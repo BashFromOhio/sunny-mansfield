@@ -296,13 +296,18 @@ CSS = """
   color-scheme:light;
 }
 body{color:var(--text);font:400 16px/1.7 var(--sans);
-  background:linear-gradient(rgba(243,230,207,.74),rgba(243,230,207,.74)),url(/assets/collage.jpg) center/cover fixed,var(--surface)}
+  background:transparent}
+/* The collage sits on a fixed layer, which phones (iOS especially) handle better than background-attachment:fixed. */
+html{background:var(--surface)}
+html::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(rgba(243,230,207,.74),rgba(243,230,207,.74)),url(/assets/collage.jpg) center/cover no-repeat}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--tertiary)}
 a{color:inherit}
 [hidden]{display:none!important}
 :focus-visible{outline:none;box-shadow:var(--ring)}
 .sheet{max-width:1200px;margin:32px auto;background:rgba(251,246,236,.86);border:2px solid var(--border-strong)}
-@media (max-width:1264px){.sheet{margin:0;border-width:0}}
+@media (max-width:1264px){.sheet{margin:24px}}
+@media (max-width:600px){.sheet{margin:10px;background:rgba(251,246,236,.9)}}
 .wrap{padding-left:max(clamp(16px,4vw,48px),env(safe-area-inset-left,0px));padding-right:max(clamp(16px,4vw,48px),env(safe-area-inset-right,0px))}
 .caps,.overline{font:700 11px/1.4 var(--caps);letter-spacing:.12em;text-transform:uppercase}
 .muted{color:var(--text-2)}
