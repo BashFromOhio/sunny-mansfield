@@ -2,21 +2,15 @@ import re, sys, json, urllib.request, urllib.parse
 sys.path.insert(0, ".")
 import build
 def n(m): print("::notice::" + m[:900])
-cands = ["https://www.richlandsource.com/feed/", "https://www.richlandsource.com/feed",
- "https://www.richlandsource.com/rss", "https://www.richlandsource.com/search/?f=rss",
- "https://www.richlandsource.com/search/?f=rss&t=article&l=50",
- "https://www.richlandsource.com/news/feed/", "https://www.richlandsource.com/obituaries/feed/",
- "https://www.richlandsource.com/category/obituaries/feed/",
- "https://www.mansfieldnewsjournal.com/rss/", "https://rssfeeds.mansfieldnewsjournal.com/mansfield/news",
- "https://www.bing.com/news/search?q=Mansfield+Ohio&format=rss"]
+cands = ["https://www.bing.com/news/search?q=Mansfield+Ohio&format=rss"]
 for u in cands:
     try:
         final, page = build.fetch(u, limit=200000)
-        items = page.count("<item")
-        imgs = len(re.findall(r'(media:content|media:thumbnail|enclosure|News:Image|<img)', page))
-        n(f"OK {u} -> {final} items={items} imgs={imgs} head={page[:120]!r}")
+        n(f"OK {u} items={page.count('<item')} sample={page[page.find('<item'):page.find('<item')+700]!r}")
     except Exception as e:
         n(f"FAIL {u}: {e}")
+_, wp = build.fetch("https://www.richlandsource.com/feed/")
+i = wp.find("<item"); n("WP " + repr(wp[i:i+800]))
 _, rss = build.fetch("https://news.google.com/rss/search?q=%22Mansfield%22+Ohio+when:7d&hl=en-US&gl=US&ceid=US:en")
 link = re.search(r"<link>(https://news.google.com/[^<]+)</link>", rss).group(1)
 gid = urllib.parse.urlparse(link).path.split("/")[-1]
