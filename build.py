@@ -808,8 +808,8 @@ def main():
     if (HERE / "postcards").is_dir():
         shutil.copytree(HERE / "postcards", out / "postcards", dirs_exist_ok=True)
     # The private preview can't load files, so inline every /assets image and drop the favicon link.
-    inline = lambda m: "data:image/jpeg;base64," + base64.b64encode((HERE / m.group(1)).read_bytes()).decode()
-    preview = re.sub(r"/(assets/[\w./-]+\.jpg)", inline, page).replace('<link rel="icon" type="image/svg+xml" href="/brand/mark.svg">\n', "")
+    inline = lambda m: m.group(1) + "data:image/jpeg;base64," + base64.b64encode((HERE / m.group(2)).read_bytes()).decode()
+    preview = re.sub(r'(["(])/(assets/[\w./-]+\.jpg)', inline, page).replace('<link rel="icon" type="image/svg+xml" href="/brand/mark.svg">\n', "")
     (out / "artifact.html").write_text(preview)
     for s in stories:
         (out / "s" / f"{s['id']}.html").write_text(rebase(render_story_page(cfg, s, stories)))
@@ -818,4 +818,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception:
+        import traceback
+        print("::error::Build failed: " + traceback.format_exc()[-700:].replace("\n", " | "), file=sys.stderr)
+        raise
