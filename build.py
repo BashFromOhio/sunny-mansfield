@@ -223,8 +223,8 @@ def note(msg):
     print(("::notice::" if os.environ.get("GITHUB_ACTIONS") else "  ") + msg, file=sys.stderr)
 
 
-def fetch(url, data=None, limit=400_000):
-    req = urllib.request.Request(url, data=data, headers={"User-Agent": UA, "Accept-Language": "en-US,en"})
+def fetch(url, data=None, limit=400_000, headers=None):
+    req = urllib.request.Request(url, data=data, headers={"User-Agent": UA, "Accept-Language": "en-US,en", **(headers or {})})
     if data:
         req.add_header("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
     with urllib.request.urlopen(req, timeout=15) as resp:
@@ -295,22 +295,36 @@ def slug(text):
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60] or "business"
 
 
+def backend_on(config):
+    return bool(config.get("supabase_url") and config.get("supabase_anon_key"))
+
+
+def fetch_published(config):
+    """Approved posts from the Supabase "published" view (no email addresses in it)."""
+    key = config["supabase_anon_key"]
+    url = config["supabase_url"].rstrip("/") + "/rest/v1/published?select=*&order=created_at.desc&limit=1000"
+    _, text = fetch(url, limit=5_000_000, headers={"apikey": key, "Authorization": f"Bearer {key}"})
+    rename = {"created_at": "when", "photo_url": "photo"}
+    return [{rename.get(k, k): ("" if v is None else str(v)) for k, v in r.items()} for r in json.loads(text)]
+
+
 def load_submissions(config, sample):
-    """Approved or verified posts from the submission form, as published CSV from Google Sheets."""
+    """Approved posts: from Supabase on the live site, from sample_submissions.csv in the preview."""
     got = {"stories": [], "spotlights": [], "flyers": [], "listings": []}
-    if sample:
-        text = (HERE / "sample_submissions.csv").read_text()
-    elif config.get("submissions_csv"):
-        try:
-            _, text = fetch(config["submissions_csv"], limit=2_000_000)
-        except Exception as exc:
-            note(f"Submissions sheet: skipped ({exc})")
+    try:
+        if sample:
+            rows = list(csv.reader(io.StringIO((HERE / "sample_submissions.csv").read_text())))
+        elif backend_on(config):
+            rows = fetch_published(config)
+        else:
             return got
-    else:
+    except Exception as exc:
+        note(f"Submissions: skipped ({exc})")
         return got
     now = datetime.now(timezone.utc)
-    for row in csv.reader(io.StringIO(text)):
-        row = dict(zip(SUBMIT_COLS, [c.strip() for c in row] + [""] * len(SUBMIT_COLS)))
+    for row in rows:
+        if isinstance(row, list):
+            row = dict(zip(SUBMIT_COLS, [c.strip() for c in row] + [""] * len(SUBMIT_COLS)))
         section = SECTION_BY_LABEL.get(row["section"].lower())
         if not section or not row["title"]:
             continue  # header row, blank row or unknown section
@@ -320,7 +334,7 @@ def load_submissions(config, sample):
             date = parse_date(row["when"])
         image = drive_image(row["photo"])
         image = image if image.startswith("https://") or (sample and image.startswith("assets/")) else None
-        sid = hashlib.sha1(("community" + row["when"] + row["title"]).encode()).hexdigest()[:10]
+        sid = hashlib.sha1(("community" + row.get("id", "") + row["when"] + row["title"]).encode()).hexdigest()[:10]
         if section == "flyer":
             day = parse_day(row["event_date"])
             if (day and day + timedelta(days=1) < now) or (not day and date + timedelta(days=LISTING_DAYS) < now):
@@ -432,13 +446,29 @@ a{color:inherit}
 .plate .logo{display:block;line-height:0}
 .plate .logo svg{width:100%;height:auto}
 .ear{display:grid;gap:4px;align-content:center}
-.ear.right{justify-items:end;text-align:right}
-@media (max-width:900px){.plate{grid-template-columns:minmax(0,1fr);justify-items:center;padding-block:24px 16px}.ear{display:none}.plate .logo{width:min(100%,420px)}}
-.strip{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 24px;padding-block:8px;
+.ear.right{justify-items:end;text-align:right;gap:12px}
+.motto{line-height:1.7}.motto.mobile{display:none}
+@media (max-width:900px){.plate{grid-template-columns:minmax(0,1fr);justify-items:center;padding-block:24px 16px;gap:12px}.ear{display:none}.plate .logo{width:min(100%,420px)}
+  .motto.mobile{display:block;text-align:center;color:var(--text-2)}}
+.strip{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 32px;padding-block:6px;
   border-top:2px solid var(--border-strong);border-bottom:2px solid var(--border-strong)}
-.strip nav{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 24px}.strip nav a{white-space:nowrap}
-.strip a{text-decoration:none}.strip a:hover{color:var(--secondary)}
-@media (max-width:900px){.strip{justify-content:center;text-align:center}}
+.navgroup{display:flex;flex-wrap:wrap;align-items:center;gap:4px 20px}
+.navlabel{color:var(--text-3)}
+.strip a,.navbtn{text-decoration:none;white-space:nowrap;padding-block:8px}
+.navbtn{font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;background:none;border:0;cursor:pointer;padding-inline:0}
+.strip a:hover,.navbtn:hover{color:var(--secondary)}
+.strip .navcta{background:var(--secondary);color:var(--tertiary);padding:8px 14px}
+.strip .navcta:hover{background:var(--secondary-dk);color:var(--tertiary)}
+@media (max-width:900px){.strip{justify-content:center}.navgroup{justify-content:center}.navlabel{display:none}}
+/* the "why this paper" pop-out: first visit, and the About link */
+.about{position:fixed;right:24px;bottom:24px;z-index:30;width:min(420px,calc(100vw - 32px));max-height:calc(100vh - 48px);overflow:auto;box-sizing:border-box;
+  background:var(--tertiary);border:2px solid var(--border-strong);border-top:6px solid var(--secondary);padding:28px 28px 24px;display:grid;gap:10px}
+.about .script{font-size:30px;color:var(--secondary);line-height:1}
+.about .hed{font-size:28px;line-height:1.15;margin:0}
+.about p{margin:0;font-size:15px;line-height:1.6}
+.about ul{margin:0;padding-left:18px;font-size:14px;line-height:1.55;display:grid;gap:6px}
+.about .close{position:absolute;top:8px;right:10px;font:400 28px/1 var(--sans);background:none;border:0;cursor:pointer;color:var(--text-2);padding:4px 8px}
+@media (max-width:600px){.about{right:16px;left:16px;bottom:16px;width:auto}}
 
 /* section bar: active item gets the 3px accent underline */
 .sections{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:rgba(251,246,236,.97);border-bottom:2px solid var(--border-subtle)}
@@ -592,6 +622,45 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .ad.house .sponsor{padding-top:0}
 .ad:hover{border-color:var(--border-strong)}
 .market-grid .listing{border-color:var(--border-subtle)}
+
+/* forms and the admin desk */
+.formbox{padding-block:0 64px;scroll-margin-top:72px}
+.formbox .label{margin-bottom:24px}
+form.sunny{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px;background:var(--tertiary);border:2px solid var(--border-subtle);border-top:4px solid var(--secondary);padding:clamp(16px,3vw,32px)}
+@media (max-width:700px){form.sunny{grid-template-columns:minmax(0,1fr)}}
+.fld{display:grid;gap:6px;min-width:0}.fld.wide,.wide{grid-column:1/-1}
+.fld>.caps{color:var(--text)}
+.hint{font:400 13px/1.5 var(--sans);color:var(--text-2);margin:0}
+input:not([type=checkbox]):not([type=file]),select,textarea{font:400 16px/1.4 var(--sans);color:var(--text);background:#fffdf8;border:2px solid var(--border-medium);border-radius:0;padding:10px 12px;min-height:44px;width:100%;box-sizing:border-box}
+textarea{resize:vertical;min-height:120px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary);box-shadow:var(--ring)}
+input[type=file]{font:400 14px/1.4 var(--sans)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.5}
+.check input{width:20px;height:20px;margin-top:2px;accent-color:var(--secondary)}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.submitrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.formmsg{font:600 14px/1.4 var(--sans);color:var(--secondary-dk);margin:0}
+.formnote{grid-column:1/-1;margin:0;padding:12px 16px;background:var(--surface);font-size:14px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.signin{background:var(--surface);padding:16px;gap:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row input{flex:1 1 220px;width:auto}
+.thanks{background:var(--tertiary);border:2px solid var(--border-subtle);border-top:4px solid var(--secondary);padding:32px;text-align:center;display:grid;justify-items:center;gap:8px}
+.thanks .script{font-size:40px;color:var(--secondary)}
+.admin{padding-block:0 64px;display:grid;gap:24px}
+.admin .box{max-width:560px;justify-self:center;width:100%}
+.deskbar{display:grid;gap:8px;margin-bottom:16px}
+.qtabs{display:flex;flex-wrap:wrap;gap:0 8px}
+.queue{display:grid;gap:16px}
+.qitem{display:grid;grid-template-columns:200px minmax(0,1fr);gap:20px;background:var(--tertiary);border:2px solid var(--border-subtle);padding:20px}
+.qitem:not(:has(.qphoto)){grid-template-columns:minmax(0,1fr)}
+@media (max-width:700px){.qitem{grid-template-columns:minmax(0,1fr)}}
+.qphoto img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.qbody{display:grid;gap:8px;align-content:start;min-width:0}
+.qbody .hed{font-size:22px;line-height:1.2}
+.qtext{margin:0;white-space:pre-line;font-size:15px}
+.facts{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:2px 12px;margin:0;font-size:13px}
+.facts dt{font-weight:700}.facts dd{margin:0;overflow-wrap:anywhere}
+.btn.ghost{border-color:transparent;background:none}.btn.ghost:hover{color:var(--secondary-dk);background:none}
 
 /* community pages */
 .pagehead{padding-block:48px 32px;text-align:center;display:grid;justify-items:center;gap:4px}
@@ -833,16 +902,29 @@ def masthead(cfg, site, stories):
     today = datetime.now(timezone.utc).strftime("%A, %B %-d, %Y")
     return f"""<header>
 <div class="wrap plate">
-<div class="ear"><span class="caps">{today}</span><span class="caps muted">{len(stories)} good stories this week</span></div>
+<div class="ear"><span class="caps">{today}</span><span class="caps muted">{len(stories)} good stories this week</span>
+<span class="caps muted">Free · Updated all day</span></div>
 <a class="logo" href="{e(site)}/" aria-label="{e(cfg['site_name'])} home">{logo("logo-retro.svg")}</a>
-<div class="ear right"><a class="btn fb" href="{e(fb_share(site + '/'))}" target="_blank" rel="noopener">{FB_ICON}Share the paper</a>
-<span class="caps muted">Free · Updated every 2 hours</span></div>
+<div class="ear right"><span class="caps motto">Good news for all seasons<br>Mansfield &amp; Richland County, Ohio</span>
+<a class="btn fb sm" href="{e(fb_share(site + '/'))}" target="_blank" rel="noopener">{FB_ICON}Share the paper</a></div>
+<span class="caps motto mobile">Good news for all seasons · Mansfield &amp; Richland County, Ohio</span>
 </div>
-<div class="wrap strip"><span class="caps">Good news for all seasons · Mansfield &amp; Richland County, Ohio</span>
-<nav class="caps"><a href="{e(site)}/#events">Events</a><a href="{e(site)}/market.html">Buy &amp; Sell</a>
-<a href="{e(site)}/businesses.html">Businesses</a><a href="{e(site)}/rules.html">Join the team</a>
-<a href="{e(site)}/advertise.html">Advertise</a><a href="{e(site)}/submit.html">Submit news</a></nav></div>
-</header>"""
+<nav class="wrap strip caps" aria-label="Main">
+<div class="navgroup"><span class="navlabel">Read</span><a href="{e(site)}/">Front page</a><a href="{e(site)}/#events">Events</a>
+<a href="{e(site)}/market.html">Buy &amp; Sell</a><a href="{e(site)}/businesses.html">Businesses</a></div>
+<div class="navgroup"><span class="navlabel">Take part</span><button class="navbtn" type="button" data-about>About</button>
+<a href="{e(site)}/rules.html">Join the team</a><a href="{e(site)}/advertise.html">Advertise</a>
+<a class="navcta" href="{e(site)}/submit.html">Submit news</a></div></nav>
+</header>
+<aside class="about" id="about" role="dialog" aria-labelledby="about-h" hidden>
+<button class="close" type="button" data-about-close aria-label="Close">&times;</button>
+<span class="script">Welcome, neighbor!</span><h2 class="hed" id="about-h">Why Sunny Mansfield?</h2>
+<p>Sunny Mansfield is a free paper for one thing: the good news. Neighbors helping neighbors, new shops opening, students winning, lives worth celebrating, and the events that bring Richland County together.</p>
+<ul><li><b>Uplifting, always.</b> We skip crime, crashes and arguing. There's plenty of that elsewhere.</li>
+<li><b>Written with neighbors.</b> Local outlets, students, business owners and mentors all add stories.</li>
+<li><b>Made to share.</b> Every story has a Share button. One share can make someone's day.</li></ul>
+<div class="share"><button class="btn solid" type="button" data-about-close>Start reading</button><a class="textbtn" href="{e(site)}/submit.html">Share good news</a></div>
+</aside>"""
 
 
 def memories(cfg):
@@ -920,6 +1002,11 @@ document.querySelectorAll('.railbox').forEach(box=>{const r=box.querySelector('.
  bs.forEach(b=>b.addEventListener('click',()=>r.scrollBy({left:+b.dataset.dir*r.clientWidth*.9,behavior:'smooth'})));
  r.addEventListener('scroll',upd,{passive:true});addEventListener('resize',upd);upd()});
 const h=decodeURIComponent(location.hash.slice(1));show(tabs.some(x=>x.dataset.sec===h)?h:'all',false);
+const about=document.getElementById('about');
+if(about){const seen=store('aboutSeen');if(!seen&&!/admin\.html/.test(location.pathname))setTimeout(()=>about.hidden=false,900);
+ document.addEventListener('click',ev=>{if(ev.target.closest('[data-about]')){about.hidden=false;about.querySelector('.btn').focus()}
+  if(ev.target.closest('[data-about-close]')){about.hidden=true;store('aboutSeen','1')}});
+ document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!about.hidden){about.hidden=true;store('aboutSeen','1')}})}
 const toast=document.getElementById('toast');let timer;
 function say(msg){if(!toast)return;toast.textContent=msg;toast.hidden=false;clearTimeout(timer);timer=setTimeout(()=>toast.hidden=true,3600)}
 function shared(){const now=new Date();const week=now.getFullYear()+'-'+Math.floor((now-new Date(now.getFullYear(),0,1))/6048e5);
@@ -1049,14 +1136,109 @@ def render_index(cfg, stories, businesses, flyers, listings):
 {SCRIPT}"""
 
 
-def shell(cfg, title, desc, url, inner, stories, image=None):
+def shell(cfg, title, desc, url, inner, stories, image=None, extra=""):
     site = cfg["site_url"].rstrip("/")
     body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
 {inner}<div class="stripes" aria-hidden="true"></div></main>{footer(cfg)}</div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>"""
     return ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
             "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
-            f"{head(cfg, title, desc, url, image)}</head><body>{body}{SCRIPT}</body></html>")
+            f"{head(cfg, title, desc, url, image)}</head><body>{body}{SCRIPT}{extra}</body></html>")
+
+
+SB_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
+EXTRA_SECTIONS = ["Business Spotlight", "Event Flyer", "Buy & Sell"]
+
+
+def field(name, label, kind="text", req=False, hint="", show=None, opts=None, extra=None, wide=False):
+    """One labeled input. show = sections it appears for; extra = label to fold it into the summary."""
+    attrs = f' name="{name}" id="f-{name}"' + (" required" if req else "")
+    if extra:
+        attrs += f' data-extra="{e(extra)}"'
+    if kind == "select":
+        ctl = f'<select{attrs}><option value="">Choose one</option>' + "".join(
+            f'<option>{e(o)}</option>' for o in opts) + "</select>"
+    elif kind == "textarea":
+        ctl = f'<textarea{attrs} rows="5" maxlength="2000"></textarea>'
+    elif kind == "file":
+        ctl = f'<input type="file" accept="image/jpeg,image/png,image/webp,image/gif"{attrs}>'
+    else:
+        ctl = f'<input type="{kind}"{attrs}' + (' maxlength="200"' if kind == "text" else "") + ">"
+    vis = f' data-for="{e("|".join(show))}" hidden' if show else ""
+    cls = "fld wide" if wide or kind == "textarea" else "fld"
+    hint = f'<span class="hint">{hint}</span>' if hint else ""
+    return f'<label class="{cls}"{vis}><span class="caps">{label}{" *" if req else ""}</span>{ctl}{hint}</label>'
+
+
+def sunny_form(cfg, fid, section, fields, button, title_tpl="", signin=False):
+    on = backend_on(cfg)
+    sign = ""
+    if signin:
+        sign = """<div class="signin fld wide"><span class="caps">Verified contributor?</span>
+<p class="hint" data-out>Sign in with your email and your posts go live on their own.</p>
+<p class="hint" data-in hidden>Signed in as <b data-who></b>. <button class="textbtn" type="button" data-signout>Sign out</button></p>
+<div class="row" data-out><input type="email" placeholder="you@example.com" data-signin-email aria-label="Email to sign in">
+<button class="btn sm" type="button" data-signin>Email me a sign-in link</button></div></div>"""
+    closed = "" if on else '<p class="formnote">Submissions open soon. Until then, email <b>' + e(cfg["submit_email"]) + "</b>.</p>"
+    return f"""<form class="sunny" id="{fid}" data-section="{e(section)}" data-title="{e(title_tpl)}" novalidate>
+{sign}{"".join(fields)}
+<label class="hp" aria-hidden="true">Leave this empty<input name="hp" tabindex="-1" autocomplete="off"></label>
+<label class="check wide"><input type="checkbox" required name="agree"> <span>I agree to the <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/rules.html#rules" target="_blank">Sunny rules</a> and have permission to share any photo I add.</span></label>
+<div class="wide submitrow"><button class="btn solid" type="submit"{"" if on else " disabled"}>{button}</button><span class="formmsg" role="status" aria-live="polite"></span></div>
+{closed}</form>
+<div class="thanks" hidden><span class="script">Thank you!</span><h2 class="hed">Got it.</h2><p data-thanks></p>
+<button class="btn" type="button" data-again>Send another</button></div>"""
+
+
+def form_script(cfg):
+    if not backend_on(cfg):
+        return ""
+    conf = json.dumps({"url": cfg["supabase_url"], "key": cfg["supabase_anon_key"]})
+    return f"""<script src="{SB_JS}"></script><script>
+(()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);
+const COLS=['section','title','summary','link','name','role','business','town','event_date','price','contact','email'];
+let who=null;
+function syncSign(){{document.querySelectorAll('[data-out]').forEach(x=>x.hidden=!!who);document.querySelectorAll('[data-in]').forEach(x=>x.hidden=!who);
+ document.querySelectorAll('[data-who]').forEach(x=>x.textContent=who||'');document.querySelectorAll('input[name=email]').forEach(x=>{{if(who){{x.value=who;x.readOnly=true}}else x.readOnly=false}})}}
+sb.auth.getSession().then(r=>{{who=r.data.session?.user?.email||null;syncSign()}});
+sb.auth.onAuthStateChange((_,s)=>{{who=s?.user?.email||null;syncSign()}});
+document.addEventListener('click',async ev=>{{
+ const b=ev.target.closest('[data-signin]');if(b){{const box=b.closest('.signin');const em=box.querySelector('[data-signin-email]').value.trim();const msg=box.querySelector('[data-out].hint');
+  if(!/^\S+@\S+\.\S+$/.test(em)){{msg.textContent='Type your email first.';return}}b.disabled=true;
+  const {{error}}=await sb.auth.signInWithOtp({{email:em,options:{{emailRedirectTo:location.href.split('#')[0]}}}});b.disabled=false;
+  msg.textContent=error?'Could not send the link: '+error.message:'Check your email for the sign-in link, then come back here.';return}}
+ if(ev.target.closest('[data-signout]')){{await sb.auth.signOut();return}}
+ const a=ev.target.closest('[data-again]');if(a){{const t=a.closest('.thanks');t.hidden=true;t.previousElementSibling.hidden=false;return}}}});
+function showFor(f){{const sec=f.dataset.section||(f.section?f.section.value:'');f.querySelectorAll('[data-for]').forEach(x=>x.hidden=!x.dataset.for.split('|').includes(sec))}}
+document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListener('change',ev=>{{if(ev.target.name==='section')showFor(f)}});
+ f.addEventListener('submit',async ev=>{{ev.preventDefault();const msg=f.querySelector('.formmsg');const btn=f.querySelector('[type=submit]');
+  if(!f.reportValidity())return;
+  const thanks=f.nextElementSibling;
+  const done=text=>{{f.reset();showFor(f);syncSign();f.hidden=true;thanks.querySelector('[data-thanks]').textContent=text;thanks.hidden=false;thanks.scrollIntoView({{behavior:'smooth',block:'center'}})}};
+  if(f.hp.value){{done('Thanks!');return}}
+  const fd=new FormData(f);const row={{}};const extras=[];
+  f.querySelectorAll('[name]').forEach(el=>{{if(el.closest('[hidden]'))return;const v=(el.type==='file'?'':String(fd.get(el.name)||'').trim());if(!v)return;
+   if(el.dataset.extra)extras.push(el.dataset.extra+': '+v);else if(COLS.includes(el.name))row[el.name]=v}});
+  if(f.dataset.section)row.section=f.dataset.section;
+  if(extras.length)row.summary=[row.summary,...extras].filter(Boolean).join('\\n');
+  if(f.dataset.title)row.title=f.dataset.title.replace(/\{{(\w+)\}}/g,(_,k)=>String(fd.get(k)||'').trim()).slice(0,200);
+  btn.disabled=true;msg.textContent='Sending…';
+  try{{const file=fd.get('photo');
+   if(file&&file.size&&!f.querySelector('[name=photo]').closest('[hidden]')){{
+    if(file.size>6*1024*1024)throw new Error('That photo is over 6 MB. Try a smaller one.');
+    msg.textContent='Uploading photo…';const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const path=new Date().getFullYear()+'/'+crypto.randomUUID()+'.'+ext;
+    const up=await sb.storage.from('photos').upload(path,file,{{contentType:file.type}});if(up.error)throw up.error;
+    row.photo_url=sb.storage.from('photos').getPublicUrl(path).data.publicUrl}}
+   const {{error}}=await sb.from('submissions').insert(row);if(error)throw error;
+   msg.textContent='';done(f.dataset.section==='Join the team'?'Your application is in. An editor will email you soon.':
+    f.dataset.section==='Advertise'?'We will get back to you within two business days.':
+    who?'If you are verified it goes live within 30 minutes. Otherwise an editor will look at it soon.':'It is in the review queue. An editor will look at it soon, usually within a day.')}}
+  catch(err){{msg.textContent='Something went wrong: '+(err.message||err)+'. Please try again.'}}
+  finally{{btn.disabled=false}}}});}});
+document.querySelectorAll('[data-pick]').forEach(b=>b.addEventListener('click',()=>{{const f=document.getElementById('send');if(!f)return;f.section.value=b.dataset.pick;showFor(f)}}));
+}})();
+</script>"""
 
 
 def form_link(cfg, key, subject):
@@ -1070,29 +1252,51 @@ def page_title(script, title, intro):
 
 def render_submit(cfg, stories):
     site = cfg["site_url"].rstrip("/")
-    story = form_link(cfg, "submit_form", "Good news for Sunny Mansfield")
-    join = form_link(cfg, "join_form", "I want to join the Sunny Mansfield team")
+    story = "#form"
     paths = [
         ("good", "Share good news", "A ribbon cutting, a 100th birthday, a team win, a garage sale, a neighbor who helps. "
          "Tell us in a few lines and add a photo.", story, "Submit a story", "submit"),
         ("biz", "Spotlight your business", "Free for Richland County businesses. You get your own page on Sunny Mansfield "
-         "with your photo, your story and a button people can share.", story, "Get a spotlight", "spotlight"),
+         "with your photo, your story and a button people can share.", "#form:Business Spotlight", "Get a spotlight", "spotlight"),
         ("vote", "Post an event flyer", "Concerts, fish fries, fundraisers, festivals, church suppers. Upload your flyer and "
-         "it rides the front page carousel until the day of the event.", story, "Post a flyer", "flyer"),
+         "it rides the front page carousel until the day of the event.", "#form:Event Flyer", "Post a flyer", "flyer"),
         ("sales", "Buy &amp; Sell", "List something for sale or wanted, with a price and how to reach you. Free, up for 30 days.",
-         story, "Post a listing", "sell"),
+         "#form:Buy & Sell", "Post a listing", "sell"),
         ("research", "Join the team", "Aspiring journalists, marketers, students, mentors and motivators. Get verified and "
-         "your posts go live on their own.", f"{site}/rules.html", "See how it works", "join"),
+         "your posts go live on their own.", f"{site}/rules.html#apply", "Apply to join", "join"),
     ]
+
+    def go(href, cta):
+        if href.startswith("#form"):
+            pick = href.split(":", 1)[1] if ":" in href else "Good News"
+            return f'<a class="btn solid" href="#form" data-pick="{e(pick)}">{cta}</a>'
+        return f'<a class="btn solid" href="{e(href)}">{cta}</a>'
     cards = "".join(f"""<article class="card path" id="{anchor}"><span class="art sm"><svg viewBox="0 0 100 100" aria-hidden="true">{ART[art]}</svg></span>
-<h2 class="hed">{title}</h2><p class="dek">{text}</p><div class="share"><a class="btn solid" href="{e(href)}"{'' if href.startswith(site) else ' target="_blank" rel="noopener"'}>{cta}</a></div></article>"""
+<h2 class="hed">{title}</h2><p class="dek">{text}</p><div class="share">{go(href, cta)}</div></article>"""
                     for art, title, text, href, cta, anchor in paths)
+    labels = [n for _, n in SECTIONS] + EXTRA_SECTIONS
+    fields = [
+        field("section", "What are you sharing?", "select", True, opts=labels),
+        field("title", "Headline", req=True, hint="Short and specific, like \u201cOntario band raises $3,000 with a car wash\u201d."),
+        field("summary", "Tell us about it", "textarea", True, "Two to four sentences. Who, what, where, when."),
+        field("photo", "Photo or flyer", "file", hint="JPG or PNG up to 6 MB. Your own photo, or one you have permission to use."),
+        field("event_date", "Event date", "date", show=["Event Flyer"]),
+        field("price", "Price", show=["Buy & Sell"], hint="Like $40, Free, or Best offer."),
+        field("contact", "How buyers reach you", show=["Buy & Sell"], hint="Phone, email or link. This is shown on the site."),
+        field("business", "Business name", show=["Business Spotlight"]),
+        field("link", "Link for more", "url", hint="Optional: a website, event page or Facebook post."),
+        field("name", "Your name as it should appear", req=True),
+        field("role", "You are a", "select", opts=["Neighbor", "Student reporter", "Business", "Mentor", "Organization"]),
+        field("town", "Town or neighborhood"),
+        field("email", "Your email", "email", hint="Only editors see it, in case we have a question."),
+    ]
     inner = f"""{page_title("Hey neighbor!", "Got good news?", "Sunny Mansfield is written by the people who live here. Pick what you want to share. It takes about two minutes.")}
 <section class="wrap latest"><div class="grid">{cards}</div></section>
+<section class="wrap formbox" id="form"><h2 class="label">Send it in</h2>{sunny_form(cfg, "send", "", fields, "Send for review", signin=True)}</section>
 <section class="wrap civic"><div class="box"><span class="caps kicker">What happens next</span><h2 class="hed">From your phone to the front page</h2>
 <ol class="steps">
-<li><span class="n">1</span><span>You fill out the short form. Sign in with Google so we know a real person sent it.</span></li>
-<li><span class="n">2</span><span><b>Verified contributors</b> go live on their own within 2 hours. Everyone else is checked by an editor first, usually within a day.</span></li>
+<li><span class="n">1</span><span>You fill out the short form above. It goes into our review queue.</span></li>
+<li><span class="n">2</span><span>An editor approves it, usually within a day. <b>Verified contributors</b> who sign in skip the line and go live within 30 minutes.</span></li>
 <li><span class="n">3</span><span>Your story gets its own page with your name on it and a Share button, so friends and family can pass it along on Facebook.</span></li>
 </ol></div>
 <div class="box"><span class="caps kicker">Before you send</span><h2 class="hed">Three quick rules</h2>
@@ -1102,12 +1306,12 @@ def render_submit(cfg, stories):
 <li><span class="n">3</span><span>No attacks, gossip or campaigning. <a class="link" href="{e(site)}/rules.html">All the rules</a></span></li>
 </ol></div></section>"""
     return shell(cfg, f"Submit good news · {cfg['site_name']}", "Share good news, spotlight your business, or join the team.",
-                 f"{site}/submit.html", inner, stories)
+                 f"{site}/submit.html", inner, stories, extra=form_script(cfg))
 
 
 def render_rules(cfg, stories):
     site = cfg["site_url"].rstrip("/")
-    join = form_link(cfg, "join_form", "I want to join the Sunny Mansfield team")
+    join = "#apply"
     rules = [
         ("Keep it true.", "Real people, real places and real events. If you didn't see it yourself, link to where it came from."),
         ("Keep it kind.", "We celebrate. No put-downs, gossip, rumors or call-outs, even when someone deserves one."),
@@ -1137,13 +1341,23 @@ def render_rules(cfg, stories):
 <li><span class="n">2</span><span><b>Quick check.</b> An editor confirms you're a real person with a Richland County connection. Under 18? We'll need a parent or guardian's OK.</span></li>
 <li><span class="n">3</span><span><b>Post freely.</b> Once verified, your posts go live on their own within 2 hours, with your name on them.</span></li>
 </ol>
-<div class="share"><a class="btn solid" href="{e(join)}" target="_blank" rel="noopener">Apply to join</a><a class="textbtn" href="{e(site)}/submit.html">Or just send a story</a></div></div>
+<div class="share"><a class="btn solid" href="{e(join)}">Apply to join</a><a class="textbtn" href="{e(site)}/submit.html">Or just send a story</a></div></div>
 <div class="box" id="rules"><span class="caps kicker">The Sunny rules</span><h2 class="hed">Eight rules, one idea: lift people up</h2>
 <ol class="steps">{rule_items}</ol>
 <p class="note">Break the rules and your post comes down. Break them twice and verification is removed.</p></div>
-</section>"""
+</section>
+<section class="wrap formbox" id="apply"><h2 class="label">Apply to join</h2>{sunny_form(cfg, "apply-form", "Join the team", [
+        field("name", "Your name", req=True),
+        field("email", "Your email", "email", True, "We'll email you when you're verified."),
+        field("role", "Role", "select", True, opts=["Community editor", "Student reporter", "Business correspondent", "Mentor and motivator"]),
+        field("town", "Town or neighborhood"),
+        field("summary", "What would you like to cover?", "textarea", True),
+        field("age", "Are you 18 or older?", "select", True, opts=["Yes", "No"], extra="18 or older"),
+        field("guardian", "If not: parent or guardian's name and email", extra="Parent or guardian", wide=True),
+        field("link", "Portfolio, school paper or social link", "url"),
+    ], "Send my application", title_tpl="{name}: {role}")}</section>"""
     return shell(cfg, f"Join the team · {cfg['site_name']}", "Become a verified contributor: editors, student reporters, business correspondents, mentors.",
-                 f"{site}/rules.html", inner, stories)
+                 f"{site}/rules.html", inner, stories, extra=form_script(cfg))
 
 
 def biz_card(cfg, b):
@@ -1198,7 +1412,7 @@ def render_market(cfg, listings, stories):
 
 def render_advertise(cfg, stories):
     site = cfg["site_url"].rstrip("/")
-    ask = form_link(cfg, "advertise_form", "Advertising on Sunny Mansfield")
+    ask = "#ask"
     packages = [
         ("biz", "Featured business", "Top of the Businesses page and the front page Shop local box for a month, with a photo gallery and hours.", "$25 to $50 a month"),
         ("good", "Section sponsor", "\u201cSeniors brought to you by\u2026\u201d Your logo and link on one section shelf, every day.", "$75 to $150 a month"),
@@ -1209,10 +1423,102 @@ def render_advertise(cfg, stories):
 <span class="caps kicker">{price}</span><h2 class="hed">{t}</h2><p class="dek">{d}</p></article>""" for a, t, d, price in packages)
     inner = f"""{page_title("Shop local!", "Advertise with us", "Put your business in front of neighbors who read, share and shop local. Every ad is labeled Sponsor, and sponsors never decide what we cover.")}
 <section class="wrap latest"><div class="grid four">{cards}</div>
-<div class="more-row"><a class="btn solid" href="{e(ask)}" target="_blank" rel="noopener">Ask about advertising</a></div>
-<p class="note" style="text-align:center">Prices are starting points for founding sponsors. Basic business spotlights and community posts are always free.</p></section>"""
+<div class="more-row"><a class="btn solid" href="{e(ask)}">Ask about advertising</a></div>
+<p class="note" style="text-align:center">Prices are starting points for founding sponsors. Basic business spotlights and community posts are always free.</p></section>
+<section class="wrap formbox" id="ask"><h2 class="label">Ask about advertising</h2>{sunny_form(cfg, "ask-form", "Advertise", [
+        field("business", "Business name", req=True),
+        field("name", "Your name", req=True),
+        field("email", "Email", "email", True),
+        field("contact", "Phone", "tel"),
+        field("interest", "Interested in", "select", opts=[p[1] for p in packages] + ["Not sure yet"], extra="Interested in"),
+        field("summary", "Anything else?", "textarea"),
+    ], "Send", title_tpl="Ad inquiry: {business}")}</section>"""
     return shell(cfg, f"Advertise · {cfg['site_name']}", "Sponsorships and featured spots on Sunny Mansfield.",
-                 f"{site}/advertise.html", inner, stories)
+                 f"{site}/advertise.html", inner, stories, extra=form_script(cfg))
+
+
+def render_admin(cfg, stories):
+    site = cfg["site_url"].rstrip("/")
+    if not backend_on(cfg):
+        inner = (page_title("Editors only", "Admin", "The review queue isn't connected yet. Follow BACKEND.md in the repository, "
+                            "then send the project URL and anon key to whoever builds the site."))
+        return shell(cfg, f"Admin · {cfg['site_name']}", "Editors only.", f"{site}/admin.html", inner, stories)
+    conf = json.dumps({"url": cfg["supabase_url"], "key": cfg["supabase_anon_key"]})
+    inner = f"""{page_title("Editors only", "Review queue", "Approve posts to put them on the site. Approved posts appear within 30 minutes.")}
+<section class="wrap admin">
+<div class="box" id="login"><span class="caps kicker">Sign in</span><h2 class="hed">Editor sign-in</h2>
+<p class="hint">We'll email you a one-tap sign-in link. Only emails on the admin list can review posts.</p>
+<div class="row"><input type="email" id="login-email" placeholder="you@example.com" aria-label="Your email">
+<button class="btn solid" type="button" id="login-btn">Email me a link</button></div><p class="formmsg" id="login-msg"></p></div>
+<div id="desk" hidden>
+<div class="deskbar"><nav class="sections" aria-label="Queue"><div class="qtabs">
+<button class="tab" type="button" data-q="pending">Waiting <span class="n"></span></button>
+<button class="tab" type="button" data-q="apps">Team applications <span class="n"></span></button>
+<button class="tab" type="button" data-q="ads">Ad inquiries <span class="n"></span></button>
+<button class="tab" type="button" data-q="approved">Approved</button>
+<button class="tab" type="button" data-q="rejected">Rejected</button>
+<button class="tab" type="button" data-q="verified">Verified people</button></div></nav>
+<p class="hint">Signed in as <b id="me"></b>. <button class="textbtn" type="button" id="logout">Sign out</button></p></div>
+<div id="addv" class="row" hidden><input type="email" id="v-email" placeholder="email to verify" aria-label="Email to verify"><input id="v-name" placeholder="name" aria-label="Name">
+<button class="btn sm solid" type="button" id="v-add">Add verified person</button></div>
+<div id="list" class="queue"></div></div>
+<p class="formmsg" id="desk-msg"></p></section>"""
+    script = f"""<script src="{SB_JS}"></script><script>
+(()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));
+const SPECIAL=['Join the team','Advertise'];let me=null,q='pending';
+const say=t=>{{$('desk-msg').textContent=t}};
+$('login-btn').onclick=async()=>{{const em=$('login-email').value.trim();if(!em)return;
+ const {{error}}=await sb.auth.signInWithOtp({{email:em,options:{{emailRedirectTo:location.href.split('#')[0]}}}});
+ $('login-msg').textContent=error?'Could not send: '+error.message:'Check your email for the sign-in link.'}};
+$('logout').onclick=()=>sb.auth.signOut().then(()=>location.reload());
+async function start(s){{if(!s){{$('login').hidden=false;$('desk').hidden=true;return}}
+ me=s.user.email;const {{data}}=await sb.from('admins').select('email').limit(1);
+ if(!data||!data.length){{$('login').hidden=false;$('login-msg').textContent=me+' is not on the admin list.';return}}
+ $('login').hidden=true;$('desk').hidden=false;$('me').textContent=me;load()}}
+sb.auth.getSession().then(r=>start(r.data.session));sb.auth.onAuthStateChange((_,s)=>{{if(s&&!me)start(s)}});
+function base(){{return sb.from('submissions').select('*').order('created_at',{{ascending:false}}).limit(200)}}
+const QUERIES={{pending:()=>base().eq('status','pending').not('section','in','("Join the team","Advertise")'),
+ apps:()=>base().eq('section','Join the team').neq('status','rejected'),ads:()=>base().eq('section','Advertise').eq('status','pending'),
+ approved:()=>base().eq('status','approved').not('section','in','("Join the team","Advertise")'),rejected:()=>base().eq('status','rejected')}};
+async function counts(){{for(const [k,f] of [['pending',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('status','pending').not('section','in','("Join the team","Advertise")')],
+ ['apps',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Join the team').eq('status','pending')],
+ ['ads',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Advertise').eq('status','pending')]]){{
+ const {{count}}=await f();document.querySelector(`[data-q="${{k}}"] .n`).textContent=count||''}}}}
+function item(r){{const when=new Date(r.created_at).toLocaleString();
+ const facts=[['Section',r.section],['By',r.name],['Role',r.role],['Town',r.town],['Business',r.business],['Event date',r.event_date],['Price',r.price],['Contact',r.contact],['Email',r.email],['Sent',when],['Status',r.status+(r.reviewed_by?' by '+r.reviewed_by:'')]].filter(x=>x[1]);
+ const link=r.link?`<a class="link" href="${{esc(r.link)}}" target="_blank" rel="noopener">Open link</a>`:'';
+ const btn=(a,t,c='')=>`<button class="btn sm ${{c}}" type="button" data-act="${{a}}" data-id="${{r.id}}">${{t}}</button>`;
+ let acts='';if(r.section==='Join the team')acts=btn('verify-approve','Approve and verify','solid')+btn('reject','Decline');
+ else if(r.status!=='approved')acts=btn('approve','Approve','solid')+btn('reject','Reject')+(r.email?btn('verify-approve','Approve and verify sender'):'');
+ else acts=btn('reject','Take down');acts+=btn('delete','Delete','ghost');
+ return `<article class="qitem" data-row='${{esc(JSON.stringify({{email:r.email,name:r.name,role:r.role}}))}}'>
+ ${{r.photo_url?`<a class="qphoto" href="${{esc(r.photo_url)}}" target="_blank" rel="noopener"><img src="${{esc(r.photo_url)}}" alt=""></a>`:''}}
+ <div class="qbody"><span class="caps kicker">${{esc(r.section)}}</span><h3 class="hed">${{esc(r.title)}}</h3><p class="qtext">${{esc(r.summary||'')}}</p>
+ <dl class="facts">${{facts.map(([k,v])=>`<dt>${{k}}</dt><dd>${{esc(v)}}</dd>`).join('')}}</dl>${{link}}<div class="share">${{acts}}</div></div></article>`}}
+async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';counts();
+ const list=$('list');list.innerHTML='<p class="hint">Loading…</p>';
+ if(q==='verified'){{const {{data,error}}=await sb.from('verified').select('*').order('added_at',{{ascending:false}});
+  if(error){{list.innerHTML='';say(error.message);return}}
+  list.innerHTML=data.length?data.map(v=>`<article class="qitem"><div class="qbody"><h3 class="hed">${{esc(v.name||v.email)}}</h3><p class="hint">${{esc(v.email)}} ${{v.role?'· '+esc(v.role):''}}</p>
+  <div class="share"><button class="btn sm ghost" type="button" data-unverify="${{esc(v.email)}}">Remove</button></div></div></article>`).join(''):'<p class="hint">Nobody verified yet.</p>';return}}
+ const {{data,error}}=await QUERIES[q]();if(error){{list.innerHTML='';say(error.message);return}}
+ list.innerHTML=data.length?data.map(item).join(''):'<p class="hint">All caught up. Nothing waiting here.</p>'}}
+document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q]');if(t){{q=t.dataset.q;load();return}}
+ const u=ev.target.closest('[data-unverify]');if(u){{const {{error}}=await sb.from('verified').delete().eq('email',u.dataset.unverify);if(error)say(error.message);load();return}}
+ const b=ev.target.closest('[data-act]');if(!b)return;const id=b.dataset.id,act=b.dataset.act;const row=JSON.parse(b.closest('.qitem').dataset.row||'{{}}');
+ if(act==='delete'&&!b.dataset.sure){{b.dataset.sure=1;b.textContent='Tap again to delete';return}}
+ b.disabled=true;let error;
+ if(act==='delete')(({{error}}=await sb.from('submissions').delete().eq('id',id)));
+ else{{if(act==='verify-approve'&&row.email){{({{error}}=await sb.from('verified').upsert({{email:row.email.toLowerCase(),name:row.name,role:row.role}}));}}
+  if(!error)(({{error}}=await sb.from('submissions').update({{status:act==='reject'?'rejected':'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',id)));}}
+ if(error){{say(error.message);b.disabled=false;return}}say(act==='reject'?'Done. It will not appear on the site.':act==='delete'?'Deleted.':'Approved. It will be on the site within 30 minutes.');load()}});
+$('v-add').onclick=async()=>{{const em=$('v-email').value.trim().toLowerCase();if(!em)return;
+ const {{error}}=await sb.from('verified').upsert({{email:em,name:$('v-name').value.trim()||null}});if(error)say(error.message);else{{$('v-email').value='';$('v-name').value='';load()}}}};
+}})();
+</script>"""
+    page = shell(cfg, f"Admin · {cfg['site_name']}", "Editors only.", f"{site}/admin.html", inner, stories, extra=script)
+    return page.replace("<title>", '<meta name="robots" content="noindex,nofollow"><title>', 1)
 
 
 def render_story_page(cfg, s, stories):
@@ -1245,6 +1551,8 @@ def main():
     args = ap.parse_args()
     cfg = json.loads((HERE / "config.json").read_text())
     cfg["site_url"] = os.environ.get("SITE_URL") or cfg["site_url"]  # set by the GitHub workflow
+    for key in ("supabase_url", "supabase_anon_key"):
+        cfg[key] = os.environ.get(key.upper()) or cfg.get(key, "")
     # Sites served from a sub-folder (like user.github.io/sunny-mansfield) need it on local file paths.
     base = urllib.parse.urlparse(cfg["site_url"]).path.rstrip("/")
     rebase = lambda text: re.sub(r'(["(])/(assets|brand)/', rf"\1{base}/\2/", text)
@@ -1286,6 +1594,7 @@ def main():
     (out / "rules.html").write_text(rebase(render_rules(cfg, stories)))
     (out / "market.html").write_text(rebase(render_market(cfg, listings, stories)))
     (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories)))
+    (out / "admin.html").write_text(rebase(render_admin(cfg, stories)))
     print(f"Built {len(stories)} stories -> {out}", file=sys.stderr)
 
 

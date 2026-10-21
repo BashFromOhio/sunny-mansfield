@@ -60,9 +60,9 @@ SIL Open Font License). Regenerate with `python3 tools/make_logo.py <fonts folde
 - Tesler's law: the site does the work (auto-loading, filtering, prefilled Facebook posts) so readers just tap Share.
 - Postel's law: feed parsing tolerates messy feeds and missing fields; links like #Seniors or #seniors both work.
 
-## Community posts, business pages and editors
+## Community posts, review queue and admin
 
-`submit.html`, `rules.html`, `businesses.html` and one page per business under `b/` are built every run.
-Posts come from a Google Form whose answers land in a Google Sheet. Verified people's posts publish on
-their own; everyone else's wait for an editor to type `yes`. See [FORMS.md](FORMS.md) for the setup.
-Until the form links are in `config.json`, the buttons open an email to `submit_email`.
+People post from forms on the site itself: `submit.html` (stories, event flyers, Buy & Sell, business spotlights),
+`rules.html#apply` (join the team) and `advertise.html#ask` (ad inquiries). Everything lands in a free Supabase
+database in **review mode**. Editors approve it at `admin.html`, and the site publishes approved posts on its next
+refresh (every 30 minutes). Verified contributors who sign in skip the queue. Setup: [BACKEND.md](BACKEND.md).
