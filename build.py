@@ -14,6 +14,8 @@ original article. Full articles are never copied.
   python3 build.py --sample         # sample_stories.json -> ./site (preview)
 """
 import argparse
+import csv
+import io
 import email.utils
 import hashlib
 import html
@@ -266,6 +268,59 @@ def bing_photo(s):
         return False
 
 
+# Columns of the "Publish" tab in the submissions sheet (see FORMS.md). Emails never reach this tab.
+SUBMIT_COLS = ["when", "section", "title", "summary", "photo", "link", "name", "role", "business", "town"]
+SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "business spotlight": "spotlight"}
+
+
+def drive_image(url):
+    """Turn a shared Google Drive photo link into a direct image address."""
+    found = re.search(r"drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)([\w-]+)", url or "")
+    return f"https://lh3.googleusercontent.com/d/{found.group(1)}" if found else (url or "").strip()
+
+
+def slug(text):
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:60] or "business"
+
+
+def load_submissions(config, sample):
+    """Approved or verified posts from the submission form, as published CSV from Google Sheets."""
+    if sample:
+        text = (HERE / "sample_submissions.csv").read_text()
+    elif config.get("submissions_csv"):
+        try:
+            _, text = fetch(config["submissions_csv"], limit=2_000_000)
+        except Exception as exc:
+            note(f"Submissions sheet: skipped ({exc})")
+            return [], []
+    else:
+        return [], []
+    stories, spotlights = [], []
+    for row in csv.reader(io.StringIO(text)):
+        row = dict(zip(SUBMIT_COLS, [c.strip() for c in row] + [""] * len(SUBMIT_COLS)))
+        section = SECTION_BY_LABEL.get(row["section"].lower())
+        if not section or not row["title"]:
+            continue  # header row, blank row or unknown section
+        try:
+            date = datetime.strptime(row["when"], "%m/%d/%Y %H:%M:%S").replace(tzinfo=timezone.utc)
+        except ValueError:
+            date = parse_date(row["when"])
+        image = drive_image(row["photo"])
+        image = image if image.startswith("https://") else None
+        if section == "spotlight":
+            name = row["business"] or row["title"]
+            spotlights.append({"name": name, "what": row["summary"], "neighborhood": row["town"],
+                               "link": row["link"] or "", "image": image, "by": row["name"], "slug": slug(name)})
+            continue
+        sid = hashlib.sha1(("community" + row["when"] + row["title"]).encode()).hexdigest()[:10]
+        byline = row["name"] or "A neighbor"
+        stories.append({"id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
+                        "link": row["link"] if row["link"].startswith("http") else "", "source": byline,
+                        "role": row["role"], "image": image, "date": date, "section": section, "community": True})
+    note(f"Community: {len(stories)} stories, {len(spotlights)} business spotlights")
+    return stories, spotlights
+
+
 def add_photos(stories, limit=80):
     """Fill in missing photos from each article's own share image (og:image)."""
     todo = [s for s in stories if not s.get("image") and s.get("photos", True)][:limit]
@@ -352,7 +407,7 @@ a{color:inherit}
 @media (max-width:900px){.plate{grid-template-columns:minmax(0,1fr);justify-items:center;padding-block:24px 16px}.ear{display:none}.plate .logo{width:min(100%,420px)}}
 .strip{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 24px;padding-block:8px;
   border-top:2px solid var(--border-strong);border-bottom:2px solid var(--border-strong)}
-.strip nav{display:flex;gap:24px}
+.strip nav{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 24px}.strip nav a{white-space:nowrap}
 .strip a{text-decoration:none}.strip a:hover{color:var(--secondary)}
 @media (max-width:900px){.strip{justify-content:center;text-align:center}}
 
@@ -373,7 +428,7 @@ a{color:inherit}
 .photo img{width:100%;height:100%;object-fit:cover;display:block;filter:sepia(.18) contrast(1.04)}
 .photo .art{position:absolute;inset:0;display:grid;place-items:center}
 .photo .art svg{width:40%;max-height:62%;stroke:var(--primary);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap:balance}
+h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap:balance}
 .hed a{text-decoration:none}.hed a:hover{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
 .dek{margin:0;color:var(--text-2)}
 .share{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
@@ -464,6 +519,21 @@ h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap:balanc
 .submit .script{margin-bottom:22px}
 .submit p{margin:12px 0 0;max-width:56ch;color:var(--text-2)}
 #submit .candy{margin-bottom:48px}
+
+/* community pages */
+.pagehead{padding-block:48px 32px;text-align:center;display:grid;justify-items:center;gap:4px}
+.pagehead .retro{margin:0}
+.pagehead .intro{max-width:60ch;margin:16px 0 0;font-size:18px;line-height:1.65;color:var(--text-2)}
+.card .art.sm,.path .art.sm,.role .art.sm{width:56px;height:56px;display:block}
+.art.sm svg{width:100%;height:100%;fill:none;stroke:var(--primary);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.path .hed,.role .hed{font-size:24px;line-height:1.2}
+.path .dek,.role .dek{-webkit-line-clamp:unset;display:block}
+.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:960px){.grid.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.grid.four{grid-template-columns:minmax(0,1fr)}}
+.meta .tag{color:var(--secondary-dk);font-weight:700}
+.bizhero .photo{aspect-ratio:16/9;max-height:460px}
+.lead h1.hed{font-size:clamp(34px,4.6vw,56px);line-height:1.05;letter-spacing:-.02em;margin:0}
 
 /* candy stripes: the one decorative brand element, used as trim only */
 .stripes{height:14px;background:repeating-linear-gradient(-55deg,var(--secondary) 0 9px,var(--tertiary) 9px 18px)}
@@ -636,7 +706,7 @@ def photo(s):
     src = src if src.startswith("https://") else "/" + src  # sample photos live under /assets
     inner = (f'<img src="{e(src)}" alt="" loading="lazy" referrerpolicy="no-referrer">' if s.get("image")
              else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART[s["section"]]}</svg></span>')
-    return f'<a class="photo" href="{e(s["link"])}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">{inner}</a>'
+    return f'<a class="photo" href="{e(s["link"])}"{target(s)} tabindex="-1" aria-hidden="true">{inner}</a>'
 
 
 def kicker(s):
@@ -644,20 +714,26 @@ def kicker(s):
 
 
 def meta(s):
-    return f'<div class="meta"><span>{e(s["source"])}</span><span>{ago(s["date"])}</span></div>'
+    by = f'By {e(s["source"])} · <span class="tag">Community</span>' if s.get("community") else e(s["source"])
+    return f'<div class="meta"><span>{by}</span><span>{ago(s["date"])}</span></div>'
 
 
 def share(cfg, s, read=False):
     url = page_url(cfg, s)
     out = (f'<a class="btn fb" href="{e(fb_share(url))}" target="_blank" rel="noopener">{FB_ICON}Share</a>'
            f'<button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button>')
-    if read:
-        out += f'<a class="textbtn" href="{e(s["link"])}" target="_blank" rel="noopener">Read at {e(s["source"])}</a>'
+    if read and not (s.get("community") and "/s/" in s["link"]):
+        where = "Read more" if s.get("community") else f"Read at {e(s['source'])}"
+        out += f'<a class="textbtn" href="{e(s["link"])}" target="_blank" rel="noopener">{where}</a>'
     return f'<div class="share">{out}</div>'
 
 
+def target(s):
+    return "" if s.get("community") and "/s/" in s["link"] else ' target="_blank" rel="noopener"'
+
+
 def hed(s, tag="h3"):
-    return f'<{tag} class="hed"><a href="{e(s["link"])}" target="_blank" rel="noopener">{e(s["title"])}</a></{tag}>'
+    return f'<{tag} class="hed"><a href="{e(s["link"])}"{target(s)}>{e(s["title"])}</a></{tag}>'
 
 
 def lead(cfg, s):
@@ -686,7 +762,8 @@ def masthead(cfg, site, stories):
 <span class="caps muted">Free · Updated every 2 hours</span></div>
 </div>
 <div class="wrap strip"><span class="caps">Good news for all seasons · Mansfield &amp; Richland County, Ohio</span>
-<nav class="caps"><a href="#subscribe">Subscribe</a><a href="#submit">Submit news</a></nav></div>
+<nav class="caps"><a href="{e(site)}/businesses.html">Businesses</a><a href="{e(site)}/rules.html">Join the team</a>
+<a href="{e(site)}/#subscribe">Subscribe</a><a href="{e(site)}/submit.html">Submit news</a></nav></div>
 </header>"""
 
 
@@ -701,14 +778,19 @@ def memories(cfg):
     return f"""<section class="wrap" aria-labelledby="mem-h"><div class="candy"><div class="candy-in memories">
 <div class="greet" id="mem-h"><span class="script">Greetings from</span><span class="retro">Mansfield</span></div>
 <div class="postcards">{cards}</div>
-<p>Postcards and snapshots from around town. Got an old photo in a shoebox? <a class="link" href="#submit">Send it in</a></p>
+<p>Postcards and snapshots from around town. Got an old photo in a shoebox? <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/submit.html">Send it in</a></p>
 </div></div></section>"""
 
 
+def biz_url(cfg, b):
+    return f"{cfg['site_url'].rstrip('/')}/b/{b['slug']}.html"
+
+
 def civic(cfg, businesses):
-    shops = "".join(f"""<div class="shop"><span class="caps kicker">{e(b.get('neighborhood', ''))}</span><h3 class="hed">{e(b['name'])}</h3><p>{e(b['what'])}</p>
-<div class="share"><a class="btn fb" href="{e(fb_share(b['link']))}" target="_blank" rel="noopener">{FB_ICON}Share</a>
-<a class="textbtn" href="{e(b['link'])}" target="_blank" rel="noopener">Visit</a></div></div>""" for b in businesses[:3])
+    site = cfg["site_url"].rstrip("/")
+    shops = "".join(f"""<div class="shop"><span class="caps kicker">{e(b.get('neighborhood', ''))}</span><h3 class="hed"><a href="{e(biz_url(cfg, b))}">{e(b['name'])}</a></h3><p>{e(b['what'])}</p>
+<div class="share"><a class="btn fb" href="{e(fb_share(biz_url(cfg, b)))}" target="_blank" rel="noopener">{FB_ICON}Share</a>
+<a class="textbtn" href="{e(biz_url(cfg, b))}">See their page</a></div></div>""" for b in businesses[:3])
     return f"""<section class="wrap civic">
 <div class="box" id="vote"><span class="caps kicker">Election Day · Tuesday, Nov. 3, 2026</span><h2 class="hed">Your vote, made easy</h2>
 <ol class="steps">
@@ -717,15 +799,15 @@ def civic(cfg, businesses):
 <li><span class="n">3</span><span>Bring a photo ID: an Ohio driver's license or state ID, a U.S. passport, or a military ID.</span></li>
 </ol></div>
 <div id="shops"><h2 class="label">Shop local</h2><div class="shoplist">{shops}</div>
-<p class="note">Free spotlights for Richland County businesses. Email {e(cfg['submit_email'])}.</p></div>
+<p class="note">Free spotlights for Richland County businesses. <a class="link" href="{e(site)}/businesses.html">See all</a> · <a class="link" href="{e(site)}/submit.html#spotlight">Get yours</a></p></div>
 </section>"""
 
 
 def submit_band(cfg, site):
     return f"""<section class="wrap" id="submit"><div class="candy"><div class="candy-in submit">
 <div><span class="script">Hey neighbor!</span><h2 class="retro sm">Got good news?</h2>
-<p>Ribbon cuttings, 100th birthdays, block parties, garage sales and kids doing great things. Send it to <b>{e(cfg['submit_email'])}</b>.</p></div>
-<div class="share" id="subscribe"><a class="btn solid" href="{e(site)}/feed.xml" target="_blank" rel="noopener">Subscribe by RSS</a></div>
+<p>Ribbon cuttings, 100th birthdays, block parties, garage sales and kids doing great things. Neighbors, students, shops and mentors all post here.</p></div>
+<div class="share" id="subscribe"><a class="btn solid" href="{e(site)}/submit.html">Submit good news</a><a class="btn" href="{e(site)}/feed.xml" target="_blank" rel="noopener">Subscribe by RSS</a></div>
 </div></div></section>"""
 
 
@@ -790,7 +872,7 @@ def render_index(cfg, stories, businesses, preview):
 <nav class="sections" aria-label="Sections"><div class="wrap">{tabs}</div></nav>
 <main>{note}{front}
 <section class="wrap latest" id="latest"><h2 class="label">More good news</h2>
-<div class="grid">{grid}<p class="empty" hidden>Nothing here this week yet. Know a story? Email {e(cfg['submit_email'])}.</p></div>
+<div class="grid">{grid}<p class="empty" hidden>Nothing here this week yet. Know a story? <a class="link" href="{e(site)}/submit.html">Submit it</a></p></div>
 <div class="more-row"><button class="btn" type="button" id="more" hidden>Show more stories</button></div></section>
 {memories(cfg)}
 {civic(cfg, businesses)}
@@ -801,6 +883,136 @@ def render_index(cfg, stories, businesses, preview):
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 {SCRIPT}"""
+
+
+def shell(cfg, title, desc, url, inner, stories, image=None):
+    site = cfg["site_url"].rstrip("/")
+    body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
+{inner}<div class="stripes" aria-hidden="true"></div></main>{footer(cfg)}</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>"""
+    return ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
+            f"{head(cfg, title, desc, url, image)}</head><body>{body}{SCRIPT}</body></html>")
+
+
+def form_link(cfg, key, subject):
+    return cfg.get(key) or f"mailto:{cfg['submit_email']}?subject=" + urllib.parse.quote(subject)
+
+
+def page_title(script, title, intro):
+    return (f'<section class="wrap pagehead"><span class="script">{script}</span><h1 class="retro sm">{title}</h1>'
+            f'<p class="intro">{intro}</p></section>')
+
+
+def render_submit(cfg, stories):
+    site = cfg["site_url"].rstrip("/")
+    story = form_link(cfg, "submit_form", "Good news for Sunny Mansfield")
+    join = form_link(cfg, "join_form", "I want to join the Sunny Mansfield team")
+    paths = [
+        ("good", "Share good news", "A ribbon cutting, a 100th birthday, a team win, a garage sale, a neighbor who helps. "
+         "Tell us in a few lines and add a photo.", story, "Submit a story", "submit"),
+        ("biz", "Spotlight your business", "Free for Richland County businesses. You get your own page on Sunny Mansfield "
+         "with your photo, your story and a button people can share.", story, "Get a spotlight", "spotlight"),
+        ("research", "Join the team", "Aspiring journalists, marketers, students, mentors and motivators. Get verified and "
+         "your posts go live on their own.", f"{site}/rules.html", "See how it works", "join"),
+    ]
+    cards = "".join(f"""<article class="card path" id="{anchor}"><span class="art sm"><svg viewBox="0 0 100 100" aria-hidden="true">{ART[art]}</svg></span>
+<h2 class="hed">{title}</h2><p class="dek">{text}</p><div class="share"><a class="btn solid" href="{e(href)}"{'' if href.startswith(site) else ' target="_blank" rel="noopener"'}>{cta}</a></div></article>"""
+                    for art, title, text, href, cta, anchor in paths)
+    inner = f"""{page_title("Hey neighbor!", "Got good news?", "Sunny Mansfield is written by the people who live here. Pick what you want to share. It takes about two minutes.")}
+<section class="wrap latest"><div class="grid">{cards}</div></section>
+<section class="wrap civic"><div class="box"><span class="caps kicker">What happens next</span><h2 class="hed">From your phone to the front page</h2>
+<ol class="steps">
+<li><span class="n">1</span><span>You fill out the short form. Sign in with Google so we know a real person sent it.</span></li>
+<li><span class="n">2</span><span><b>Verified contributors</b> go live on their own within 2 hours. Everyone else is checked by an editor first, usually within a day.</span></li>
+<li><span class="n">3</span><span>Your story gets its own page with your name on it and a Share button, so friends and family can pass it along on Facebook.</span></li>
+</ol></div>
+<div class="box"><span class="caps kicker">Before you send</span><h2 class="hed">Three quick rules</h2>
+<ol class="steps">
+<li><span class="n">1</span><span>Keep it true, kind and local to Richland County.</span></li>
+<li><span class="n">2</span><span>Use your own photos, or ones you have permission to share. Ask before posting people, and a parent for kids.</span></li>
+<li><span class="n">3</span><span>No attacks, gossip or campaigning. <a class="link" href="{e(site)}/rules.html">All the rules</a></span></li>
+</ol></div></section>"""
+    return shell(cfg, f"Submit good news · {cfg['site_name']}", "Share good news, spotlight your business, or join the team.",
+                 f"{site}/submit.html", inner, stories)
+
+
+def render_rules(cfg, stories):
+    site = cfg["site_url"].rstrip("/")
+    join = form_link(cfg, "join_form", "I want to join the Sunny Mansfield team")
+    rules = [
+        ("Keep it true.", "Real people, real places and real events. If you didn't see it yourself, link to where it came from."),
+        ("Keep it kind.", "We celebrate. No put-downs, gossip, rumors or call-outs, even when someone deserves one."),
+        ("Keep it local.", "Mansfield, Ontario, Lexington, Shelby, Bellville, Butler, Lucas, Plymouth and everywhere in Richland County."),
+        ("Your words, your photos.", "Write it yourself and use photos you took or have permission to share. Never copy a whole article."),
+        ("Ask before you post people.", "Get an OK from anyone pictured or named, and a parent or guardian's OK for anyone under 18."),
+        ("Civic, not political.", "Voting dates, forums and how-to are welcome. Endorsements, attack posts and campaign ads are not."),
+        ("Honest business.", "Spotlights are free, one a month per business. No fake reviews, fake deals or pay-to-win."),
+        ("Editors have the last word.", "We may trim for length, fix spelling, or decline a post. We'll fix mistakes fast: just tell us."),
+    ]
+    rule_items = "".join(f'<li><span class="n">{i}</span><span><b>{a}</b> {b}</span></li>' for i, (a, b) in enumerate(rules, 1))
+    roles = [
+        ("good", "Community editors", "Review new posts, pick the lead story and keep the paper sunny. A few minutes a day."),
+        ("research", "Student reporters", "Aspiring journalists in high school or college. Real bylines for your portfolio and "
+         "college applications, with a mentor to help."),
+        ("biz", "Business correspondents", "Marketers and shop owners who tell the stories of other local businesses, not just their own."),
+        ("seniors", "Mentors and motivators", "Teachers, coaches, pastors and leaders who share wins and help new writers grow."),
+    ]
+    role_cards = "".join(f"""<article class="card role"><span class="art sm"><svg viewBox="0 0 100 100" aria-hidden="true">{ART[a]}</svg></span>
+<h3 class="hed">{t}</h3><p class="dek">{d}</p></article>""" for a, t, d in roles)
+    inner = f"""{page_title("Good news, by neighbors", "Join the team", "Sunny Mansfield is a free, open paper for the good things happening around Richland County. Anyone can send a story. Verified contributors publish directly.")}
+<section class="wrap latest"><h2 class="label">Who we're looking for</h2><div class="grid four">{role_cards}</div></section>
+<section class="wrap civic">
+<div class="box" id="verify"><span class="caps kicker">Get verified</span><h2 class="hed">How it works</h2>
+<ol class="steps">
+<li><span class="n">1</span><span><b>Apply.</b> A two-minute form: your name, your town, and what you'd like to cover.</span></li>
+<li><span class="n">2</span><span><b>Quick check.</b> An editor confirms you're a real person with a Richland County connection. Under 18? We'll need a parent or guardian's OK.</span></li>
+<li><span class="n">3</span><span><b>Post freely.</b> Once verified, your posts go live on their own within 2 hours, with your name on them.</span></li>
+</ol>
+<div class="share"><a class="btn solid" href="{e(join)}" target="_blank" rel="noopener">Apply to join</a><a class="textbtn" href="{e(site)}/submit.html">Or just send a story</a></div></div>
+<div class="box" id="rules"><span class="caps kicker">The Sunny rules</span><h2 class="hed">Eight rules, one idea: lift people up</h2>
+<ol class="steps">{rule_items}</ol>
+<p class="note">Break the rules and your post comes down. Break them twice and verification is removed.</p></div>
+</section>"""
+    return shell(cfg, f"Join the team · {cfg['site_name']}", "Become a verified contributor: editors, student reporters, business correspondents, mentors.",
+                 f"{site}/rules.html", inner, stories)
+
+
+def biz_card(cfg, b):
+    img = (f'<img src="{e(b["image"])}" alt="" loading="lazy" referrerpolicy="no-referrer">' if b.get("image")
+           else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["biz"]}</svg></span>')
+    return (f'<article class="card"><a class="photo" href="{e(biz_url(cfg, b))}" tabindex="-1" aria-hidden="true">{img}</a>'
+            f'<span class="caps kicker">{e(b.get("neighborhood") or "Richland County")}</span>'
+            f'<h3 class="hed"><a href="{e(biz_url(cfg, b))}">{e(b["name"])}</a></h3><p class="dek">{e(b["what"])}</p>'
+            f'<div class="share"><a class="btn fb" href="{e(fb_share(biz_url(cfg, b)))}" target="_blank" rel="noopener">{FB_ICON}Share</a>'
+            f'<a class="textbtn" href="{e(biz_url(cfg, b))}">See their page</a></div></article>')
+
+
+def render_businesses(cfg, businesses, stories):
+    site = cfg["site_url"].rstrip("/")
+    cards = "".join(biz_card(cfg, b) for b in businesses)
+    inner = f"""{page_title("Shop local", "Business spotlights", "Every Richland County business can have a free page here. Share your favorites, and tell them you saw them on Sunny Mansfield.")}
+<section class="wrap latest"><div class="grid">{cards}</div>
+<div class="more-row"><a class="btn solid" href="{e(site)}/submit.html#spotlight">Spotlight your business</a></div></section>"""
+    return shell(cfg, f"Business spotlights · {cfg['site_name']}", "Free spotlights for Richland County businesses.",
+                 f"{site}/businesses.html", inner, stories)
+
+
+def render_business(cfg, b, businesses, stories):
+    site = cfg["site_url"].rstrip("/")
+    img = (f'<span class="photo"><img src="{e(b["image"])}" alt="{e(b["name"])}" referrerpolicy="no-referrer"></span>'
+           if b.get("image") else f'<span class="photo"><span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["biz"]}</svg></span></span>')
+    visit = f'<a class="textbtn" href="{e(b["link"])}" target="_blank" rel="noopener">Visit their website</a>' if b.get("link") else ""
+    by = f'<div class="meta"><span>Spotlight by {e(b["by"])}</span></div>' if b.get("by") else ""
+    others = "".join(biz_card(cfg, o) for o in [o for o in businesses if o is not b][:3])
+    inner = f"""<section class="wrap front" style="grid-template-columns:minmax(0,1fr)"><article class="lead bizhero">{img}
+<span class="caps kicker">Business spotlight · {e(b.get("neighborhood") or "Richland County")}</span><h1 class="hed">{e(b["name"])}</h1>
+<p class="dek">{e(b["what"])}</p>{by}
+<div class="share"><a class="btn fb" href="{e(fb_share(biz_url(cfg, b)))}" target="_blank" rel="noopener">{FB_ICON}Share this business</a>{visit}</div></article></section>
+<section class="wrap latest">{f'<h2 class="label">More local businesses</h2><div class="grid">{others}</div>' if others else ""}
+<div class="more-row"><a class="btn" href="{e(site)}/businesses.html">See all businesses</a></div></section>"""
+    image = b["image"] if (b.get("image") or "").startswith("https://") else None
+    return shell(cfg, f"{b['name']} · {cfg['site_name']}", b["what"], biz_url(cfg, b), inner, stories, image)
 
 
 def render_story_page(cfg, s, stories):
@@ -819,6 +1031,13 @@ def render_story_page(cfg, s, stories):
             f"{head(cfg, s['title'], desc, page_url(cfg, s), image)}</head><body>{body}{SCRIPT}</body></html>")
 
 
+def merge_community(cfg, stories, community):
+    for s in community:
+        if not s["link"]:
+            s["link"] = page_url(cfg, s)  # no outside article: the story page is the article
+    return sorted(stories + community, key=lambda s: s["date"], reverse=True)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", action="store_true", help="use sample_stories.json instead of live feeds")
@@ -831,6 +1050,13 @@ def main():
     rebase = lambda text: re.sub(r'(["(])/(assets|brand)/', rf"\1{base}/\2/", text)
     businesses = json.loads((HERE / "businesses.json").read_text())
     stories = collect(cfg, args.sample)
+    community, spotlights = load_submissions(cfg, args.sample)
+    stories = merge_community(cfg, stories, community)
+    # Newest spotlights first; the example businesses only fill in until real ones arrive.
+    real = list(reversed(spotlights)) + [b for b in businesses if not b.get("sample")]
+    businesses = real + [b for b in businesses if b.get("sample")][:max(0, 3 - len(real))]
+    for b in businesses:
+        b.setdefault("slug", slug(b["name"]))
     out = Path(args.out)
     (out / "s").mkdir(parents=True, exist_ok=True)
     page = render_index(cfg, stories, businesses, args.sample)
@@ -851,6 +1077,12 @@ def main():
     for s in stories:
         (out / "s" / f"{s['id']}.html").write_text(rebase(render_story_page(cfg, s, stories)))
     (out / "feed.xml").write_text(render_feed(cfg, stories))
+    (out / "b").mkdir(exist_ok=True)
+    for b in businesses:
+        (out / "b" / f"{b['slug']}.html").write_text(rebase(render_business(cfg, b, businesses, stories)))
+    (out / "businesses.html").write_text(rebase(render_businesses(cfg, businesses, stories)))
+    (out / "submit.html").write_text(rebase(render_submit(cfg, stories)))
+    (out / "rules.html").write_text(rebase(render_rules(cfg, stories)))
     print(f"Built {len(stories)} stories -> {out}", file=sys.stderr)
 
 

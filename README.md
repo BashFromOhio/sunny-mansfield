@@ -59,3 +59,10 @@ SIL Open Font License). Regenerate with `python3 tools/make_logo.py <fonts folde
 - Serial position: the lead story comes first and the "Got good news?" call to action comes last.
 - Tesler's law: the site does the work (auto-loading, filtering, prefilled Facebook posts) so readers just tap Share.
 - Postel's law: feed parsing tolerates messy feeds and missing fields; links like #Seniors or #seniors both work.
+
+## Community posts, business pages and editors
+
+`submit.html`, `rules.html`, `businesses.html` and one page per business under `b/` are built every run.
+Posts come from a Google Form whose answers land in a Google Sheet. Verified people's posts publish on
+their own; everyone else's wait for an editor to type `yes`. See [FORMS.md](FORMS.md) for the setup.
+Until the form links are in `config.json`, the buttons open an email to `submit_email`.

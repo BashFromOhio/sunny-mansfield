@@ -36,5 +36,8 @@
       "url": "https://www.bing.com/news/search?q=Mansfield+Ohio&format=rss"
     }
   ],
-  "postcards": []
+  "postcards": [],
+  "submit_form": "",
+  "join_form": "",
+  "submissions_csv": ""
 }
