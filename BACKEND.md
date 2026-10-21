@@ -34,6 +34,15 @@ The anon key is meant to be public. Security comes from the rules in `schema.sql
 
 Both values go in `config.json` as `supabase_url` and `supabase_anon_key`. The forms switch on with the next build.
 
+## 5. Give editors a password
+
+Supabase's free email only sends about 2 sign-in emails an hour, so editors and verified contributors sign in with a password instead.
+
+1. In Supabase, open **Authentication → Users** and click **Add user → Create new user**.
+2. Type their email and a password, leave **Auto Confirm User** checked, and click **Create user**.
+3. For an editor, also add their email to the admins list (step 2). For a verified contributor, add them on the admin page under **Verified people**.
+4. Give them the password. After signing in, they can change it on the admin page with **Set password**.
+
 ## How it works day to day
 
 - **Waiting**: new posts. Choose **Approve** or **Reject**. **Approve and verify sender** also adds the sender to the verified list.

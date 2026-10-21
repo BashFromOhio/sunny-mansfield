@@ -648,6 +648,8 @@ input[type=file]{font:400 14px/1.4 var(--sans)}
 .thanks .script{font-size:40px;color:var(--secondary)}
 .admin{padding-block:0 64px;display:grid;gap:24px}
 .admin .box{max-width:560px;justify-self:center;width:100%}
+.logform{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px}
+@media (max-width:600px){.logform{grid-template-columns:minmax(0,1fr)}}
 .deskbar{display:grid;gap:8px;margin-bottom:16px}
 .qtabs{display:flex;flex-wrap:wrap;gap:0 8px}
 .queue{display:grid;gap:16px}
@@ -1177,10 +1179,12 @@ def sunny_form(cfg, fid, section, fields, button, title_tpl="", signin=False):
     sign = ""
     if signin:
         sign = """<div class="signin fld wide"><span class="caps">Verified contributor?</span>
-<p class="hint" data-out>Sign in with your email and your posts go live on their own.</p>
+<p class="hint" data-out>Sign in with the email and password your editor gave you, and your posts go live on their own.</p>
 <p class="hint" data-in hidden>Signed in as <b data-who></b>. <button class="textbtn" type="button" data-signout>Sign out</button></p>
-<div class="row" data-out><input type="email" placeholder="you@example.com" data-signin-email aria-label="Email to sign in">
-<button class="btn sm" type="button" data-signin>Email me a sign-in link</button></div></div>"""
+<div class="row" data-out><input type="email" placeholder="you@example.com" data-signin-email aria-label="Email to sign in" autocomplete="username">
+<input type="password" placeholder="password" data-signin-pass aria-label="Password" autocomplete="current-password">
+<button class="btn sm" type="button" data-signin>Sign in</button></div>
+<p class="hint" data-out>No password? <button class="textbtn" type="button" data-signin-link>Email me a sign-in link</button></p></div>"""
     closed = "" if on else '<p class="formnote">Submissions open soon. Until then, email <b>' + e(cfg["submit_email"]) + "</b>.</p>"
     return f"""<form class="sunny" id="{fid}" data-section="{e(section)}" data-title="{e(title_tpl)}" novalidate>
 {sign}{"".join(fields)}
@@ -1205,10 +1209,13 @@ function syncSign(){{document.querySelectorAll('[data-out]').forEach(x=>x.hidden
 sb.auth.getSession().then(r=>{{who=r.data.session?.user?.email||null;syncSign()}});
 sb.auth.onAuthStateChange((_,s)=>{{who=s?.user?.email||null;syncSign()}});
 document.addEventListener('click',async ev=>{{
- const b=ev.target.closest('[data-signin]');if(b){{const box=b.closest('.signin');const em=box.querySelector('[data-signin-email]').value.trim();const msg=box.querySelector('[data-out].hint');
-  if(!/^\S+@\S+\.\S+$/.test(em)){{msg.textContent='Type your email first.';return}}b.disabled=true;
-  const {{error}}=await sb.auth.signInWithOtp({{email:em,options:{{emailRedirectTo:location.href.split('#')[0]}}}});b.disabled=false;
-  msg.textContent=error?'Could not send the link: '+error.message:'Check your email for the sign-in link, then come back here.';return}}
+ const b=ev.target.closest('[data-signin],[data-signin-link]');if(b){{const box=b.closest('.signin');const em=box.querySelector('[data-signin-email]').value.trim();const msg=box.querySelector('[data-out].hint');
+  if(!/^\S+@\S+\.\S+$/.test(em)){{msg.textContent='Type your email first.';return}}b.disabled=true;let error;
+  if(b.hasAttribute('data-signin')){{const pw=box.querySelector('[data-signin-pass]').value;if(!pw){{msg.textContent='Type your password, or use the email link.';b.disabled=false;return}}
+   ({{error}}=await sb.auth.signInWithPassword({{email:em,password:pw}}));msg.textContent=error?'Could not sign in: '+error.message:''}}
+  else{{({{error}}=await sb.auth.signInWithOtp({{email:em,options:{{emailRedirectTo:location.href.split('#')[0],shouldCreateUser:false}}}}));
+   msg.textContent=error?'Could not send the link: '+error.message:'Check your email for the sign-in link, then come back here.'}}
+  b.disabled=false;return}}
  if(ev.target.closest('[data-signout]')){{await sb.auth.signOut();return}}
  const a=ev.target.closest('[data-again]');if(a){{const t=a.closest('.thanks');t.hidden=true;t.previousElementSibling.hidden=false;return}}}});
 function fixUrls(f){{f.querySelectorAll('[data-url]').forEach(x=>{{const v=x.value.trim();if(v&&!/^https?:\/\//i.test(v))x.value='https://'+v.replace(/^\/+/,'')}})}}
@@ -1451,9 +1458,12 @@ def render_admin(cfg, stories):
     inner = f"""{page_title("Editors only", "Review queue", "Approve posts to put them on the site. Approved posts appear within 30 minutes.")}
 <section class="wrap admin">
 <div class="box" id="login"><span class="caps kicker">Sign in</span><h2 class="hed">Editor sign-in</h2>
-<p class="hint">We'll email you a one-tap sign-in link. Only emails on the admin list can review posts.</p>
-<div class="row"><input type="email" id="login-email" placeholder="you@example.com" aria-label="Your email">
-<button class="btn solid" type="button" id="login-btn">Email me a link</button></div><p class="formmsg" id="login-msg"></p></div>
+<p class="hint">Use the email and password set up for you in Supabase. Only emails on the admin list can review posts.</p>
+<form class="logform" id="login-form"><input type="email" id="login-email" placeholder="you@example.com" aria-label="Your email" autocomplete="username" required>
+<input type="password" id="login-pass" placeholder="password" aria-label="Password" autocomplete="current-password">
+<button class="btn solid" type="submit" id="login-btn">Sign in</button></form>
+<p class="hint">No password yet? <button class="textbtn" type="button" id="login-link">Email me a sign-in link</button></p>
+<p class="formmsg" id="login-msg"></p></div>
 <div id="desk" hidden>
 <div class="deskbar"><nav class="sections" aria-label="Queue"><div class="qtabs">
 <button class="tab" type="button" data-q="pending">Waiting <span class="n"></span></button>
@@ -1462,7 +1472,9 @@ def render_admin(cfg, stories):
 <button class="tab" type="button" data-q="approved">Approved</button>
 <button class="tab" type="button" data-q="rejected">Rejected</button>
 <button class="tab" type="button" data-q="verified">Verified people</button></div></nav>
-<p class="hint">Signed in as <b id="me"></b>. <button class="textbtn" type="button" id="logout">Sign out</button></p></div>
+<div class="row"><p class="hint">Signed in as <b id="me"></b>. <button class="textbtn" type="button" id="logout">Sign out</button></p>
+<input type="password" id="pw-new" placeholder="new password" aria-label="New password" autocomplete="new-password" style="flex:0 1 200px">
+<button class="btn sm" type="button" id="pw-btn">Set password</button></div></div>
 <div id="addv" class="row" hidden><input type="email" id="v-email" placeholder="email to verify" aria-label="Email to verify"><input id="v-name" placeholder="name" aria-label="Name">
 <button class="btn sm solid" type="button" id="v-add">Add verified person</button></div>
 <div id="list" class="queue"></div></div>
@@ -1472,11 +1484,17 @@ def render_admin(cfg, stories):
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));
 const SPECIAL=['Join the team','Advertise'];let me=null,q='pending';
 const say=t=>{{$('desk-msg').textContent=t}};
-$('login-btn').onclick=async()=>{{const em=$('login-email').value.trim();if(!em)return;
- const {{error}}=await sb.auth.signInWithOtp({{email:em,options:{{emailRedirectTo:location.href.split('#')[0]}}}});
+$('login-form').onsubmit=async ev=>{{ev.preventDefault();const em=$('login-email').value.trim(),pw=$('login-pass').value;
+ if(!em||!pw){{$('login-msg').textContent='Type your email and password.';return}}$('login-btn').disabled=true;
+ const {{data,error}}=await sb.auth.signInWithPassword({{email:em,password:pw}});$('login-btn').disabled=false;
+ if(error){{$('login-msg').textContent='Could not sign in: '+error.message;return}}$('login-msg').textContent='';start(data.session)}};
+$('login-link').onclick=async()=>{{const em=$('login-email').value.trim();if(!em){{$('login-msg').textContent='Type your email first.';return}}
+ const {{error}}=await sb.auth.signInWithOtp({{email:em,options:{{emailRedirectTo:location.href.split('#')[0],shouldCreateUser:false}}}});
  $('login-msg').textContent=error?'Could not send: '+error.message:'Check your email for the sign-in link.'}};
+$('pw-btn').onclick=async()=>{{const pw=$('pw-new').value;if(pw.length<8){{say('Use at least 8 characters.');return}}
+ const {{error}}=await sb.auth.updateUser({{password:pw}});$('pw-new').value='';say(error?'Could not change it: '+error.message:'Password saved. Use it to sign in from now on.')}};
 $('logout').onclick=()=>sb.auth.signOut().then(()=>location.reload());
-async function start(s){{if(!s){{$('login').hidden=false;$('desk').hidden=true;return}}
+async function start(s){{if(me&&s&&s.user.email===me)return;if(!s){{$('login').hidden=false;$('desk').hidden=true;return}}
  me=s.user.email;const {{data}}=await sb.from('admins').select('email').limit(1);
  if(!data||!data.length){{$('login').hidden=false;$('login-msg').textContent=me+' is not on the admin list.';return}}
  $('login').hidden=true;$('desk').hidden=false;$('me').textContent=me;load()}}
