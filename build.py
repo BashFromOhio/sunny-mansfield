@@ -1227,7 +1227,7 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
    if(file&&file.size&&!f.querySelector('[name=photo]').closest('[hidden]')){{
     if(file.size>6*1024*1024)throw new Error('That photo is over 6 MB. Try a smaller one.');
     msg.textContent='Uploading photo…';const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
-    const path=new Date().getFullYear()+'/'+crypto.randomUUID()+'.'+ext;
+    const rid=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);const path=new Date().getFullYear()+'/'+rid+'.'+ext;
     const up=await sb.storage.from('photos').upload(path,file,{{contentType:file.type}});if(up.error)throw up.error;
     row.photo_url=sb.storage.from('photos').getPublicUrl(path).data.publicUrl}}
    const {{error}}=await sb.from('submissions').insert(row);if(error)throw error;
