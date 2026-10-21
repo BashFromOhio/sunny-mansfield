@@ -734,7 +734,8 @@ document.addEventListener('click',ev=>{
 
 def render_index(cfg, stories, businesses, preview):
     site = cfg["site_url"].rstrip("/")
-    news = [s for s in stories if s["section"] != "life"]
+    # The front page leads with the newest stories that have a photo.
+    news = sorted((s for s in stories if s["section"] != "life"), key=lambda s: not s.get("image"))
     top, also = (news[0], news[1:5]) if news else (None, [])
     front_ids = {s["id"] for s in ([top] if top else []) + also}
     counts = {k: sum(1 for s in stories if s["section"] == k) for k, _ in SECTIONS}
