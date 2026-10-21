@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Your Business Here",
+    "what": "Example spotlight. Replace with a real local business: who they are, what they make, and why people love them.",
+    "neighborhood": "Downtown Mansfield",
+    "link": "https://example.com",
+    "sample": true
+  },
+  {
+    "name": "Family Diner (example)",
+    "what": "Example spotlight. Breakfast all day, the same booth regulars for 30 years, and pie worth the drive.",
+    "neighborhood": "Ontario",
+    "link": "https://example.com",
+    "sample": true
+  },
+  {
+    "name": "Corner Bike Shop (example)",
+    "what": "Example spotlight. Tune-ups, trail tips for the B&O Bike Trail, and free air for anyone who rolls in.",
+    "neighborhood": "Lexington",
+    "link": "https://example.com",
+    "sample": true
+  }
+]
