@@ -269,8 +269,20 @@ def bing_photo(s):
 
 
 # Columns of the "Publish" tab in the submissions sheet (see FORMS.md). Emails never reach this tab.
-SUBMIT_COLS = ["when", "section", "title", "summary", "photo", "link", "name", "role", "business", "town"]
-SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "business spotlight": "spotlight"}
+SUBMIT_COLS = ["when", "section", "title", "summary", "photo", "link", "name", "role", "business", "town",
+               "event_date", "price", "contact"]
+SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "business spotlight": "spotlight",
+                    "event flyer": "flyer", "buy & sell": "market", "buy and sell": "market"}
+LISTING_DAYS = 30  # flyers without a date and Buy & Sell listings come down after this
+
+
+def parse_day(text):
+    for fmt in ("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%y"):
+        try:
+            return datetime.strptime(text.strip(), fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    return None
 
 
 def drive_image(url):
@@ -285,6 +297,7 @@ def slug(text):
 
 def load_submissions(config, sample):
     """Approved or verified posts from the submission form, as published CSV from Google Sheets."""
+    got = {"stories": [], "spotlights": [], "flyers": [], "listings": []}
     if sample:
         text = (HERE / "sample_submissions.csv").read_text()
     elif config.get("submissions_csv"):
@@ -292,10 +305,10 @@ def load_submissions(config, sample):
             _, text = fetch(config["submissions_csv"], limit=2_000_000)
         except Exception as exc:
             note(f"Submissions sheet: skipped ({exc})")
-            return [], []
+            return got
     else:
-        return [], []
-    stories, spotlights = [], []
+        return got
+    now = datetime.now(timezone.utc)
     for row in csv.reader(io.StringIO(text)):
         row = dict(zip(SUBMIT_COLS, [c.strip() for c in row] + [""] * len(SUBMIT_COLS)))
         section = SECTION_BY_LABEL.get(row["section"].lower())
@@ -306,19 +319,35 @@ def load_submissions(config, sample):
         except ValueError:
             date = parse_date(row["when"])
         image = drive_image(row["photo"])
-        image = image if image.startswith("https://") else None
+        image = image if image.startswith("https://") or (sample and image.startswith("assets/")) else None
+        sid = hashlib.sha1(("community" + row["when"] + row["title"]).encode()).hexdigest()[:10]
+        if section == "flyer":
+            day = parse_day(row["event_date"])
+            if (day and day + timedelta(days=1) < now) or (not day and date + timedelta(days=LISTING_DAYS) < now):
+                continue  # the event is over
+            got["flyers"].append({"id": sid, "title": row["title"], "summary": row["summary"], "image": image,
+                                  "link": row["link"], "day": day, "town": row["town"], "date": date})
+            continue
+        if section == "market":
+            if date + timedelta(days=LISTING_DAYS) < now:
+                continue
+            got["listings"].append({"id": sid, "title": row["title"], "summary": row["summary"], "image": image,
+                                    "price": row["price"], "contact": row["contact"], "town": row["town"],
+                                    "name": row["name"], "date": date})
+            continue
         if section == "spotlight":
             name = row["business"] or row["title"]
-            spotlights.append({"name": name, "what": row["summary"], "neighborhood": row["town"],
+            got["spotlights"].append({"name": name, "what": row["summary"], "neighborhood": row["town"],
                                "link": row["link"] or "", "image": image, "by": row["name"], "slug": slug(name)})
             continue
-        sid = hashlib.sha1(("community" + row["when"] + row["title"]).encode()).hexdigest()[:10]
         byline = row["name"] or "A neighbor"
-        stories.append({"id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
+        got["stories"].append({"id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
                         "link": row["link"] if row["link"].startswith("http") else "", "source": byline,
                         "role": row["role"], "image": image, "date": date, "section": section, "community": True})
-    note(f"Community: {len(stories)} stories, {len(spotlights)} business spotlights")
-    return stories, spotlights
+    got["flyers"].sort(key=lambda f: f["day"] or f["date"] + timedelta(days=LISTING_DAYS))
+    got["listings"].sort(key=lambda x: x["date"], reverse=True)
+    note("Community: " + ", ".join(f"{len(v)} {k}" for k, v in got.items()))
+    return got
 
 
 def add_photos(stories, limit=80):
@@ -520,6 +549,50 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .submit p{margin:12px 0 0;max-width:56ch;color:var(--text-2)}
 #submit .candy{margin-bottom:48px}
 
+/* carousels ("shelves"): swipe on phones, arrow buttons on desktop; the rail scrolls, never the page */
+.railbox{padding-block:0 48px;min-width:0;scroll-margin-top:72px}
+.rail-head{display:flex;align-items:end;gap:16px;border-bottom:2px solid var(--border-strong);margin-bottom:20px}
+.rail-head .label{border:0;padding-bottom:10px;flex:1}
+.rail-head .link{margin-bottom:10px;background:none;border-top:0;border-left:0;border-right:0;cursor:pointer;padding:0 0 2px}
+.rail-nav{display:flex;gap:4px;margin-bottom:6px}
+.arrow{width:36px;height:36px;display:grid;place-items:center;background:var(--tertiary);border:2px solid var(--border-strong);cursor:pointer;color:var(--primary)}
+.arrow svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.5}
+.arrow:hover{background:var(--primary);color:var(--tertiary)}
+.arrow:disabled{opacity:.35;cursor:default;background:var(--tertiary);color:var(--primary)}
+@media (hover:none){.rail-nav{display:none}}
+.rail{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 48px)/3);gap:24px;overflow-x:auto;overscroll-behavior-x:contain;
+  scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:4px}
+.rail::-webkit-scrollbar{display:none}
+.rail>*{scroll-snap-align:start;min-width:0}
+@media (max-width:960px){.rail{grid-auto-columns:calc((100% - 24px)/2.15)}}
+@media (max-width:600px){.rail{grid-auto-columns:82%;gap:16px}}
+.flyers .rail{grid-auto-columns:calc((100% - 72px)/4)}
+@media (max-width:960px){.flyers .rail{grid-auto-columns:calc((100% - 24px)/2.3)}}
+@media (max-width:600px){.flyers .rail{grid-auto-columns:64%}}
+.flyer{display:grid;gap:8px;align-content:start;text-decoration:none}
+.flyer-img{display:block;aspect-ratio:4/5;background:var(--surface);border:2px solid var(--border-strong);overflow:hidden}
+.flyer-img img{width:100%;height:100%;object-fit:cover;display:block}
+.flyer .hed{font-size:18px;line-height:1.25}
+.flyer .dek{font-size:14px;line-height:1.5;margin:0}
+.flyer.add .flyer-img{display:grid;place-items:center;border-style:dashed;border-color:var(--border-medium)}
+.flyer.add .plus{font:700 64px/1 var(--serif);color:var(--secondary)}
+.flyer.add:hover .flyer-img{border-color:var(--secondary)}
+.listing{display:grid;gap:10px;align-content:start;background:var(--tertiary);border:2px solid var(--border-subtle);padding:0 0 20px}
+.listing>:not(.photo){padding-inline:20px}
+.listing .photo{aspect-ratio:4/3}
+.listing .hed{font-size:20px;line-height:1.25}
+.listing .dek{font-size:14px;line-height:1.55;margin:0}
+.price{position:absolute;left:0;bottom:0;background:var(--secondary);color:var(--tertiary);font:700 16px/1 var(--sans);padding:8px 12px}
+.ad{display:grid;gap:10px;align-content:start;text-decoration:none;background:var(--tertiary);border:2px solid var(--border-subtle);padding:0 0 20px}
+.ad>:not(.photo){padding-inline:20px}
+.ad .hed{font:700 20px/1.25 var(--serif)}
+.ad .sponsor{color:var(--text-3);padding-top:16px}
+.ad.house{background:var(--surface);border:2px dashed var(--secondary);padding:20px 0;align-content:center;text-align:center;justify-items:center}
+.ad.house .script{font-size:34px;color:var(--secondary)}
+.ad.house .sponsor{padding-top:0}
+.ad:hover{border-color:var(--border-strong)}
+.market-grid .listing{border-color:var(--border-subtle)}
+
 /* community pages */
 .pagehead{padding-block:48px 32px;text-align:center;display:grid;justify-items:center;gap:4px}
 .pagehead .retro{margin:0}
@@ -701,6 +774,10 @@ def head(cfg, title, desc, url, image=None):
 <style>{CSS}</style>"""
 
 
+def img_src(src):
+    return src if src.startswith("https://") else "/" + src  # sample photos live under /assets
+
+
 def photo(s):
     src = s.get("image") or ""
     src = src if src.startswith("https://") else "/" + src  # sample photos live under /assets
@@ -762,8 +839,9 @@ def masthead(cfg, site, stories):
 <span class="caps muted">Free · Updated every 2 hours</span></div>
 </div>
 <div class="wrap strip"><span class="caps">Good news for all seasons · Mansfield &amp; Richland County, Ohio</span>
-<nav class="caps"><a href="{e(site)}/businesses.html">Businesses</a><a href="{e(site)}/rules.html">Join the team</a>
-<a href="{e(site)}/#subscribe">Subscribe</a><a href="{e(site)}/submit.html">Submit news</a></nav></div>
+<nav class="caps"><a href="{e(site)}/#events">Events</a><a href="{e(site)}/market.html">Buy &amp; Sell</a>
+<a href="{e(site)}/businesses.html">Businesses</a><a href="{e(site)}/rules.html">Join the team</a>
+<a href="{e(site)}/advertise.html">Advertise</a><a href="{e(site)}/submit.html">Submit news</a></nav></div>
 </header>"""
 
 
@@ -825,7 +903,8 @@ const cards=[...document.querySelectorAll('.grid .card')];const empty=document.q
 const more=document.getElementById('more');const label=document.querySelector('#latest .label');
 let current='all',limit=PAGE;
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(_){return null}}
-function render(){let n=0,shown=0;
+const shelves=document.getElementById('shelves');const latest=document.getElementById('latest');
+function render(){let n=0,shown=0;if(shelves&&latest){const all=current==='all';shelves.hidden=!all;latest.hidden=all}
  cards.forEach(c=>{const match=current==='all'?!c.dataset.front:c.dataset.sec===current;n+=match;
   const on=match&&shown<limit;shown+=on;c.hidden=!on});
  if(empty)empty.hidden=n>0;if(more){more.hidden=shown>=n;more.textContent=`Show ${Math.min(PAGE,n-shown)} more stories`}}
@@ -835,7 +914,12 @@ function show(sec,scroll){sec=(sec||'').toLowerCase();const t=tabs.find(x=>x.dat
  if(scroll)document.getElementById('latest').scrollIntoView({behavior:'smooth',block:'start'})}
 tabs.forEach(t=>t.addEventListener('click',()=>{show(t.dataset.sec,true);history.replaceState(null,'','#'+t.dataset.sec)}));
 if(more)more.addEventListener('click',()=>{limit+=PAGE;render()});
-show(decodeURIComponent(location.hash.slice(1))||'all',false);
+document.querySelectorAll('[data-show]').forEach(b=>b.addEventListener('click',()=>{show(b.dataset.show,true);history.replaceState(null,'','#'+b.dataset.show)}));
+document.querySelectorAll('.railbox').forEach(box=>{const r=box.querySelector('.rail');const bs=box.querySelectorAll('.arrow');
+ const upd=()=>{bs[0].disabled=r.scrollLeft<4;bs[1].disabled=r.scrollLeft+r.clientWidth>=r.scrollWidth-4};
+ bs.forEach(b=>b.addEventListener('click',()=>r.scrollBy({left:+b.dataset.dir*r.clientWidth*.9,behavior:'smooth'})));
+ r.addEventListener('scroll',upd,{passive:true});addEventListener('resize',upd);upd()});
+const h=decodeURIComponent(location.hash.slice(1));show(tabs.some(x=>x.dataset.sec===h)?h:'all',false);
 const toast=document.getElementById('toast');let timer;
 function say(msg){if(!toast)return;toast.textContent=msg;toast.hidden=false;clearTimeout(timer);timer=setTimeout(()=>toast.hidden=true,3600)}
 function shared(){const now=new Date();const week=now.getFullYear()+'-'+Math.floor((now-new Date(now.getFullYear(),0,1))/6048e5);
@@ -850,7 +934,67 @@ document.addEventListener('click',ev=>{
 </script>"""
 
 
-def render_index(cfg, stories, businesses, preview):
+ARROWS = ('<div class="rail-nav"><button class="arrow" type="button" data-dir="-1" aria-label="Back">'
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>'
+          '<button class="arrow" type="button" data-dir="1" aria-label="Next">'
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>')
+
+
+def rail(title, items, more="", rid="", kind=""):
+    """A swipeable row of cards with arrow buttons, like a magazine shelf."""
+    head = f'<div class="rail-head"><h2 class="label">{title}</h2>{more}{ARROWS}</div>'
+    ident = f' id="{rid}"' if rid else ""
+    return (f'<section class="wrap railbox {kind}"{ident}>{head}'
+            f'<div class="rail" tabindex="0">{items}</div></section>')
+
+
+def flyer_card(f):
+    when = f["day"].strftime("%a, %b %-d") if f.get("day") else "Coming up"
+    img = (f'<img src="{e(img_src(f["image"]))}" alt="Flyer: {e(f["title"])}" loading="lazy" referrerpolicy="no-referrer">'
+           if f.get("image") else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["good"]}</svg></span>')
+    href = f["link"] or (img_src(f["image"]) if f.get("image") else "")
+    open_ = f'<a class="flyer-img" href="{e(href)}" target="_blank" rel="noopener">{img}</a>' if href else f'<span class="flyer-img">{img}</span>'
+    dek = f'<p class="dek">{e(f["summary"])}</p>' if f.get("summary") else ""
+    return (f'<article class="slide flyer">{open_}<span class="caps kicker">{e(when)}{" · " + e(f["town"]) if f.get("town") else ""}</span>'
+            f'<h3 class="hed">{e(f["title"])}</h3>{dek}</article>')
+
+
+def listing_card(x, cfg):
+    img = (f'<img src="{e(img_src(x["image"]))}" alt="" loading="lazy" referrerpolicy="no-referrer">' if x.get("image")
+           else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["sales"]}</svg></span>')
+    price = f'<span class="price">{e(x["price"])}</span>' if x.get("price") else ""
+    contact = x.get("contact") or ""
+    if re.fullmatch(r"[\w.+-]+@[\w-]+\.[\w.]+", contact):
+        how = f'<a class="textbtn" href="mailto:{e(contact)}?subject={e(urllib.parse.quote("Sunny Mansfield: " + x["title"]))}">Email seller</a>'
+    elif re.fullmatch(r"[\d\s().+-]{7,}", contact):
+        how = f'<a class="textbtn" href="tel:{e(re.sub(r"[^0-9+]", "", contact))}">Call or text {e(contact)}</a>'
+    elif contact.startswith("http"):
+        how = f'<a class="textbtn" href="{e(contact)}" target="_blank" rel="noopener">Contact seller</a>'
+    else:
+        how = f'<span class="muted">{e(contact)}</span>' if contact else ""
+    return (f'<article class="slide listing" id="l-{x["id"]}"><span class="photo">{img}{price}</span>'
+            f'<span class="caps kicker">{e(x.get("town") or "Richland County")} · {ago(x["date"])}</span>'
+            f'<h3 class="hed">{e(x["title"])}</h3><p class="dek">{e(x["summary"])}</p><div class="share">{how}</div></article>')
+
+
+def ad_card(cfg, ad=None):
+    site = cfg["site_url"].rstrip("/")
+    if ad:
+        text = f'<span class="dek">{e(ad["text"])}</span>' if ad.get("text") else ""
+        return (f'<a class="slide ad" href="{e(ad["link"])}" target="_blank" rel="noopener sponsored">'
+                f'<span class="photo"><img src="{e(ad["image"])}" alt="{e(ad["name"])}" loading="lazy"></span>'
+                f'<span class="caps sponsor">Sponsor</span><span class="hed">{e(ad["name"])}</span>'
+                f'{text}</a>')
+    return (f'<a class="slide ad house" href="{e(site)}/advertise.html"><span class="caps sponsor">Your business here</span>'
+            f'<span class="script">Shop local!</span><span class="hed">Reach thousands of neighbors who love Mansfield</span>'
+            f'<span class="btn solid sm">Advertise with us</span></a>')
+
+
+def slide(cfg, s):
+    return card(cfg, s).replace('<article class="card"', '<article class="card slide"', 1)
+
+
+def render_index(cfg, stories, businesses, flyers, listings):
     site = cfg["site_url"].rstrip("/")
     # The front page leads with the newest stories that have a photo.
     news = sorted((s for s in stories if s["section"] != "life"), key=lambda s: not s.get("image"))
@@ -866,12 +1010,32 @@ def render_index(cfg, stories, businesses, preview):
         front = (f'<section class="wrap front">{lead(cfg, top)}<aside class="also"><h2 class="label">Also today</h2>'
                  f'{"".join(brief(s) for s in also)}</aside></section>')
     grid = "".join(card(cfg, s, front=s["id"] in front_ids) for s in stories)
+    ads = cfg.get("ads") or []
+    ad_at = lambda i: ad_card(cfg, ads[i % len(ads)] if ads else None)
+    rails = []
+    for i, (k, name) in enumerate(SECTIONS):
+        items = [s for s in stories if s["section"] == k][:12]
+        if not items:
+            continue
+        slides = [slide(cfg, s) for s in items]
+        if i % 3 == 1:
+            slides.insert(min(3, len(slides)), ad_at(i))  # one sponsor spot every few shelves
+        see = f'<button class="link" type="button" data-show="{k}">See all {counts[k]}</button>'
+        rails.append(rail(e(name), "".join(slides), see, kind="sec"))
+    events = rail("Local events", "".join(flyer_card(f) for f in flyers) + (
+        f'<a class="slide flyer add" href="{e(site)}/submit.html#flyer"><span class="flyer-img"><span class="plus">+</span></span>'
+        f'<span class="hed">Post your flyer</span><span class="dek">Free for community events</span></a>'), rid="events", kind="flyers")
+    market = rail("Buy &amp; Sell", "".join(listing_card(x, cfg) for x in listings[:12]) + ad_at(0),
+                  f'<a class="link" href="{e(site)}/market.html">See all</a>', kind="market") if listings else ""
     return f"""{head(cfg, cfg['site_name'], cfg['tagline'], site + '/')}
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
 {masthead(cfg, site, stories)}
 <nav class="sections" aria-label="Sections"><div class="wrap">{tabs}</div></nav>
 <main>{note}{front}
-<section class="wrap latest" id="latest"><h2 class="label">More good news</h2>
+{events}
+<div id="shelves">{"".join(rails)}</div>
+{market}
+<section class="wrap latest" id="latest" hidden><h2 class="label">More good news</h2>
 <div class="grid">{grid}<p class="empty" hidden>Nothing here this week yet. Know a story? <a class="link" href="{e(site)}/submit.html">Submit it</a></p></div>
 <div class="more-row"><button class="btn" type="button" id="more" hidden>Show more stories</button></div></section>
 {memories(cfg)}
@@ -913,6 +1077,10 @@ def render_submit(cfg, stories):
          "Tell us in a few lines and add a photo.", story, "Submit a story", "submit"),
         ("biz", "Spotlight your business", "Free for Richland County businesses. You get your own page on Sunny Mansfield "
          "with your photo, your story and a button people can share.", story, "Get a spotlight", "spotlight"),
+        ("vote", "Post an event flyer", "Concerts, fish fries, fundraisers, festivals, church suppers. Upload your flyer and "
+         "it rides the front page carousel until the day of the event.", story, "Post a flyer", "flyer"),
+        ("sales", "Buy &amp; Sell", "List something for sale or wanted, with a price and how to reach you. Free, up for 30 days.",
+         story, "Post a listing", "sell"),
         ("research", "Join the team", "Aspiring journalists, marketers, students, mentors and motivators. Get verified and "
          "your posts go live on their own.", f"{site}/rules.html", "See how it works", "join"),
     ]
@@ -1015,6 +1183,38 @@ def render_business(cfg, b, businesses, stories):
     return shell(cfg, f"{b['name']} · {cfg['site_name']}", b["what"], biz_url(cfg, b), inner, stories, image)
 
 
+def render_market(cfg, listings, stories):
+    site = cfg["site_url"].rstrip("/")
+    ads = cfg.get("ads") or []
+    cards = "".join(listing_card(x, cfg) for x in listings) or (
+        '<p class="empty">Nothing for sale yet. Be the first!</p>')
+    inner = f"""{page_title("Neighbor to neighbor", "Buy &amp; Sell", "Furniture, bikes, baby gear, tools, crafts and yard sale finds from around Richland County. Free to post. Listings stay up for 30 days.")}
+<section class="wrap latest"><div class="more-row" style="margin:0 0 24px"><a class="btn solid" href="{e(site)}/submit.html#sell">Post something for sale</a></div>
+<div class="grid market-grid">{cards}{ad_card(cfg, ads[0] if ads else None)}</div>
+<p class="note">Meet in a public place, bring a friend, and never wire money or pay with gift cards. Sunny Mansfield doesn't handle payments or check items. Report a listing: {e(cfg['submit_email'])}</p></section>"""
+    return shell(cfg, f"Buy & Sell · {cfg['site_name']}", "Local buy and sell listings from Richland County neighbors.",
+                 f"{site}/market.html", inner, stories)
+
+
+def render_advertise(cfg, stories):
+    site = cfg["site_url"].rstrip("/")
+    ask = form_link(cfg, "advertise_form", "Advertising on Sunny Mansfield")
+    packages = [
+        ("biz", "Featured business", "Top of the Businesses page and the front page Shop local box for a month, with a photo gallery and hours.", "$25 to $50 a month"),
+        ("good", "Section sponsor", "\u201cSeniors brought to you by\u2026\u201d Your logo and link on one section shelf, every day.", "$75 to $150 a month"),
+        ("hoods", "Front page sponsor", "Your logo and link in a sponsor spot on every page of the paper.", "$250 to $500 a month"),
+        ("sales", "Boost a listing", "Pin a garage sale, event flyer or Buy &amp; Sell listing to the top for a week.", "$5 to $15"),
+    ]
+    cards = "".join(f"""<article class="card path"><span class="art sm"><svg viewBox="0 0 100 100" aria-hidden="true">{ART[a]}</svg></span>
+<span class="caps kicker">{price}</span><h2 class="hed">{t}</h2><p class="dek">{d}</p></article>""" for a, t, d, price in packages)
+    inner = f"""{page_title("Shop local!", "Advertise with us", "Put your business in front of neighbors who read, share and shop local. Every ad is labeled Sponsor, and sponsors never decide what we cover.")}
+<section class="wrap latest"><div class="grid four">{cards}</div>
+<div class="more-row"><a class="btn solid" href="{e(ask)}" target="_blank" rel="noopener">Ask about advertising</a></div>
+<p class="note" style="text-align:center">Prices are starting points for founding sponsors. Basic business spotlights and community posts are always free.</p></section>"""
+    return shell(cfg, f"Advertise · {cfg['site_name']}", "Sponsorships and featured spots on Sunny Mansfield.",
+                 f"{site}/advertise.html", inner, stories)
+
+
 def render_story_page(cfg, s, stories):
     site = cfg["site_url"].rstrip("/")
     desc = s["summary"] or f"Good news from {cfg['site_name']}"
@@ -1050,16 +1250,17 @@ def main():
     rebase = lambda text: re.sub(r'(["(])/(assets|brand)/', rf"\1{base}/\2/", text)
     businesses = json.loads((HERE / "businesses.json").read_text())
     stories = collect(cfg, args.sample)
-    community, spotlights = load_submissions(cfg, args.sample)
-    stories = merge_community(cfg, stories, community)
+    got = load_submissions(cfg, args.sample)
+    stories = merge_community(cfg, stories, got["stories"])
+    flyers, listings = got["flyers"], got["listings"]
     # Newest spotlights first; the example businesses only fill in until real ones arrive.
-    real = list(reversed(spotlights)) + [b for b in businesses if not b.get("sample")]
+    real = list(reversed(got["spotlights"])) + [b for b in businesses if not b.get("sample")]
     businesses = real + [b for b in businesses if b.get("sample")][:max(0, 3 - len(real))]
     for b in businesses:
         b.setdefault("slug", slug(b["name"]))
     out = Path(args.out)
     (out / "s").mkdir(parents=True, exist_ok=True)
-    page = render_index(cfg, stories, businesses, args.sample)
+    page = render_index(cfg, stories, businesses, flyers, listings)
     (out / "index.html").write_text(rebase(
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
@@ -1083,6 +1284,8 @@ def main():
     (out / "businesses.html").write_text(rebase(render_businesses(cfg, businesses, stories)))
     (out / "submit.html").write_text(rebase(render_submit(cfg, stories)))
     (out / "rules.html").write_text(rebase(render_rules(cfg, stories)))
+    (out / "market.html").write_text(rebase(render_market(cfg, listings, stories)))
+    (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories)))
     print(f"Built {len(stories)} stories -> {out}", file=sys.stderr)
 
 
