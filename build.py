@@ -23,6 +23,7 @@ import os
 import re
 import shutil
 import sys
+import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -137,14 +138,19 @@ def fetch_feed(feed):
         href = (link.text or link.get("href")) if link is not None else None
         desc = get("description", "summary", "encoded")
         date = get("pubDate", "published", "updated")
-        source = get("source")
-        media = get("content", "thumbnail", "enclosure")
-        image = media.get("url") if media is not None else None
+        source = get("source", "Source")
+        media = get("content", "thumbnail", "enclosure", "Image")
+        image = media.get("url") or media.text if media is not None else None
+        if image and image.startswith("http://www.bing.com/"):
+            image = "https://" + image[len("http://"):]
         if not image and desc is not None and desc.text:
             found = re.search(r'<img[^>]+src="([^"]+)"', desc.text)
             image = found.group(1) if found else None
         if title is None or not href:
             continue
+        # Bing News wraps the article in a click-tracking link; keep the real address.
+        if "bing.com/news/apiclick" in href:
+            href = urllib.parse.parse_qs(urllib.parse.urlparse(href.strip()).query).get("url", [href])[0]
         name = feed["name"]
         title_text = title.text or ""
         # Google News titles end with " - Publisher"; use that as the source.
@@ -219,7 +225,7 @@ def fetch(url, data=None, limit=400_000):
 def google_news_url(link):
     """Google News links hide the real article; ask Google for it, like its own redirect page does."""
     gid = urllib.parse.urlparse(link).path.rstrip("/").split("/")[-1]
-    _, page = fetch(f"https://news.google.com/rss/articles/{gid}")
+    _, page = fetch(f"https://news.google.com/rss/articles/{gid}", limit=5_000_000)
     sig = re.search(r'data-n-a-sg="([^"]+)"', page)
     ts = re.search(r'data-n-a-ts="([^"]+)"', page)
     if not (sig and ts):
@@ -239,6 +245,7 @@ def add_photos(stories, limit=80):
     for s in todo:
         try:
             if "news.google.com" in s["link"]:
+                time.sleep(0.5)  # be gentle with Google
                 real = google_news_url(s["link"])
                 if not real:
                     raise ValueError("google link not decoded")

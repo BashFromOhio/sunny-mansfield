@@ -8,16 +8,20 @@
   "feeds": [
     {
       "name": "Richland Source",
-      "url": "https://www.richlandsource.com/search/?f=rss&t=article&l=50&s=start_time&sd=desc"
+      "url": "https://www.richlandsource.com/feed/"
+    },
+    {
+      "name": "Richland Source",
+      "url": "https://www.richlandsource.com/feed/?paged=2"
+    },
+    {
+      "name": "Richland Source",
+      "url": "https://www.richlandsource.com/feed/?paged=3"
     },
     {
       "name": "Richland Source Obituaries",
-      "url": "https://www.richlandsource.com/search/?f=rss&t=article&c=obituaries&l=30&s=start_time&sd=desc",
+      "url": "https://www.richlandsource.com/category/obituaries/feed/",
       "section": "life"
-    },
-    {
-      "name": "Mansfield News Journal",
-      "url": "https://rssfeeds.mansfieldnewsjournal.com/mansfield/home"
     },
     {
       "name": "Google News: Mansfield Ohio",
@@ -26,6 +30,10 @@
     {
       "name": "Google News: Richland County",
       "url": "https://news.google.com/rss/search?q=%22Richland+County%22+Ohio+when:7d&hl=en-US&gl=US&ceid=US:en"
+    },
+    {
+      "name": "Bing News: Mansfield Ohio",
+      "url": "https://www.bing.com/news/search?q=Mansfield+Ohio&format=rss"
     }
   ],
   "postcards": []
