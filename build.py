@@ -1162,6 +1162,8 @@ def field(name, label, kind="text", req=False, hint="", show=None, opts=None, ex
         ctl = f'<textarea{attrs} rows="5" maxlength="2000"></textarea>'
     elif kind == "file":
         ctl = f'<input type="file" accept="image/jpeg,image/png,image/webp,image/gif"{attrs}>'
+    elif kind == "url":  # plain text so "sunnymansfield.com" is accepted; https:// is added for them
+        ctl = f'<input type="text" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="sunnymansfield.com" data-url{attrs}>'
     else:
         ctl = f'<input type="{kind}"{attrs}' + (' maxlength="200"' if kind == "text" else "") + ">"
     vis = f' data-for="{e("|".join(show))}" hidden' if show else ""
@@ -1209,10 +1211,12 @@ document.addEventListener('click',async ev=>{{
   msg.textContent=error?'Could not send the link: '+error.message:'Check your email for the sign-in link, then come back here.';return}}
  if(ev.target.closest('[data-signout]')){{await sb.auth.signOut();return}}
  const a=ev.target.closest('[data-again]');if(a){{const t=a.closest('.thanks');t.hidden=true;t.previousElementSibling.hidden=false;return}}}});
+function fixUrls(f){{f.querySelectorAll('[data-url]').forEach(x=>{{const v=x.value.trim();if(v&&!/^https?:\/\//i.test(v))x.value='https://'+v.replace(/^\/+/,'')}})}}
+document.addEventListener('focusout',ev=>{{if(ev.target.matches&&ev.target.matches('[data-url]'))fixUrls(ev.target.form)}});
 function showFor(f){{const sec=f.dataset.section||(f.section?f.section.value:'');f.querySelectorAll('[data-for]').forEach(x=>x.hidden=!x.dataset.for.split('|').includes(sec))}}
 document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListener('change',ev=>{{if(ev.target.name==='section')showFor(f)}});
  f.addEventListener('submit',async ev=>{{ev.preventDefault();const msg=f.querySelector('.formmsg');const btn=f.querySelector('[type=submit]');
-  if(!f.reportValidity())return;
+  fixUrls(f);if(!f.reportValidity())return;
   const thanks=f.nextElementSibling;
   const done=text=>{{f.reset();showFor(f);syncSign();f.hidden=true;thanks.querySelector('[data-thanks]').textContent=text;thanks.hidden=false;thanks.scrollIntoView({{behavior:'smooth',block:'center'}})}};
   if(f.hp.value){{done('Thanks!');return}}
