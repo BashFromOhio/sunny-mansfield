@@ -8,7 +8,7 @@ gid = urllib.parse.urlparse(link).path.split("/")[-1]
 n("link " + link)
 for path in ("rss/articles", "articles"):
     try:
-        final, page = build.fetch(f"https://news.google.com/{path}/{gid}")
+        final, page = build.fetch(f"https://news.google.com/{path}/{gid}", limit=5_000_000)
         n(f"{path}: final={final[:150]} len={len(page)} sg={'data-n-a-sg' in page} attrs={re.findall(r'data-n-a-[a-z]+', page)[:6]} title={re.search(r'<title>(.*?)</title>', page, re.S).group(1)[:80] if '<title>' in page else ''}")
         for m in re.findall(r'<c-wiz[^>]{0,400}', page)[:2]: n("cwiz " + m)
     except Exception as e:

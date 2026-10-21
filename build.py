@@ -219,7 +219,7 @@ def fetch(url, data=None, limit=400_000):
 def google_news_url(link):
     """Google News links hide the real article; ask Google for it, like its own redirect page does."""
     gid = urllib.parse.urlparse(link).path.rstrip("/").split("/")[-1]
-    _, page = fetch(f"https://news.google.com/rss/articles/{gid}")
+    _, page = fetch(f"https://news.google.com/rss/articles/{gid}", limit=5_000_000)
     sig = re.search(r'data-n-a-sg="([^"]+)"', page)
     ts = re.search(r'data-n-a-ts="([^"]+)"', page)
     if not (sig and ts):
