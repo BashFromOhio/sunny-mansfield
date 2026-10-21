@@ -187,7 +187,7 @@ def collect(config, sample):
         for feed in config["feeds"]:
             try:
                 got = fetch_feed(feed)
-                note(f"{feed['name']}: {len(got)} items, {sum(1 for g in got if g['image'])} with photos")
+                print(f"  {feed['name']}: {len(got)} items, {sum(1 for g in got if g['image'])} with photos", file=sys.stderr)
                 raw += got
             except Exception as exc:  # one bad feed shouldn't stop the build
                 note(f"{feed['name']}: skipped ({exc})")
