@@ -157,9 +157,12 @@ def fetch_feed(feed):
         if source is not None and source.text:
             name = source.text
             title_text = re.sub(r"\s+-\s+" + re.escape(source.text) + r"$", "", title_text)
+        summary = clean(desc.text if desc is not None else "")
+        if re.sub(r"\W+", "", summary.lower()).startswith(re.sub(r"\W+", "", clean(title_text, 200).lower())[:50]):
+            summary = ""  # Google News repeats the headline here
         items.append({
             "title": clean(title_text, 200),
-            "summary": clean(desc.text if desc is not None else ""),
+            "summary": summary,
             "link": href.strip(),
             "source": name,
             "image": image if feed.get("photos", True) and image and image.startswith("https://") else None,
@@ -201,6 +204,10 @@ def collect(config, sample):
         stories.append(s)
     if not sample:
         add_photos(stories)
+        if config.get("require_photos", True):
+            dropped = [s for s in stories if not s.get("image")]
+            stories = [s for s in stories if s.get("image")]
+            note(f"Left out {len(dropped)} stories with no photo")
     return stories
 
 
@@ -238,6 +245,27 @@ def google_news_url(link):
     return json.loads(payload[0][2])[1]
 
 
+def bing_photo(s):
+    """Some sites block robots; Bing News often has a thumbnail for the same headline."""
+    try:
+        q = urllib.parse.quote_plus(f'"{s["title"][:90]}"')
+        _, feed = fetch(f"https://www.bing.com/news/search?q={q}&format=rss")
+        norm = lambda x: re.sub(r"\W+", "", html.unescape(x).lower())
+        want = norm(s["title"])[:40]
+        for item in re.findall(r"<item>(.*?)</item>", feed, re.S):
+            title = re.search(r"<title>(.*?)</title>", item, re.S)
+            found = re.search(r"<News:Image>([^<]+)</News:Image>", item)
+            if title and found and want in norm(title.group(1)):
+                break
+        else:
+            return False  # only use a photo from the very same story
+        url = html.unescape(found.group(1)).replace("http://", "https://", 1)
+        s["image"] = re.sub(r"&pid=News.*", "", url) + "&w=800&h=450&c=14&pid=News"
+        return True
+    except Exception:
+        return False
+
+
 def add_photos(stories, limit=80):
     """Fill in missing photos from each article's own share image (og:image)."""
     todo = [s for s in stories if not s.get("image") and s.get("photos", True)][:limit]
@@ -263,11 +291,14 @@ def add_photos(stories, limit=80):
             if image.startswith("https://"):
                 s["image"] = image
         except Exception as exc:
+            if bing_photo(s):
+                STATS["bing"] = STATS.get("bing", 0) + 1
+                continue
             key = f"{urllib.parse.urlparse(s['link']).netloc}: {type(exc).__name__} {str(exc)[:60]}"
             fails[key] = fails.get(key, 0) + 1
     have = sum(1 for s in stories if s.get("image"))
     note(f"Photos: {have} of {len(stories)} stories ({len(todo)} looked up, "
-         f"{STATS.get('google_decoded', 0)} Google links decoded)")
+         f"{STATS.get('google_decoded', 0)} Google links decoded, {STATS.get('bing', 0)} photos from Bing)")
     for key, n in sorted(fails.items(), key=lambda kv: -kv[1])[:8]:
         note(f"Photo lookup failed x{n}: {key}")
 
