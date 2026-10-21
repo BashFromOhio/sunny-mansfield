@@ -1005,7 +1005,7 @@ document.querySelectorAll('.railbox').forEach(box=>{const r=box.querySelector('.
  r.addEventListener('scroll',upd,{passive:true});addEventListener('resize',upd);upd()});
 const h=decodeURIComponent(location.hash.slice(1));show(tabs.some(x=>x.dataset.sec===h)?h:'all',false);
 const about=document.getElementById('about');
-if(about){const seen=store('aboutSeen');if(!seen&&!/admin\.html/.test(location.pathname))setTimeout(()=>about.hidden=false,900);
+if(about){const seen=store('aboutSeen');if(!seen&&!/admin\.html/.test(location.pathname))setTimeout(()=>about.hidden=false,4000);
  document.addEventListener('click',ev=>{if(ev.target.closest('[data-about]')){about.hidden=false;about.querySelector('.btn').focus()}
   if(ev.target.closest('[data-about-close]')){about.hidden=true;store('aboutSeen','1')}});
  document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!about.hidden){about.hidden=true;store('aboutSeen','1')}})}
