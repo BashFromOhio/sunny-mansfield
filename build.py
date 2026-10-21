@@ -119,7 +119,7 @@ def parse_date(value):
 
 
 def fetch_feed(feed):
-    req = urllib.request.Request(feed["url"], headers={"User-Agent": "Mozilla/5.0 (good-news-bot)"})
+    req = urllib.request.Request(feed["url"], headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=30) as resp:
         root = ET.fromstring(resp.read())
     items = []
@@ -176,10 +176,10 @@ def collect(config, sample):
         for feed in config["feeds"]:
             try:
                 got = fetch_feed(feed)
-                print(f"  {feed['name']}: {len(got)} items", file=sys.stderr)
+                note(f"{feed['name']}: {len(got)} items, {sum(1 for g in got if g['image'])} with photos")
                 raw += got
             except Exception as exc:  # one bad feed shouldn't stop the build
-                print(f"  {feed['name']}: skipped ({exc})", file=sys.stderr)
+                note(f"{feed['name']}: skipped ({exc})")
     cutoff = datetime.now(timezone.utc) - timedelta(days=config.get("max_age_days", 21))
     seen, stories = set(), []
     for s in sorted(raw, key=lambda s: s["date"], reverse=True):
@@ -198,23 +198,71 @@ def collect(config, sample):
     return stories
 
 
-def add_photos(stories, limit=60):
+UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+      "Chrome/128.0 Safari/537.36")
+STATS = {}
+
+
+def note(msg):
+    """Log a line; on GitHub Actions it also shows as a notice on the run."""
+    print(("::notice::" if os.environ.get("GITHUB_ACTIONS") else "  ") + msg, file=sys.stderr)
+
+
+def fetch(url, data=None, limit=400_000):
+    req = urllib.request.Request(url, data=data, headers={"User-Agent": UA, "Accept-Language": "en-US,en"})
+    if data:
+        req.add_header("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return resp.geturl(), resp.read(limit).decode("utf-8", "ignore")
+
+
+def google_news_url(link):
+    """Google News links hide the real article; ask Google for it, like its own redirect page does."""
+    gid = urllib.parse.urlparse(link).path.rstrip("/").split("/")[-1]
+    _, page = fetch(f"https://news.google.com/rss/articles/{gid}")
+    sig = re.search(r'data-n-a-sg="([^"]+)"', page)
+    ts = re.search(r'data-n-a-ts="([^"]+)"', page)
+    if not (sig and ts):
+        return None
+    req = ["Fbv4je", json.dumps(["garturlreq", [["X", "X", ["X", "X"], None, None, 1, 1, "US:en", None, 1, None, None,
+            None, None, None, 0, 1], "X", "X", 1, [1, 1, 1], 1, 1, None, 0, 0, None, 0], gid, int(ts.group(1)), sig.group(1)])]
+    body = urllib.parse.urlencode({"f.req": json.dumps([[req]])}).encode()
+    _, text = fetch("https://news.google.com/_/DotsSplashUi/data/batchexecute", data=body)
+    payload = json.loads(text.split("\n\n")[1])
+    return json.loads(payload[0][2])[1]
+
+
+def add_photos(stories, limit=80):
     """Fill in missing photos from each article's own share image (og:image)."""
-    for s in [s for s in stories if not s.get("image") and s.get("photos", True)][:limit]:
+    todo = [s for s in stories if not s.get("image") and s.get("photos", True)][:limit]
+    fails = {}
+    for s in todo:
         try:
-            req = urllib.request.Request(s["link"], headers={"User-Agent": "Mozilla/5.0 (good-news-bot)"})
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                page = resp.read(300_000).decode("utf-8", "ignore")
-            found = (re.search(r'<meta[^>]+property="og:image"[^>]+content="([^"]+)"', page)
-                     or re.search(r'<meta[^>]+content="([^"]+)"[^>]+property="og:image"', page))
-            if found and found.group(1).startswith("https://"):
-                s["image"] = html.unescape(found.group(1))
-        except Exception:
-            pass
-
-
-
-
+            if "news.google.com" in s["link"]:
+                real = google_news_url(s["link"])
+                if not real:
+                    raise ValueError("google link not decoded")
+                s["link"] = real
+                STATS["google_decoded"] = STATS.get("google_decoded", 0) + 1
+            _, page = fetch(s["link"])
+            found = (re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)', page)
+                     or re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image', page)
+                     or re.search(r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)', page))
+            if not found:
+                raise ValueError("no og:image")
+            image = html.unescape(found.group(1))
+            if image.startswith("//"):
+                image = "https:" + image
+            if image.startswith("https://"):
+                s["image"] = image
+        except Exception as exc:
+            key = f"{urllib.parse.urlparse(s['link']).netloc}: {type(exc).__name__} {str(exc)[:60]}"
+            fails[key] = fails.get(key, 0) + 1
+    have = sum(1 for s in stories if s.get("image"))
+    note(f"Photos: {have} of {len(stories)} stories ({len(todo)} looked up, "
+         f"{STATS.get('google_decoded', 0)} Google links decoded)")
+    for key, n in sorted(fails.items(), key=lambda kv: -kv[1])[:8]:
+        note(f"Photo lookup failed x{n}: {key}")
 
 
 # ---------- rendering ----------
