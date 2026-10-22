@@ -179,7 +179,7 @@ parts.append(f"""<section class="cover"><div class="stripes"></div>
 <div class="covin"><img src="file://{HERE / 'brand' / 'logo-retro.svg'}" style="width:5.4in">
 <h1>Social media kit</h1><p class="lead">Profile pictures, covers, post templates, story frames, bios, captions and a posting plan for
 Facebook, Instagram, X and LinkedIn, plus what else to set up.</p>
-<p class="small">Every image is in the ZIP, sorted into folders by platform. October 2026.</p></div><div class="stripes bottom"></div></section>""")
+<p class="small">Every image is in the ZIP, sorted into folders by platform. October 2026.</p><p class="small">Made in Mansfield by Ofgeneration LLC. &copy; 2026 Ofgeneration LLC. All rights reserved.</p></div><div class="stripes bottom"></div></section>""")
 
 parts.append("""<section><h2>Before you post</h2><ol class="big">
 <li><b>Buy SunnyMansfield.com first.</b> The templates and bios say SunnyMansfield.com. Until it's connected, the site lives at

@@ -643,6 +643,10 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .ad.house .sponsor{padding-top:0}
 .ad:hover{border-color:var(--border-strong)}
 .market-grid .listing{border-color:var(--border-subtle)}
+footer .wrap.credit{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:4px 10px;text-align:center;
+  padding-top:18px;padding-bottom:22px;border-top:1px solid rgba(251,246,236,.18);font:600 14px/1.4 var(--sans)}
+footer .credit .script{font-size:26px;color:var(--secondary);line-height:1}
+footer .credit small{flex-basis:100%;font:400 12px/1.6 var(--sans);opacity:.7}
 
 /* sports: athlete cards and tournament brackets */
 .athlete .sport{color:var(--secondary)}
@@ -852,14 +856,22 @@ def page_url(cfg, s):
     return f"{cfg['site_url'].rstrip('/')}/s/{s['id']}.html"
 
 
+def post_media(cfg, s):
+    """The framed post image, for services that post the feed to Facebook or Instagram."""
+    if not s.get("post_image"):
+        return ""
+    url = e(cfg["site_url"].rstrip("/") + "/" + s["post_image"])
+    return f'<enclosure url="{url}" type="image/jpeg" length="0"/><media:content url="{url}" medium="image" type="image/jpeg" width="1080" height="1350"/>'
+
+
 def render_feed(cfg, stories):
     site = cfg["site_url"].rstrip("/")
     items = "".join(f"""<item><title>{e(s['title'])}</title><link>{e(page_url(cfg, s))}</link>
 <guid isPermaLink="false">{s['id']}</guid><category>{e(SECTION_NAMES[s['section']])}</category>
 <pubDate>{email.utils.format_datetime(s['date'])}</pubDate>
-<description>{e(s['summary'] + ' (via ' + s['source'] + ')')}</description></item>""" for s in stories[:50])
+<description>{e(s['summary'] + ' (via ' + s['source'] + ')')}</description>{post_media(cfg, s)}</item>""" for s in stories[:50])
     return f"""<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0"><channel><title>{e(cfg['site_name'])}</title><link>{e(site)}/</link>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])}</title><link>{e(site)}/</link>
 <description>{e(cfg['tagline'])}</description>{items}</channel></rss>"""
 
 
@@ -1021,7 +1033,10 @@ def footer(cfg):
 <span class="logo">{logo("logo-retro-reverse.svg")}</span>
 <p>We share headlines, short summaries and source photos, and every story links to the original reporting.
 Please read and support Richland Source, the Mansfield News Journal and our other local outlets.</p>
-<span class="caps">Updated {datetime.now(timezone.utc).strftime('%b %-d, %Y')}</span></div></footer>"""
+<span class="caps">Updated {datetime.now(timezone.utc).strftime('%b %-d, %Y')}</span></div>
+<div class="wrap credit"><span class="script">Made in Mansfield</span> <span>by Ofgeneration LLC</span>
+<small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
+Stories from other outlets belong to their publishers.</small></div></footer>"""
 
 
 SCRIPT = """<script>
@@ -1696,6 +1711,7 @@ def render_story_page(cfg, s, stories):
     more = "".join(card(cfg, o) for o in [o for o in stories if o is not s][:3])
     body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
 <section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s)}</section>
+{f'<p class="wrap note postimg"><a class="link" href="{e(site)}/{s["post_image"]}" download>Download the framed image for Facebook or Instagram</a></p>' if s.get("post_image") else ""}
 <section class="wrap latest"><h2 class="label">More good news</h2><div class="grid">{more}</div>
 <div class="more-row"><a class="btn" href="{e(site)}/">See all stories</a></div></section>
 {submit_band(cfg, site)}<div class="stripes" aria-hidden="true"></div></main>{footer(cfg)}</div>
@@ -1751,6 +1767,12 @@ def main():
     inline = lambda m: m.group(1) + "data:image/jpeg;base64," + base64.b64encode((HERE / m.group(2)).read_bytes()).decode()
     preview = re.sub(r'(["(])/(assets/[\w./-]+\.jpg)', inline, page).replace('<link rel="icon" type="image/svg+xml" href="/brand/mark.svg">\n', "")
     (out / "artifact.html").write_text(preview)
+    try:
+        from posts import make_post_images
+        make_post_images(stories, out, SECTION_NAMES, UA, f"\u00a9 {datetime.now(timezone.utc).year} Ofgeneration LLC",
+                         outlet_photos=cfg.get("frame_outlet_photos", False), note=note)
+    except ImportError as exc:
+        note(f"Post images: skipped ({exc})")
     for s in stories:
         (out / "s" / f"{s['id']}.html").write_text(rebase(render_story_page(cfg, s, stories)))
     (out / "feed.xml").write_text(render_feed(cfg, stories))

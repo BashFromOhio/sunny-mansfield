@@ -283,7 +283,8 @@ add("08-print", "qr-flyer-letter", 1275, 1650,
     f'<div class="caps" style="font-size:26px;margin-top:30px">Good news for all seasons · Mansfield &amp; Richland County</div>'
     f'<div class="serif" style="font-size:74px;line-height:1.1;margin-top:60px">Scan for good news from your neighbors</div>'
     f'<div style="width:520px;height:520px;margin:50px auto 0;padding:24px;background:#fff;border:6px solid {INK}">{qr_svg}</div>'
-    f'<div style="font-size:32px;line-height:1.45;margin-top:44px;color:#4a3426">Local stories, events, shops and Buy &amp; Sell. Free, and updated all day.</div></div>',
+    f'<div style="font-size:32px;line-height:1.45;margin-top:44px;color:#4a3426">Local stories, events, shops and Buy &amp; Sell. Free, and updated all day.</div>'
+    f'<div style="font-size:20px;margin-top:36px;color:#8a6f5c">Made in Mansfield by Ofgeneration LLC &middot; &copy; 2026 Ofgeneration LLC</div></div>',
     css="svg{width:100%;height:100%;display:block}.logo svg{height:auto}",
     note="Print on letter paper for shop windows and bulletin boards. QR opens the site.")
 
