@@ -99,17 +99,18 @@ for folder, name, size, bg, note in [
     add(folder, name, size, size, avatar(size, bg), note=note)
 
 # ---------- cover banners ----------
-def cover(w, h, logo_w, tag_size, stripe, offset_x=0, tag=True, extra=""):
+def cover(w, h, logo_w, tag_size, stripe, offset_x=0, tag=True, extra="", top=None):
     tagline = (f'<div class="caps" style="font-size:{tag_size}px;margin-top:{int(tag_size*1.4)}px;color:{INK}">'
                f'Good news for all seasons &nbsp;·&nbsp; Mansfield &amp; Richland County, Ohio</div>') if tag else ""
     return (f'<div class="collage"></div><div class="stripes" style="--s:{stripe}px;top:0"></div>'
             f'<div class="stripes" style="--s:{stripe}px;bottom:0"></div>'
-            f'<div style="position:absolute;inset:0;display:grid;place-items:center;transform:translateX({offset_x}px)"><div style="text-align:center">'
+            f'<div style="position:absolute;inset:0;display:grid;justify-items:center;align-items:{"start" if top else "center"};'
+            f'padding-top:{top or 0}px;transform:translateX({offset_x}px)"><div style="text-align:center">'
             f'<div class="logo" style="width:{logo_w}px;margin:0 auto">{svg("logo-retro.svg")}</div>{tagline}{extra}</div></div>')
 
 
-add("02-facebook", "facebook-cover-1640x624", 1640, 624, cover(1640, 624, 760, 22, 20),
-    note="Facebook Page cover. Logo stays inside the area phones show.")
+add("02-facebook", "facebook-cover-1640x624", 1640, 624, cover(1640, 624, 700, 22, 20, top=74),
+    note="Facebook Page cover. Logo sits in the top half so the centered profile picture doesn't cover it.")
 add("02-facebook", "facebook-group-cover-1640x856", 1640, 856, cover(1640, 856, 820, 24, 22,
     extra=f'<div class="script" style="font-size:54px;margin-top:26px">Neighbors sharing good news</div>'),
     note="Cover for a Sunny Mansfield Facebook Group.")
