@@ -1570,7 +1570,7 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
    const {{error}}=await sb.from('submissions').insert(row);if(error)throw error;
    msg.textContent='';done(f.dataset.section==='Join the team'?'Your application is in. An editor will email you soon.':
     f.dataset.section==='Advertise'?'We will get back to you within two business days.':
-    who?'If you are verified it goes live within 30 minutes. Otherwise an editor will look at it soon.':'It is in the review queue. An editor will look at it soon, usually within a day.')}}
+    who?'If you are verified it goes live within 20 minutes. Otherwise an editor will look at it soon.':'It is in the review queue. An editor will look at it soon, usually within a day.')}}
   catch(err){{msg.textContent='Something went wrong: '+(err.message||err)+'. Please try again.'}}
   finally{{btn.disabled=false}}}});}});
 document.querySelectorAll('[data-pick]').forEach(b=>b.addEventListener('click',()=>{{const f=document.getElementById('send');if(!f)return;f.section.value=b.dataset.pick;showFor(f)}}));
@@ -1644,7 +1644,7 @@ def render_submit(cfg, stories):
 <section class="wrap civic"><div class="box"><span class="caps kicker">What happens next</span><h2 class="hed">From your phone to the front page</h2>
 <ol class="steps">
 <li><span class="n">1</span><span>You fill out the short form above. It goes into our review queue.</span></li>
-<li><span class="n">2</span><span>An editor approves it, usually within a day. <b>Verified contributors</b> who sign in skip the line and go live within 30 minutes.</span></li>
+<li><span class="n">2</span><span>An editor approves it, usually within a day. <b>Verified contributors</b> who sign in skip the line and go live within 20 minutes.</span></li>
 <li><span class="n">3</span><span>Your story gets its own page with your name on it and a Share button, so friends and family can pass it along on Facebook.</span></li>
 </ol></div>
 <div class="box"><span class="caps kicker">Before you send</span><h2 class="hed">Three quick rules</h2>
@@ -1956,7 +1956,7 @@ def render_admin(cfg, stories):
                             "then send the project URL and anon key to whoever builds the site."))
         return shell(cfg, f"Admin · {cfg['site_name']}", "Editors only.", f"{site}/admin.html", inner, stories)
     conf = json.dumps({"url": cfg["supabase_url"], "key": cfg["supabase_anon_key"]})
-    inner = f"""{page_title("Editors only", "Review queue", "Approve posts to put them on the site. Approved posts appear within 30 minutes.")}
+    inner = f"""{page_title("Editors only", "Review queue", "Approve posts to put them on the site. Approved posts appear within 20 minutes.")}
 <section class="wrap admin">
 <div class="box" id="login"><span class="caps kicker">Sign in</span><h2 class="hed">Editor sign-in</h2>
 <p class="hint">Use the email and password set up for you in Supabase. Only emails on the admin list can review posts.</p>
@@ -2046,7 +2046,7 @@ document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q
  if(act==='delete')(({{error}}=await sb.from('submissions').delete().eq('id',id)));
  else{{if(act==='verify-approve'&&row.email){{({{error}}=await sb.from('verified').upsert({{email:row.email.toLowerCase(),name:row.name,role:row.role}}));}}
   if(!error)(({{error}}=await sb.from('submissions').update({{status:act==='reject'?'rejected':'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',id)));}}
- if(error){{say(error.message);b.disabled=false;return}}say(act==='reject'?'Done. It will not appear on the site.':act==='delete'?'Deleted.':'Approved. It will be on the site within 30 minutes.');load()}});
+ if(error){{say(error.message);b.disabled=false;return}}say(act==='reject'?'Done. It will not appear on the site.':act==='delete'?'Deleted.':'Approved. It will be on the site within 20 minutes.');load()}});
 function newBracket(){{$('b-form').reset();$('b-id').value='';$('b-head').textContent='New bracket'}}
 $('b-new').onclick=newBracket;
 $('b-form').onsubmit=async ev=>{{ev.preventDefault();const title=$('b-title').value.trim(),text=$('b-text').value.trim();let link=$('b-link').value.trim();
@@ -2056,7 +2056,7 @@ $('b-form').onsubmit=async ev=>{{ev.preventDefault();const title=$('b-title').va
  if(id)(({{error}}=await sb.from('submissions').update(fields).eq('id',id)));
  else{{(({{data,error}}=await sb.from('submissions').insert({{...fields,section:'Bracket',name:'Sunny Mansfield'}}).select('id')));
   if(!error)(({{error}}=await sb.from('submissions').update({{status:'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',data[0].id)))}}
- if(error){{say(error.message);return}}newBracket();say('Bracket saved. It will be on the Sports page within 30 minutes.');load()}};
+ if(error){{say(error.message);return}}newBracket();say('Bracket saved. It will be on the Sports page within 20 minutes.');load()}};
 $('v-add').onclick=async()=>{{const em=$('v-email').value.trim().toLowerCase();if(!em)return;
  const {{error}}=await sb.from('verified').upsert({{email:em,name:$('v-name').value.trim()||null}});if(error)say(error.message);else{{$('v-email').value='';$('v-name').value='';load()}}}};
 }})();

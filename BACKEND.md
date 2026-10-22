@@ -1,6 +1,6 @@
 # Setting up the review queue (about 10 minutes, free)
 
-Submissions are stored in Supabase, a free hosted database. Every post starts in **review mode**. Editors approve it on the site's admin page (`/admin.html`), and the site publishes approved posts within 30 minutes.
+Submissions are stored in Supabase, a free hosted database. Every post starts in **review mode**. Editors approve it on the site's admin page (`/admin.html`), and the site publishes approved posts within 20 minutes.
 
 ## 1. Create the database
 
@@ -59,4 +59,4 @@ To show a paid ad in the carousels and on the Buy & Sell page, add it to `config
 "ads": [{"name": "Sample Bank", "text": "Proud to keep Mansfield sunny", "image": "https://.../ad.jpg", "link": "https://..."}]
 ```
 
-Note: Supabase's built-in email only sends a few sign-in emails per hour. After you sign in, you stay signed in on that device. The site checks the database every 30 minutes, which also keeps the free project from pausing.
+Note: Supabase's built-in email only sends a few sign-in emails per hour. After you sign in, you stay signed in on that device. The site checks the database every 15 minutes, which also keeps the free project from pausing.

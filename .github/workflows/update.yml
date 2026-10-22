@@ -1,7 +1,7 @@
 name: Refresh good news
 on:
   schedule:
-    - cron: "7,37 * * * *"   # every 30 minutes
+    - cron: "4,19,34,49 * * * *"   # every 15 minutes (free for public repos)
   workflow_dispatch:
   push:
     branches: [main]
