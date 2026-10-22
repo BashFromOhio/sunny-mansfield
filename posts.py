@@ -368,3 +368,18 @@ def make_community_feed(cfg, stories, flyers, funds, businesses, out, page_url, 
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])}: posted by neighbors</title>
 <link>{e(site)}/</link><description>Everything posted through Sunny Mansfield, for the Facebook Page</description>{body}</channel></rss>""")
     note(f"Community feed: {len(items)} posts")
+
+
+def fill_enclosure_lengths(out, site):
+    """Give each enclosure its real file size. Some RSS readers, Zapier among them, skip enclosures with length 0."""
+    import re
+    site = site.rstrip("/")
+    for name in ("social.xml", "community.xml", "top.xml", "feed.xml"):
+        path = Path(out) / name
+        if not path.exists():
+            continue
+        def size(m):
+            local = Path(out) / m.group(1)[len(site) + 1:] if m.group(1).startswith(site + "/") else None
+            n = local.stat().st_size if local and local.exists() else 0
+            return f'<enclosure url="{m.group(1)}" type="image/jpeg" length="{n}"/>'
+        path.write_text(re.sub(r'<enclosure url="([^"]+)" type="image/jpeg" length="0"/>', size, path.read_text()))

@@ -2038,6 +2038,11 @@ def main():
     for s in stories:
         (out / "s" / f"{s['id']}.html").write_text(rebase(render_story_page(cfg, s, stories)))
     (out / "feed.xml").write_text(render_feed(cfg, stories))
+    try:
+        from posts import fill_enclosure_lengths
+        fill_enclosure_lengths(out, cfg["site_url"])
+    except ImportError:
+        pass
     (out / "b").mkdir(exist_ok=True)
     for b in businesses:
         (out / "b" / f"{b['slug']}.html").write_text(rebase(render_business(cfg, b, businesses, stories)))
