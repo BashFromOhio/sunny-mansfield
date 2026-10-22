@@ -477,8 +477,8 @@ def add_photos(stories, limit=80):
     have = sum(1 for s in stories if s.get("image"))
     note(f"Photos: {have} of {len(stories)} stories ({len(todo)} looked up, "
          f"{STATS.get('google_decoded', 0)} Google links decoded, {STATS.get('bing', 0)} photos from Bing)")
-    for key, n in sorted(fails.items(), key=lambda kv: -kv[1])[:8]:
-        note(f"Photo lookup failed x{n}: {key}")
+    if fails:  # one line, so the notice limit (10 per run) leaves room for the rest
+        note("Photo lookups failed: " + "; ".join(f"{k.split(':')[0]} x{n}" for k, n in sorted(fails.items(), key=lambda kv: -kv[1])[:10]))
 
 
 # ---------- rendering ----------
