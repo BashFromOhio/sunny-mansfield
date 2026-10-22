@@ -281,7 +281,7 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
     (Path(out) / "social.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])} daily post</title>
 <link>{e(site)}/</link><description>One ready-made post a day for Facebook and Instagram</description>
-<item><title>{e(theme + ': ' + title)}</title><link>{e(image)}</link><guid isPermaLink="false">sunny-daily-{day:%Y-%m-%d}</guid>
+<item><title>{e(theme + ': ' + title)}</title><link>{e(image)}</link><guid isPermaLink="false">sunny-daily2-{day:%Y-%m-%d}</guid>
 <pubDate>{format_datetime(day)}</pubDate><description>{e(caption)}</description>
 <enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>
 </channel></rss>""")
@@ -306,7 +306,7 @@ def make_top_story_feed(cfg, stories, out, page_url, note=print):
         s = fresh[0]
         link, image = page_url(s), f"{site}/{s['post_image']}"
         caption = f"{s['title']}\n\n{s.get('summary') or ''}\n\nRead more: {link}\n\n#SunnyMansfield #MansfieldOhio #GoodNews"
-        item = (f"<item><title>{e(s['title'])}</title><link>{e(image)}</link><guid isPermaLink=\"false\">sunny-top-{s['id']}</guid>"
+        item = (f"<item><title>{e(s['title'])}</title><link>{e(image)}</link><guid isPermaLink=\"false\">sunny-top2-{s['id']}</guid>"
                 f"<pubDate>{format_datetime(noon)}</pubDate><description>{e(caption)}</description>"
                 f"<enclosure url=\"{e(image)}\" type=\"image/jpeg\" length=\"0\"/>"
                 f"</item>")
@@ -361,7 +361,7 @@ def make_community_feed(cfg, stories, flyers, funds, businesses, out, page_url, 
                           f"Shop local: {b['name']}\n\n{b.get('what') or ''}\n\nRead more: {link}\n\n{tags} #ShopLocal"))
     items.sort(key=lambda x: x[0], reverse=True)
     body = "".join(
-        f"<item><title>{e(t)}</title><link>{e(img)}</link><guid isPermaLink=\"false\">sunny-{gid}</guid>"
+        f"<item><title>{e(t)}</title><link>{e(img)}</link><guid isPermaLink=\"false\">sunny2-{gid}</guid>"
         f"<pubDate>{format_datetime(d)}</pubDate><description>{e(cap)}</description>"
         f"<enclosure url=\"{e(img)}\" type=\"image/jpeg\" length=\"0\"/>"
         f"</item>"
