@@ -36,6 +36,7 @@ HERE = Path(__file__).resolve().parent
 
 SECTIONS = [
     ("good", "Good News"),
+    ("sports", "Sports"),
     ("hoods", "Neighborhoods"),
     ("biz", "Local Business"),
     ("sales", "Garage Sales"),
@@ -66,6 +67,9 @@ students|kids|library|cheer|smile|gift|joy|family|reunion|bloom|harvest|sanctuar
 SECTION_RULES = [
     ("sales", r"garage sale|yard sale|rummage|flea market|estate sale|porch sale|swap meet"),
     ("vote", r"\bvot(e|er|ers|ing)\b|ballot|election|polls?\b|candidate|levy|board of elections"),
+    ("sports", r"\b(football|basketball|volleyball|soccer|baseball|softball|wrestl\w*|swim\w*|cross country|"
+               r"track and field|golf|tennis|bowling|hockey|lacrosse|cheerlead\w*|athlet\w*|varsity|playoffs?|"
+               r"ohsaa|state champion\w*|district champion\w*|regional champion\w*|tygers|quarterback|touchdown)\b"),
     ("research", r"research|study|studies|scientist|discover|university|osu mansfield|ohio state|"
                  r"north central state|nc state|professor|nasa|experiment|data show"),
     ("seniors", r"senior|retire|centenarian|100th birthday|\b(9\d|1\d\d)(th)? birthday|older adults|"
@@ -272,7 +276,9 @@ def bing_photo(s):
 SUBMIT_COLS = ["when", "section", "title", "summary", "photo", "link", "name", "role", "business", "town",
                "event_date", "price", "contact"]
 SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "business spotlight": "spotlight",
-                    "event flyer": "flyer", "buy & sell": "market", "buy and sell": "market"}
+                    "event flyer": "flyer", "buy & sell": "market", "buy and sell": "market",
+                    "athlete spotlight": "athlete", "bracket": "bracket"}
+ATHLETE_FACTS = ("Sport", "School", "Class of")  # folded into the summary by the submit form
 LISTING_DAYS = 30  # flyers without a date and Buy & Sell listings come down after this
 
 
@@ -310,7 +316,7 @@ def fetch_published(config):
 
 def load_submissions(config, sample):
     """Approved posts: from Supabase on the live site, from sample_submissions.csv in the preview."""
-    got = {"stories": [], "spotlights": [], "flyers": [], "listings": []}
+    got = {"stories": [], "spotlights": [], "flyers": [], "listings": [], "brackets": []}
     try:
         if sample:
             rows = list(csv.reader(io.StringIO((HERE / "sample_submissions.csv").read_text())))
@@ -354,8 +360,23 @@ def load_submissions(config, sample):
             got["spotlights"].append({"name": name, "what": row["summary"], "neighborhood": row["town"],
                                "link": row["link"] or "", "image": image, "by": row["name"], "slug": slug(name)})
             continue
+        if section == "bracket":
+            if all(b["title"] != row["title"] for b in got["brackets"]):  # newest version of each bracket wins
+                got["brackets"].append({"id": sid, "title": row["title"], "text": row["summary"], "link": row["link"],
+                                        "date": date})
+            continue
+        facts = {}
+        if section == "athlete":
+            keep = []
+            for line in row["summary"].splitlines():
+                k, _, v = line.partition(": ")
+                if k in ATHLETE_FACTS and v.strip():
+                    facts[k] = v.strip()
+                else:
+                    keep.append(line)
+            row["summary"], section = " ".join(keep), "sports"
         byline = row["name"] or "A neighbor"
-        got["stories"].append({"id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
+        got["stories"].append({"athlete": facts if facts or row["section"].lower() == "athlete spotlight" else None,"id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
                         "link": row["link"] if row["link"].startswith("http") else "", "source": byline,
                         "role": row["role"], "image": image, "date": date, "section": section, "community": True})
     got["flyers"].sort(key=lambda f: f["day"] or f["date"] + timedelta(days=LISTING_DAYS))
@@ -623,6 +644,26 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .ad:hover{border-color:var(--border-strong)}
 .market-grid .listing{border-color:var(--border-subtle)}
 
+/* sports: athlete cards and tournament brackets */
+.athlete .sport{color:var(--secondary)}
+.bracketbox{display:grid;gap:12px;margin-bottom:40px}
+.bracketbox .rail-head{margin:0}
+.bracketbox h3.hed{font-size:24px;line-height:1.2;margin:0}
+.bracket{display:grid;grid-template-columns:repeat(var(--rounds),minmax(190px,1fr));gap:0;overflow-x:auto;overscroll-behavior-x:contain;
+  background:var(--tertiary);border:2px solid var(--border-strong);border-top:4px solid var(--secondary);padding:16px 0}
+.round{display:grid;grid-template-rows:auto 1fr;padding:0 16px;border-left:2px dashed var(--border-medium)}
+.round:first-child{border-left:0}
+.round h4{margin:0 0 12px;font-size:12px;letter-spacing:.12em;color:var(--text-2)}
+.games{display:flex;flex-direction:column;justify-content:space-around;gap:16px}
+.game{border:2px solid var(--border-strong);background:#fffdf8}
+.team{display:flex;justify-content:space-between;gap:12px;padding:8px 10px;font:400 15px/1.3 var(--sans)}
+.team+.team{border-top:1px solid var(--border-subtle)}
+.team b{font-variant-numeric:tabular-nums;min-width:2ch;text-align:right}
+.team.won{background:var(--secondary);color:var(--tertiary);font-weight:700}
+.trophy{display:grid;justify-items:center;gap:8px;text-align:center}
+.trophy svg{width:72px;height:72px;fill:none;stroke:var(--secondary);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+.trophy .hed{font:700 22px/1.2 var(--serif)}
+
 /* forms and the admin desk */
 .formbox{padding-block:0 64px;scroll-margin-top:72px}
 .formbox .label{margin-bottom:24px}
@@ -789,6 +830,7 @@ ART = {
     "seniors": '<path d="M50 84S16 64 16 38c0-12 9-20 19-20 7 0 12 4 15 9 3-5 8-9 15-9 10 0 19 8 19 20 0 26-34 46-34 46z"/>',
     "life": '<path d="M50 88V48M50 48c-10-2-20-12-20-26 12 0 20 10 20 26zM50 48c10-2 20-12 20-26-12 0-20 10-20 26zM50 66c-8 0-16-6-18-16 10 0 16 6 18 16zM50 66c8 0 16-6 18-16-10 0-16 6-18 16z"/>',
     "vote": '<path d="M14 54h72v34H14zM30 54V18h40v36M40 36l8 8 14-16"/>',
+    "sports": '<path d="M30 14h40v22c0 12-9 22-20 22S30 48 30 36zM30 22H16c0 14 6 20 14 20M70 22h14c0 14-6 20-14 20M50 58v12M36 88h28M40 88l3-18h14l3 18"/>',
     "research": '<path d="M38 12h24M42 12v28L18 82c-2 4 1 8 5 8h54c4 0 7-4 5-8L58 40V12M28 66h44"/>',
 }
 
@@ -913,6 +955,7 @@ def masthead(cfg, site, stories):
 </div>
 <nav class="wrap strip caps" aria-label="Main">
 <div class="navgroup"><span class="navlabel">Read</span><a href="{e(site)}/">Front page</a><a href="{e(site)}/#events">Events</a>
+<a href="{e(site)}/sports.html">Sports</a>
 <a href="{e(site)}/market.html">Buy &amp; Sell</a><a href="{e(site)}/businesses.html">Businesses</a></div>
 <div class="navgroup"><span class="navlabel">Take part</span><button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a><a href="{e(site)}/advertise.html">Advertise</a>
@@ -1149,7 +1192,7 @@ def shell(cfg, title, desc, url, inner, stories, image=None, extra=""):
 
 
 SB_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
-EXTRA_SECTIONS = ["Business Spotlight", "Event Flyer", "Buy & Sell"]
+EXTRA_SECTIONS = ["Athlete Spotlight", "Business Spotlight", "Event Flyer", "Buy & Sell"]
 
 
 def field(name, label, kind="text", req=False, hint="", show=None, opts=None, extra=None, wide=False):
@@ -1271,6 +1314,8 @@ def render_submit(cfg, stories):
          "with your photo, your story and a button people can share.", "#form:Business Spotlight", "Get a spotlight", "spotlight"),
         ("vote", "Post an event flyer", "Concerts, fish fries, fundraisers, festivals, church suppers. Upload your flyer and "
          "it rides the front page carousel until the day of the event.", "#form:Event Flyer", "Post a flyer", "flyer"),
+        ("sports", "Spotlight an athlete", "A big game, a personal best, a signing day, a kid who never quits. Send a photo "
+         "and a few lines and they get their own page to share.", "#form:Athlete Spotlight", "Spotlight an athlete", "athlete"),
         ("sales", "Buy &amp; Sell", "List something for sale or wanted, with a price and how to reach you. Free, up for 30 days.",
          "#form:Buy & Sell", "Post a listing", "sell"),
         ("research", "Join the team", "Aspiring journalists, marketers, students, mentors and motivators. Get verified and "
@@ -1295,6 +1340,9 @@ def render_submit(cfg, stories):
         field("price", "Price", show=["Buy & Sell"], hint="Like $40, Free, or Best offer."),
         field("contact", "How buyers reach you", show=["Buy & Sell"], hint="Phone, email or link. This is shown on the site."),
         field("business", "Business name", show=["Business Spotlight"]),
+        field("sport", "Sport", show=["Athlete Spotlight"], extra="Sport", hint="Like Volleyball or Cross country."),
+        field("school", "School or team", show=["Athlete Spotlight"], extra="School"),
+        field("grad", "Class of", show=["Athlete Spotlight"], extra="Class of", hint="Graduation year, like 2027."),
         field("link", "Link for more", "url", hint="Optional: a website, event page or Facebook post."),
         field("name", "Your name as it should appear", req=True),
         field("role", "You are a", "select", opts=["Neighbor", "Student reporter", "Business", "Mentor", "Organization"]),
@@ -1408,6 +1456,83 @@ def render_business(cfg, b, businesses, stories):
     return shell(cfg, f"{b['name']} · {cfg['site_name']}", b["what"], biz_url(cfg, b), inner, stories, image)
 
 
+def parse_bracket(text):
+    """Rounds of games from lines like "Semifinals" and "Madison 3 vs Ontario 1"."""
+    rounds = []
+    for line in (text or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        sides = re.split(r"\s+vs\.?\s+", line, maxsplit=1, flags=re.I)
+        if len(sides) < 2:
+            rounds.append({"name": line.rstrip(":"), "games": []})
+            continue
+        if not rounds:
+            rounds.append({"name": "", "games": []})
+        game = []
+        for side in sides:
+            star = "*" in side
+            side = side.replace("*", "").strip()
+            m = re.fullmatch(r"(.*?)\s+\(?(\d{1,3})\)?", side)
+            name, score = (m.group(1), int(m.group(2))) if m else (side, None)
+            game.append({"name": name or "TBD", "score": score, "won": star})
+        a, b = game
+        if not (a["won"] or b["won"]) and a["score"] is not None and b["score"] is not None and a["score"] != b["score"]:
+            (a if a["score"] > b["score"] else b)["won"] = True
+        rounds[-1]["games"].append(game)
+    return [r for r in rounds if r["games"]]
+
+
+def render_bracket(cfg, b):
+    rounds = parse_bracket(b["text"])
+    if not rounds:
+        return ""
+    cols = []
+    for r in rounds:
+        games = "".join(
+            '<div class="game">' + "".join(
+                f'<div class="team{" won" if t["won"] else ""}"><span>{e(t["name"])}</span>'
+                f'<b>{"" if t["score"] is None else t["score"]}</b></div>' for t in g) + "</div>"
+            for g in r["games"])
+        cols.append(f'<div class="round"><h4 class="caps">{e(r["name"])}</h4><div class="games">{games}</div></div>')
+    last = rounds[-1]["games"]
+    champ = next((t["name"] for t in last[0] if t["won"]), "") if len(last) == 1 else ""
+    if champ:
+        cols.append(f'<div class="round champ"><h4 class="caps">Champion</h4><div class="games"><div class="trophy">'
+                    f'<svg viewBox="0 0 100 100" aria-hidden="true">{ART["sports"]}</svg><span class="hed">{e(champ)}</span>'
+                    f'</div></div></div>')
+    more = f'<a class="link" href="{e(b["link"])}" target="_blank" rel="noopener">Full details</a>' if b.get("link") else ""
+    return (f'<article class="bracketbox" id="b-{b["id"]}"><div class="rail-head"><h3 class="hed">{e(b["title"])}</h3>{more}</div>'
+            f'<div class="bracket" tabindex="0" style="--rounds:{len(cols)}">{"".join(cols)}</div>'
+            f'<span class="caps muted">Updated {ago(b["date"])}</span></article>')
+
+
+def athlete_card(cfg, s):
+    f = s.get("athlete") or {}
+    line = " · ".join(x for x in (f.get("Sport"), f.get("School"), f"Class of {f['Class of']}" if f.get("Class of") else "") if x)
+    html = card(cfg, s).replace('<article class="card"', '<article class="card slide athlete"', 1)
+    return html.replace(kicker(s), f'<span class="caps kicker sport">{e(line)}</span>', 1) if line else html
+
+
+def render_sports(cfg, stories, brackets):
+    site = cfg["site_url"].rstrip("/")
+    athletes = [s for s in stories if s.get("athlete") is not None]
+    news = [s for s in stories if s["section"] == "sports" and s.get("athlete") is None]
+    add = (f'<a class="slide flyer add" href="{e(site)}/submit.html#athlete"><span class="flyer-img"><span class="plus">+</span></span>'
+           f'<span class="hed">Spotlight an athlete</span><span class="dek">Free. Parents, coaches and teammates welcome.</span></a>')
+    spot = rail("Athlete spotlights", "".join(athlete_card(cfg, s) for s in athletes) + add, rid="athletes", kind="athletes")
+    boxes = "".join(render_bracket(cfg, b) for b in brackets) or (
+        '<p class="empty">Tournament brackets show up here during the playoffs. Coaches and boosters can send results to '
+        f'<a class="link" href="{e(site)}/submit.html">Submit news</a>.</p>')
+    grid = "".join(card(cfg, s) for s in news) or '<p class="empty">No sports stories this week yet.</p>'
+    inner = f"""{page_title("Go team!", "Sports", "Wins, personal bests, signing days and the kids who never quit. Richland County athletes, cheered on by their neighbors.")}
+{spot}
+<section class="wrap latest" id="brackets"><h2 class="label">Brackets</h2>{boxes}</section>
+<section class="wrap latest"><h2 class="label">Sports news</h2><div class="grid">{grid}</div></section>"""
+    return shell(cfg, f"Sports · {cfg['site_name']}", "Richland County athlete spotlights, tournament brackets and good sports news.",
+                 f"{site}/sports.html", inner, stories)
+
+
 def render_market(cfg, listings, stories):
     site = cfg["site_url"].rstrip("/")
     ads = cfg.get("ads") or []
@@ -1470,6 +1595,7 @@ def render_admin(cfg, stories):
 <button class="tab" type="button" data-q="apps">Team applications <span class="n"></span></button>
 <button class="tab" type="button" data-q="ads">Ad inquiries <span class="n"></span></button>
 <button class="tab" type="button" data-q="approved">Approved</button>
+<button class="tab" type="button" data-q="brackets">Brackets</button>
 <button class="tab" type="button" data-q="rejected">Rejected</button>
 <button class="tab" type="button" data-q="verified">Verified people</button></div></nav>
 <div class="row"><p class="hint">Signed in as <b id="me"></b>. <button class="textbtn" type="button" id="logout">Sign out</button></p>
@@ -1477,12 +1603,19 @@ def render_admin(cfg, stories):
 <button class="btn sm" type="button" id="pw-btn">Set password</button></div></div>
 <div id="addv" class="row" hidden><input type="email" id="v-email" placeholder="email to verify" aria-label="Email to verify"><input id="v-name" placeholder="name" aria-label="Name">
 <button class="btn sm solid" type="button" id="v-add">Add verified person</button></div>
+<div id="bracket-ed" class="box" hidden><span class="caps kicker">Sports page</span><h2 class="hed" id="b-head">New bracket</h2>
+<form class="sunny" id="b-form" novalidate><input type="hidden" id="b-id">
+<label class="fld wide"><span class="caps">Name *</span><input id="b-title" maxlength="200" required placeholder="Division III District Volleyball 2026"></label>
+<label class="fld wide"><span class="caps">Games *</span><textarea id="b-text" rows="12" maxlength="2000" required placeholder="Semifinals&#10;Madison 3 vs Ontario 1&#10;Lexington 2 vs Shelby 3&#10;Final&#10;Madison vs Shelby"></textarea>
+<span class="hint">Type a round name on its own line, then one game per line with "vs" in the middle. Add scores after each team when they're in. The higher score wins, or put * after the winner's name.</span></label>
+<label class="fld wide"><span class="caps">Link for more</span><input id="b-link" inputmode="url" placeholder="Optional: OHSAA or school page"></label>
+<div class="wide submitrow"><button class="btn solid" type="submit">Publish bracket</button><button class="btn" type="button" id="b-new">Start a new one</button></div></form></div>
 <div id="list" class="queue"></div></div>
 <p class="formmsg" id="desk-msg"></p></section>"""
     script = f"""<script src="{SB_JS}"></script><script>
 (()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));
-const SPECIAL=['Join the team','Advertise'];let me=null,q='pending';
+const SPECIAL=['Join the team','Advertise'];const NOTQ='("Join the team","Advertise","Bracket")';let me=null,q='pending';
 const say=t=>{{$('desk-msg').textContent=t}};
 $('login-form').onsubmit=async ev=>{{ev.preventDefault();const em=$('login-email').value.trim(),pw=$('login-pass').value;
  if(!em||!pw){{$('login-msg').textContent='Type your email and password.';return}}$('login-btn').disabled=true;
@@ -1500,10 +1633,10 @@ async function start(s){{if(me&&s&&s.user.email===me)return;if(!s){{$('login').h
  $('login').hidden=true;$('desk').hidden=false;$('me').textContent=me;load()}}
 sb.auth.getSession().then(r=>start(r.data.session));sb.auth.onAuthStateChange((_,s)=>{{if(s&&!me)start(s)}});
 function base(){{return sb.from('submissions').select('*').order('created_at',{{ascending:false}}).limit(200)}}
-const QUERIES={{pending:()=>base().eq('status','pending').not('section','in','("Join the team","Advertise")'),
+const QUERIES={{pending:()=>base().eq('status','pending').not('section','in',NOTQ),brackets:()=>base().eq('section','Bracket').neq('status','rejected'),
  apps:()=>base().eq('section','Join the team').neq('status','rejected'),ads:()=>base().eq('section','Advertise').eq('status','pending'),
- approved:()=>base().eq('status','approved').not('section','in','("Join the team","Advertise")'),rejected:()=>base().eq('status','rejected')}};
-async function counts(){{for(const [k,f] of [['pending',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('status','pending').not('section','in','("Join the team","Advertise")')],
+ approved:()=>base().eq('status','approved').not('section','in',NOTQ),rejected:()=>base().eq('status','rejected')}};
+async function counts(){{for(const [k,f] of [['pending',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('status','pending').not('section','in',NOTQ)],
  ['apps',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Join the team').eq('status','pending')],
  ['ads',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Advertise').eq('status','pending')]]){{
  const {{count}}=await f();document.querySelector(`[data-q="${{k}}"] .n`).textContent=count||''}}}}
@@ -1512,13 +1645,14 @@ function item(r){{const when=new Date(r.created_at).toLocaleString();
  const link=r.link?`<a class="link" href="${{esc(r.link)}}" target="_blank" rel="noopener">Open link</a>`:'';
  const btn=(a,t,c='')=>`<button class="btn sm ${{c}}" type="button" data-act="${{a}}" data-id="${{r.id}}">${{t}}</button>`;
  let acts='';if(r.section==='Join the team')acts=btn('verify-approve','Approve and verify','solid')+btn('reject','Decline');
+ else if(r.section==='Bracket')acts=btn('edit-bracket','Edit','solid');
  else if(r.status!=='approved')acts=btn('approve','Approve','solid')+btn('reject','Reject')+(r.email?btn('verify-approve','Approve and verify sender'):'');
  else acts=btn('reject','Take down');acts+=btn('delete','Delete','ghost');
- return `<article class="qitem" data-row='${{esc(JSON.stringify({{email:r.email,name:r.name,role:r.role}}))}}'>
+ return `<article class="qitem" data-row='${{esc(JSON.stringify({{email:r.email,name:r.name,role:r.role,title:r.title,summary:r.summary,link:r.link}}))}}'>
  ${{r.photo_url?`<a class="qphoto" href="${{esc(r.photo_url)}}" target="_blank" rel="noopener"><img src="${{esc(r.photo_url)}}" alt=""></a>`:''}}
  <div class="qbody"><span class="caps kicker">${{esc(r.section)}}</span><h3 class="hed">${{esc(r.title)}}</h3><p class="qtext">${{esc(r.summary||'')}}</p>
  <dl class="facts">${{facts.map(([k,v])=>`<dt>${{k}}</dt><dd>${{esc(v)}}</dd>`).join('')}}</dl>${{link}}<div class="share">${{acts}}</div></div></article>`}}
-async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';counts();
+async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';counts();
  const list=$('list');list.innerHTML='<p class="hint">Loading…</p>';
  if(q==='verified'){{const {{data,error}}=await sb.from('verified').select('*').order('added_at',{{ascending:false}});
   if(error){{list.innerHTML='';say(error.message);return}}
@@ -1529,12 +1663,24 @@ async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAtt
 document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q]');if(t){{q=t.dataset.q;load();return}}
  const u=ev.target.closest('[data-unverify]');if(u){{const {{error}}=await sb.from('verified').delete().eq('email',u.dataset.unverify);if(error)say(error.message);load();return}}
  const b=ev.target.closest('[data-act]');if(!b)return;const id=b.dataset.id,act=b.dataset.act;const row=JSON.parse(b.closest('.qitem').dataset.row||'{{}}');
+ if(act==='edit-bracket'){{$('b-id').value=id;$('b-title').value=row.title||'';$('b-text').value=row.summary||'';$('b-link').value=row.link||'';
+  $('b-head').textContent='Edit bracket';$('bracket-ed').scrollIntoView({{behavior:'smooth'}});return}}
  if(act==='delete'&&!b.dataset.sure){{b.dataset.sure=1;b.textContent='Tap again to delete';return}}
  b.disabled=true;let error;
  if(act==='delete')(({{error}}=await sb.from('submissions').delete().eq('id',id)));
  else{{if(act==='verify-approve'&&row.email){{({{error}}=await sb.from('verified').upsert({{email:row.email.toLowerCase(),name:row.name,role:row.role}}));}}
   if(!error)(({{error}}=await sb.from('submissions').update({{status:act==='reject'?'rejected':'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',id)));}}
  if(error){{say(error.message);b.disabled=false;return}}say(act==='reject'?'Done. It will not appear on the site.':act==='delete'?'Deleted.':'Approved. It will be on the site within 30 minutes.');load()}});
+function newBracket(){{$('b-form').reset();$('b-id').value='';$('b-head').textContent='New bracket'}}
+$('b-new').onclick=newBracket;
+$('b-form').onsubmit=async ev=>{{ev.preventDefault();const title=$('b-title').value.trim(),text=$('b-text').value.trim();let link=$('b-link').value.trim();
+ if(title.length<3||!/ vs /i.test(text)){{say('Give the bracket a name and at least one game with "vs" in it.');return}}
+ if(link&&!/^https?:\\/\\//i.test(link))link='https://'+link;
+ const fields={{title,summary:text,link:link||null}};const id=$('b-id').value;let error,data;
+ if(id)(({{error}}=await sb.from('submissions').update(fields).eq('id',id)));
+ else{{(({{data,error}}=await sb.from('submissions').insert({{...fields,section:'Bracket',name:'Sunny Mansfield'}}).select('id')));
+  if(!error)(({{error}}=await sb.from('submissions').update({{status:'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',data[0].id)))}}
+ if(error){{say(error.message);return}}newBracket();say('Bracket saved. It will be on the Sports page within 30 minutes.');load()}};
 $('v-add').onclick=async()=>{{const em=$('v-email').value.trim().toLowerCase();if(!em)return;
  const {{error}}=await sb.from('verified').upsert({{email:em,name:$('v-name').value.trim()||null}});if(error)say(error.message);else{{$('v-email').value='';$('v-name').value='';load()}}}};
 }})();
@@ -1614,6 +1760,7 @@ def main():
     (out / "businesses.html").write_text(rebase(render_businesses(cfg, businesses, stories)))
     (out / "submit.html").write_text(rebase(render_submit(cfg, stories)))
     (out / "rules.html").write_text(rebase(render_rules(cfg, stories)))
+    (out / "sports.html").write_text(rebase(render_sports(cfg, stories, got["brackets"])))
     (out / "market.html").write_text(rebase(render_market(cfg, listings, stories)))
     (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories)))
     (out / "admin.html").write_text(rebase(render_admin(cfg, stories)))

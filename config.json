@@ -24,6 +24,10 @@
       "section": "life"
     },
     {
+      "name": "Richland Source Sports",
+      "url": "https://www.richlandsource.com/category/sports/feed/"
+    },
+    {
       "name": "Google News: Mansfield Ohio",
       "url": "https://news.google.com/rss/search?q=%22Mansfield%22+Ohio+when:7d&hl=en-US&gl=US&ceid=US:en"
     },
@@ -34,6 +38,10 @@
     {
       "name": "Bing News: Mansfield Ohio",
       "url": "https://www.bing.com/news/search?q=Mansfield+Ohio&format=rss"
+    },
+    {
+      "name": "Google News: Mansfield sports",
+      "url": "https://news.google.com/rss/search?q=Mansfield+Ohio+(football+OR+basketball+OR+volleyball+OR+soccer+OR+wrestling+OR+softball+OR+baseball)+when:7d&hl=en-US&gl=US&ceid=US:en"
     }
   ],
   "postcards": [],
