@@ -107,7 +107,10 @@ def classify(story, forced=None):
 
 
 def clean(text, limit=220):
-    text = re.sub(r"<[^>]+>", " ", html.unescape(text or ""))
+    # Strip tags before unescaping, and respect quoted attributes: WordPress puts escaped HTML inside
+    # attributes like data-image-caption, which otherwise leaks "data-large-file=..." into the summary.
+    tag = r"""<(?:[^>"']|"[^"]*"|'[^']*')*>"""
+    text = re.sub(tag, " ", html.unescape(re.sub(tag, " ", text or "")))
     text = re.sub(r"\s+", " ", text).strip()
     if len(text) > limit:
         text = text[:limit].rsplit(" ", 1)[0].rstrip(",.;:") + "…"
