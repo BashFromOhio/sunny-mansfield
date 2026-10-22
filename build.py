@@ -359,7 +359,8 @@ def load_submissions(config, sample):
         if section == "spotlight":
             name = row["business"] or row["title"]
             got["spotlights"].append({"name": name, "what": row["summary"], "neighborhood": row["town"],
-                               "link": row["link"] or "", "image": image, "by": row["name"], "slug": slug(name)})
+                               "link": row["link"] or "", "image": image, "by": row["name"], "slug": slug(name),
+                                      "date": date, "community": True})
             continue
         if section == "fund":
             day = parse_day(row["event_date"])
@@ -2022,12 +2023,13 @@ def main():
     preview = re.sub(r'(["(])/(assets/[\w./-]+\.jpg)', inline, page).replace('<link rel="icon" type="image/svg+xml" href="/brand/mark.svg">\n', "")
     (out / "artifact.html").write_text(preview)
     try:
-        from posts import make_daily_post, make_post_images, make_top_story_feed
+        from posts import make_community_feed, make_daily_post, make_post_images, make_top_story_feed
         credit = f"\u00a9 {datetime.now(timezone.utc).year} Ofgeneration LLC"
         make_post_images(stories, out, SECTION_NAMES, UA, credit, outlet_photos=cfg.get("frame_outlet_photos", False), note=note)
         make_daily_post(cfg, stories, businesses, flyers, got["fundraisers"], listings, out, SECTION_NAMES, UA, credit,
                         lambda s: page_url(cfg, s), note=note)
         make_top_story_feed(cfg, stories, out, lambda s: page_url(cfg, s), note=note)
+        make_community_feed(cfg, stories, flyers, got["fundraisers"], businesses, out, lambda s: page_url(cfg, s), UA, credit, note=note)
     except ImportError as exc:
         note(f"Post images: skipped ({exc})")
     for s in stories:

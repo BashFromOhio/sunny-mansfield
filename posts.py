@@ -312,3 +312,59 @@ def make_top_story_feed(cfg, stories, out, page_url, note=print):
     (Path(out) / "top.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])} top story</title>
 <link>{e(site)}/</link><description>The best new story each day, for Facebook</description>{item}</channel></rss>""")
+
+
+def make_community_feed(cfg, stories, flyers, funds, businesses, out, page_url, ua, credit, note=print):
+    """community.xml: everything people post through the site (stories, athlete spotlights, event flyers,
+    fundraisers and business spotlights), each with a framed image, for posting to the Facebook Page."""
+    from datetime import datetime, timezone
+    from email.utils import format_datetime
+    from html import escape as e
+    site = cfg["site_url"].rstrip("/")
+    folder = Path(out) / "p"
+    folder.mkdir(parents=True, exist_ok=True)
+    tags = "#SunnyMansfield #MansfieldOhio #RichlandCounty"
+    items = []
+
+    def framed(key, title, by, label, image, script):
+        path = folder / f"c-{key}.jpg"
+        photo = load_photo(image, ua)
+        fake = {"title": title, "source": by}
+        im = photo_post(fake, label, photo, credit) if photo else text_post(fake, label, credit, script)
+        im.save(path, quality=86, optimize=True, progressive=True)
+        return f"{site}/p/{path.name}"
+
+    for s in stories:
+        if s.get("community") and s.get("post_image"):
+            link = page_url(s)
+            items.append((s["date"], f"c-{s['id']}", s["title"], link, f"{site}/{s['post_image']}",
+                          f"{s['title']}\n\n{s.get('summary') or ''}\n\nRead more: {link}\n\n{tags}"))
+    for f in flyers:
+        when = f["day"].strftime("%A, %B %-d") if f.get("day") else "Coming up"
+        img = framed(f"f{f['id']}", f["title"], f.get("town") or "", f"Event · {when}", f.get("image"), "Save the date!")
+        items.append((f["date"], f"f-{f['id']}", f["title"], f"{site}/#events", img,
+                      f"{when}: {f['title']}\n\n{f.get('summary') or ''}\n\nMore local events: {site}/#events\n\n{tags} #ThingsToDoMansfield"))
+    for f in funds:
+        link = f"{site}/fundraisers.html#f-{f['id']}"
+        img = framed(f"d{f['id']}", f["title"], f.get("by") or "", "Fundraiser", f.get("image"), "Lend a hand!")
+        give = f"\n\nGive here: {f['link']}" if f.get("link") else ""
+        items.append((f["date"], f"d-{f['id']}", f["title"], link, img,
+                      f"Neighbors helping neighbors: {f['title']}\n\n{f.get('summary') or ''}{give}\n\nGive if you can, share if you can't.\n\n{tags} #GiveLocal"))
+    for b in businesses:
+        if b.get("community"):  # spotlights sent in through the site
+            link = f"{site}/b/{b['slug']}.html"
+            img = framed(f"b{b['slug']}", b["name"], b.get("neighborhood") or "", "Business spotlight",
+                         b.get("image") if (b.get("image") or "").startswith("https://") else None, "Shop local!")
+            items.append((b.get("date") or datetime.now(timezone.utc), f"b-{b['slug']}", b["name"], link, img,
+                          f"Shop local: {b['name']}\n\n{b.get('what') or ''}\n\nRead more: {link}\n\n{tags} #ShopLocal"))
+    items.sort(key=lambda x: x[0], reverse=True)
+    body = "".join(
+        f"<item><title>{e(t)}</title><link>{e(link)}</link><guid isPermaLink=\"false\">sunny-{gid}</guid>"
+        f"<pubDate>{format_datetime(d)}</pubDate><description>{e(cap)}</description>"
+        f"<enclosure url=\"{e(img)}\" type=\"image/jpeg\" length=\"0\"/>"
+        f"<media:content url=\"{e(img)}\" medium=\"image\" type=\"image/jpeg\" width=\"1080\" height=\"1350\"/></item>"
+        for d, gid, t, link, img, cap in items[:30])
+    (Path(out) / "community.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])}: posted by neighbors</title>
+<link>{e(site)}/</link><description>Everything posted through Sunny Mansfield, for the Facebook Page</description>{body}</channel></rss>""")
+    note(f"Community feed: {len(items)} posts")

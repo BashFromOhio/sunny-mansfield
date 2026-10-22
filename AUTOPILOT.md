@@ -40,10 +40,12 @@ Creating the accounts themselves, Google Business Profile and Nextdoor verificat
 
 ## Staying on Zapier's free plan
 
-The free plan allows 100 posts a month, and each Zap can have only one action. These three Zaps add up to about 90 posts a month:
+The free plan allows 100 posts a month, and each Zap can have only one action. These three Zaps fit in it while community posts stay under about 40 a month:
 
 | Zap | Feed | Posts to | Per month |
 |---|---|---|---|
 | Daily post | `/social.xml` | Facebook Page (Create Page Photo) | ~30 |
 | Daily post | `/social.xml` | Instagram (Publish Photo) | ~30 |
-| Top story | `/top.xml` (the best new story each day, at noon Eastern) | Facebook Page (Create Page Photo) | ~30 |
+| Posted by neighbors | `/community.xml` (every story, athlete spotlight, event flyer, fundraiser and business spotlight sent in through the site, once it's approved) | Facebook Page (Create Page Photo) | usually under 40 |
+
+`/top.xml` (the best new story each day) is also there if you upgrade later or want it instead.
