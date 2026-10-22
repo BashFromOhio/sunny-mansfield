@@ -156,7 +156,7 @@ def make_post_images(stories, out, section_names, ua, credit, outlet_photos=Fals
         photo = load_photo(s.get("image"), ua) if own else None
         section = section_names.get(s["section"], "Good News")
         im = photo_post(s, section, photo, credit) if photo else text_post(s, section, credit)
-        im.save(folder / f"{s['id']}.jpg", quality=86, optimize=True, progressive=True)
+        im.save(folder / f"{s['id']}.jpg", quality=86, optimize=True, progressive=False)
         s["post_image"] = f"p/{s['id']}.jpg"
         return bool(photo)
 
@@ -273,7 +273,7 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
     folder = Path(out) / "social"
     folder.mkdir(parents=True, exist_ok=True)
     name = f"{day:%Y-%m-%d}.jpg"
-    im.save(folder / name, quality=86, optimize=True, progressive=True)
+    im.save(folder / name, quality=86, optimize=True, progressive=False)
     image = f"{site}/social/{name}"
     caption = f"{theme} ☀️\n\n{text}\n\nRead more: {link}\n\n{TAGS} {tag}"
     (Path(out) / "social.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -281,7 +281,7 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
 <link>{e(site)}/</link><description>One ready-made post a day for Facebook and Instagram</description>
 <item><title>{e(theme + ': ' + title)}</title><link>{e(link)}</link><guid isPermaLink="false">sunny-daily-{day:%Y-%m-%d}</guid>
 <pubDate>{format_datetime(day)}</pubDate><description>{e(caption)}</description>
-<enclosure url="{e(image)}" type="image/jpeg" length="0"/><media:content url="{e(image)}" medium="image" type="image/jpeg" width="1080" height="1350"/></item>
+<enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>
 </channel></rss>""")
     note(f"Daily post: {theme} - {title}")
 
@@ -307,7 +307,7 @@ def make_top_story_feed(cfg, stories, out, page_url, note=print):
         item = (f"<item><title>{e(s['title'])}</title><link>{e(link)}</link><guid isPermaLink=\"false\">sunny-top-{s['id']}</guid>"
                 f"<pubDate>{format_datetime(noon)}</pubDate><description>{e(caption)}</description>"
                 f"<enclosure url=\"{e(image)}\" type=\"image/jpeg\" length=\"0\"/>"
-                f"<media:content url=\"{e(image)}\" medium=\"image\" type=\"image/jpeg\" width=\"1080\" height=\"1350\"/></item>")
+                f"</item>")
         note(f"Top story: {s['title']}")
     (Path(out) / "top.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])} top story</title>
@@ -331,7 +331,7 @@ def make_community_feed(cfg, stories, flyers, funds, businesses, out, page_url, 
         photo = load_photo(image, ua)
         fake = {"title": title, "source": by}
         im = photo_post(fake, label, photo, credit) if photo else text_post(fake, label, credit, script)
-        im.save(path, quality=86, optimize=True, progressive=True)
+        im.save(path, quality=86, optimize=True, progressive=False)
         return f"{site}/p/{path.name}"
 
     for s in stories:
@@ -362,7 +362,7 @@ def make_community_feed(cfg, stories, flyers, funds, businesses, out, page_url, 
         f"<item><title>{e(t)}</title><link>{e(link)}</link><guid isPermaLink=\"false\">sunny-{gid}</guid>"
         f"<pubDate>{format_datetime(d)}</pubDate><description>{e(cap)}</description>"
         f"<enclosure url=\"{e(img)}\" type=\"image/jpeg\" length=\"0\"/>"
-        f"<media:content url=\"{e(img)}\" medium=\"image\" type=\"image/jpeg\" width=\"1080\" height=\"1350\"/></item>"
+        f"</item>"
         for d, gid, t, link, img, cap in items[:30])
     (Path(out) / "community.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])}: posted by neighbors</title>

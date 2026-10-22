@@ -993,7 +993,7 @@ def post_media(cfg, s):
     if not s.get("post_image"):
         return ""
     url = e(cfg["site_url"].rstrip("/") + "/" + s["post_image"])
-    return f'<enclosure url="{url}" type="image/jpeg" length="0"/><media:content url="{url}" medium="image" type="image/jpeg" width="1080" height="1350"/>'
+    return f'<enclosure url="{url}" type="image/jpeg" length="0"/>'
 
 
 def render_feed(cfg, stories):
