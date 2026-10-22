@@ -26,7 +26,7 @@ If a day has nothing to post, for example no event flyers, it posts the best goo
 1. Make the Facebook Page and switch Instagram to a Professional account linked to that Page.
 2. Sign up at zapier.com. The free plan is enough for one daily post.
 3. Create a Zap. **Trigger:** RSS by Zapier → New Item in Feed → feed URL `https://<your site>/social.xml`.
-4. **Action 1:** Facebook Pages → Create Page Photo. Photo URL: the item's *Enclosure URL*. Message: the item's *Description*.
+4. **Action 1:** Facebook Pages → Create Page Photo. Photo URL: the item's *Link* (in these feeds the link is the image; the story link is in the caption). Message: the item's *Description*.
 5. **Action 2:** Instagram for Business → Publish Photo. Same photo and caption.
 6. Test it and turn it on.
 
