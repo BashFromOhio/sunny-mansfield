@@ -284,3 +284,31 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
 <enclosure url="{e(image)}" type="image/jpeg" length="0"/><media:content url="{e(image)}" medium="image" type="image/jpeg" width="1080" height="1350"/></item>
 </channel></rss>""")
     note(f"Daily post: {theme} - {title}")
+
+
+def make_top_story_feed(cfg, stories, out, page_url, note=print):
+    """top.xml: the single best new story each day, switching over at noon Eastern. Kept to one post a day
+    so the Page stays inside Zapier's free plan alongside the daily post."""
+    from datetime import datetime, timedelta
+    from email.utils import format_datetime
+    from html import escape as e
+    from zoneinfo import ZoneInfo
+    now = datetime.now(ZoneInfo("America/New_York"))
+    noon = (now - timedelta(hours=12)).replace(hour=12, minute=0, second=0, microsecond=0)
+    fresh = [s for s in stories if s.get("post_image") and s["section"] != "life"
+             and noon - timedelta(hours=36) <= s["date"] <= noon]
+    fresh.sort(key=lambda s: (not s.get("community"), not s.get("image"), -s["date"].timestamp()))
+    site = cfg["site_url"].rstrip("/")
+    item = ""
+    if fresh:
+        s = fresh[0]
+        link, image = page_url(s), f"{site}/{s['post_image']}"
+        caption = f"{s['title']}\n\n{s.get('summary') or ''}\n\nRead more: {link}\n\n#SunnyMansfield #MansfieldOhio #GoodNews"
+        item = (f"<item><title>{e(s['title'])}</title><link>{e(link)}</link><guid isPermaLink=\"false\">sunny-top-{s['id']}</guid>"
+                f"<pubDate>{format_datetime(noon)}</pubDate><description>{e(caption)}</description>"
+                f"<enclosure url=\"{e(image)}\" type=\"image/jpeg\" length=\"0\"/>"
+                f"<media:content url=\"{e(image)}\" medium=\"image\" type=\"image/jpeg\" width=\"1080\" height=\"1350\"/></item>")
+        note(f"Top story: {s['title']}")
+    (Path(out) / "top.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])} top story</title>
+<link>{e(site)}/</link><description>The best new story each day, for Facebook</description>{item}</channel></rss>""")

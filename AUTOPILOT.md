@@ -37,3 +37,13 @@ dlvr.it, IFTTT and Buffer can do the same job with the same feed.
 ## Things that can't run on autopilot
 
 Creating the accounts themselves, Google Business Profile and Nextdoor verification, replying to comments and messages, and joining Facebook groups all need a person. Everything else in the posting plan is covered above.
+
+## Staying on Zapier's free plan
+
+The free plan allows 100 posts a month, and each Zap can have only one action. These three Zaps add up to about 90 posts a month:
+
+| Zap | Feed | Posts to | Per month |
+|---|---|---|---|
+| Daily post | `/social.xml` | Facebook Page (Create Page Photo) | ~30 |
+| Daily post | `/social.xml` | Instagram (Publish Photo) | ~30 |
+| Top story | `/top.xml` (the best new story each day, at noon Eastern) | Facebook Page (Create Page Photo) | ~30 |
