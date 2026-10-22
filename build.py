@@ -277,7 +277,8 @@ SUBMIT_COLS = ["when", "section", "title", "summary", "photo", "link", "name", "
                "event_date", "price", "contact"]
 SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "business spotlight": "spotlight",
                     "event flyer": "flyer", "buy & sell": "market", "buy and sell": "market",
-                    "athlete spotlight": "athlete", "bracket": "bracket"}
+                    "athlete spotlight": "athlete", "bracket": "bracket", "fundraiser": "fund"}
+FUND_DAYS = 90  # fundraisers without an end date come down after this
 ATHLETE_FACTS = ("Sport", "School", "Class of")  # folded into the summary by the submit form
 LISTING_DAYS = 30  # flyers without a date and Buy & Sell listings come down after this
 
@@ -316,7 +317,7 @@ def fetch_published(config):
 
 def load_submissions(config, sample):
     """Approved posts: from Supabase on the live site, from sample_submissions.csv in the preview."""
-    got = {"stories": [], "spotlights": [], "flyers": [], "listings": [], "brackets": []}
+    got = {"stories": [], "spotlights": [], "flyers": [], "listings": [], "brackets": [], "fundraisers": []}
     try:
         if sample:
             rows = list(csv.reader(io.StringIO((HERE / "sample_submissions.csv").read_text())))
@@ -359,6 +360,14 @@ def load_submissions(config, sample):
             name = row["business"] or row["title"]
             got["spotlights"].append({"name": name, "what": row["summary"], "neighborhood": row["town"],
                                "link": row["link"] or "", "image": image, "by": row["name"], "slug": slug(name)})
+            continue
+        if section == "fund":
+            day = parse_day(row["event_date"])
+            if (day and day + timedelta(days=1) < now) or (not day and date + timedelta(days=FUND_DAYS) < now):
+                continue
+            got["fundraisers"].append({"id": sid, "title": row["title"], "summary": row["summary"], "image": image,
+                                       "link": row["link"], "goal": row["price"], "cause": row["business"].strip(),
+                                       "by": row["name"], "town": row["town"], "day": day, "date": date})
             continue
         if section == "bracket":
             if all(b["title"] != row["title"] for b in got["brackets"]):  # newest version of each bracket wins
@@ -471,9 +480,10 @@ a{color:inherit}
 .motto{line-height:1.7}.motto.mobile{display:none}
 @media (max-width:900px){.plate{grid-template-columns:minmax(0,1fr);justify-items:center;padding-block:24px 16px;gap:12px}.ear{display:none}.plate .logo{width:min(100%,420px)}
   .motto.mobile{display:block;text-align:center;color:var(--text-2)}}
-.strip{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 32px;padding-block:6px;
+.strip{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 24px;padding-block:6px;
   border-top:2px solid var(--border-strong);border-bottom:2px solid var(--border-strong)}
-.navgroup{display:flex;flex-wrap:wrap;align-items:center;gap:4px 20px}
+.navgroup{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
+@media (max-width:1400px){.navlabel{display:none}}
 .navlabel{color:var(--text-3)}
 .strip a,.navbtn{text-decoration:none;white-space:nowrap;padding-block:8px}
 .navbtn{font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;background:none;border:0;cursor:pointer;padding-inline:0}
@@ -643,6 +653,47 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .ad.house .sponsor{padding-top:0}
 .ad:hover{border-color:var(--border-strong)}
 .market-grid .listing{border-color:var(--border-subtle)}
+.adrow{display:grid;gap:4px;justify-items:center;padding-block:16px}
+.adlabel{font-size:10px;letter-spacing:.14em;color:var(--text-3)}
+.adbanner{display:block;width:100%;max-width:728px;line-height:0;text-decoration:none}
+.adbanner img{width:100%;height:auto;display:block;border:1px solid var(--border-subtle)}
+.adbanner.house{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 16px;min-height:90px;line-height:1.3;
+  padding:12px 20px;background:var(--surface);border:2px dashed var(--secondary);text-align:center}
+.adbanner.house .script{font-size:30px;color:var(--secondary);line-height:1}
+.adbanner.house .adtext{font:600 15px/1.4 var(--sans)}
+.adbanner.house .adspot{font-size:11px;color:var(--text-2);flex-basis:100%}
+.adbanner.house:hover{border-style:solid}
+.sponsortag{display:flex;align-items:center;gap:8px;margin-bottom:10px;text-decoration:none;font-size:11px;color:var(--text-2)}
+.sponsortag img{height:28px;width:auto}
+.sponsortag.house{border-bottom:1px dashed var(--secondary);letter-spacing:.1em}
+.sponsortag.house:hover{color:var(--secondary)}
+@media (max-width:600px){.sponsortag.house{display:none}}
+.evad .flyer-img .script{font-size:40px;line-height:1.1;color:var(--secondary);text-align:center}
+.evad .sponsor{color:var(--text-3)}
+footer .wrap.sponsors{justify-content:center;gap:6px 14px;padding-block:14px;border-top:1px solid rgba(251,246,236,.18);font-size:14px}
+footer .sponsors .caps{color:var(--secondary)}
+footer .sponsors a{color:inherit}
+.spots{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px}
+.spot{background:var(--tertiary);border:2px solid var(--border-subtle);border-top:4px solid var(--secondary);padding:20px;display:grid;gap:6px;align-content:start}
+.spot .code{font:700 13px/1 var(--caps);letter-spacing:.12em;color:var(--secondary)}
+.spot h3{font:700 20px/1.25 var(--serif);margin:0}
+.spot p{margin:0;font-size:14px;line-height:1.55}
+.spot .price{position:static;display:inline-block;justify-self:start;font-size:14px;padding:6px 10px;margin-top:6px}
+.fund .cause{display:inline-block;justify-self:start;margin-inline:20px;background:var(--surface);border:1px solid var(--secondary);color:var(--secondary-dk);font:700 11px/1 var(--caps);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px}
+.fund .muted{font-size:13px;color:var(--text-2)}
+.fund .share{display:flex;flex-wrap:wrap;gap:8px}
+.causebox .script{display:block;font-size:28px;line-height:1.3;color:var(--secondary)}
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px;align-items:stretch}
+.tier{position:relative;background:var(--tertiary);border:2px solid var(--border-strong);padding:24px 20px;display:grid;gap:8px;align-content:start}
+.tier.pick{border:3px solid var(--secondary);background:#fffdf8}
+.tier .picked{position:absolute;top:-13px;left:16px;background:var(--secondary);color:var(--tertiary);font-size:11px;padding:5px 8px}
+.tier h3{font:700 22px/1.2 var(--serif);margin:0}
+.tier .cost{margin:0;font-size:15px;color:var(--text-2)}.tier .cost b{font:700 36px/1 var(--serif);color:var(--secondary)}
+.tier ul{margin:4px 0 8px;padding-left:18px;font-size:14px;line-height:1.55;display:grid;gap:4px}
+.tier .btn{justify-self:start}
+.deals{margin:24px 0 0;padding-left:18px;display:grid;gap:4px;font-size:15px}
+.reqs{columns:2 320px;column-gap:40px}
+.reqs li{break-inside:avoid;margin-bottom:10px;font-size:15px;line-height:1.6}
 footer .wrap.credit{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:center;gap:4px 10px;text-align:center;
   padding-top:18px;padding-bottom:22px;border-top:1px solid rgba(251,246,236,.18);font:600 14px/1.4 var(--sans)}
 footer .credit .script{font-size:26px;color:var(--secondary);line-height:1}
@@ -967,12 +1018,13 @@ def masthead(cfg, site, stories):
 </div>
 <nav class="wrap strip caps" aria-label="Main">
 <div class="navgroup"><span class="navlabel">Read</span><a href="{e(site)}/">Front page</a><a href="{e(site)}/#events">Events</a>
-<a href="{e(site)}/sports.html">Sports</a>
+<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/celebrations.html">Celebrations</a><a href="{e(site)}/fundraisers.html">Fundraisers</a>
 <a href="{e(site)}/market.html">Buy &amp; Sell</a><a href="{e(site)}/businesses.html">Businesses</a></div>
 <div class="navgroup"><span class="navlabel">Take part</span><button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a><a href="{e(site)}/advertise.html">Advertise</a>
 <a class="navcta" href="{e(site)}/submit.html">Submit news</a></div></nav>
 </header>
+{banner(cfg, "A1")}
 <aside class="about" id="about" role="dialog" aria-labelledby="about-h" hidden>
 <button class="close" type="button" data-about-close aria-label="Close">&times;</button>
 <span class="script">Welcome, neighbor!</span><h2 class="hed" id="about-h">Why Sunny Mansfield?</h2>
@@ -1034,6 +1086,7 @@ def footer(cfg):
 <p>We share headlines, short summaries and source photos, and every story links to the original reporting.
 Please read and support Richland Source, the Mansfield News Journal and our other local outlets.</p>
 <span class="caps">Updated {datetime.now(timezone.utc).strftime('%b %-d, %Y')}</span></div>
+{sponsor_strip(cfg)}
 <div class="wrap credit"><span class="script">Made in Mansfield</span> <span>by Ofgeneration LLC</span>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
 Stories from other outlets belong to their publishers.</small></div></footer>"""
@@ -1124,7 +1177,121 @@ def listing_card(x, cfg):
             f'<h3 class="hed">{e(x["title"])}</h3><p class="dek">{e(x["summary"])}</p><div class="share">{how}</div></article>')
 
 
-def ad_card(cfg, ad=None):
+# Every place an ad can go. The Advertise page and the media kit read this list.
+# config.json "ads" entries name a spot: {"spot": "A1", "name": ..., "image": ..., "link": ..., "until": "2026-12-31"}
+AD_SPOTS = [
+    {"spot": "A1", "name": "Top banner", "where": "Every page, right under the menu", "kind": "banner",
+     "size": "1456 x 180 px (shows at 728 x 90), plus 640 x 200 px for phones", "price": "$150 to $300 a month"},
+    {"spot": "A2", "name": "Front page carousel card", "where": "Inside the story carousels on the front page", "kind": "card",
+     "size": "1200 x 800 px photo, a name and one short line", "price": "$50 to $100 a month"},
+    {"spot": "A3", "name": "Section sponsor", "where": "“Presented by” on one section shelf, like Sports or Seniors", "kind": "logo",
+     "size": "Logo, 600 x 200 px PNG with a see-through background", "price": "$75 to $150 a month"},
+    {"spot": "A4", "name": "Story page banner", "where": "Under the story on every story page", "kind": "banner",
+     "size": "1456 x 180 px, plus 640 x 200 px for phones", "price": "$75 to $150 a month"},
+    {"spot": "A5", "name": "Sports page sponsor", "where": "Top of the Sports page, above athlete spotlights and brackets", "kind": "banner",
+     "size": "1456 x 180 px, plus 640 x 200 px for phones", "price": "$75 to $150 a month"},
+    {"spot": "A6", "name": "Events sponsor", "where": "A flyer-sized card in the Local events carousel", "kind": "flyer",
+     "size": "1080 x 1350 px (4:5), like a flyer", "price": "$50 to $100 a month"},
+    {"spot": "A7", "name": "Buy & Sell sponsor", "where": "On the Buy & Sell page and its front page carousel", "kind": "card",
+     "size": "1200 x 800 px photo, a name and one short line", "price": "$25 to $50 a month"},
+    {"spot": "A8", "name": "Celebrations of Life sponsor", "where": "Right above the Celebrations of Life photo carousel, on its own page and the front page",
+     "kind": "banner", "size": "1456 x 180 px, plus 640 x 200 px for phones. Quiet and respectful: name, logo, phone",
+     "price": "$100 to $200 a month", "for": "Funeral homes, memorial and monument companies, florists, grief support",
+     "house": ("Honoring lives", "A quiet, respectful spot for funeral homes, florists and memorial services.")},
+    {"spot": "S1", "name": "Sponsored social post", "where": "One post on our Facebook and Instagram, marked as a paid partnership", "kind": "social",
+     "size": "1080 x 1350 px image or we design it from your photos", "price": "$25 to $75 a post"},
+]
+AD_SPOT = {s["spot"]: s for s in AD_SPOTS}
+
+# Packages for the Advertise page and the media kit. Founding sponsor prices, per month unless noted.
+AD_TIERS = [
+    {"name": "Neighbor", "price": "$49", "per": "a month", "best": "Shops, salons, food trucks and side businesses",
+     "gets": ["A front page carousel card (A2) or a Buy & Sell card (A7)", "Your name in the sponsor thank-you on every page",
+              "One shout-out on our Facebook page each month"]},
+    {"name": "Main Street", "price": "$129", "per": "a month", "best": "Restaurants, gyms, dealers and service businesses", "pick": True,
+     "gets": ["Everything in Neighbor", "\u201cPresented by\u201d sponsor of one section (A3)", "One sponsored post a month on Facebook and Instagram (S1)",
+              "A featured business page with photos and hours"]},
+    {"name": "Hometown Hero", "price": "$279", "per": "a month", "best": "Banks, hospitals, insurance and bigger local brands",
+     "gets": ["Everything in Main Street", "Top banner on every page (A1), shared with up to two other sponsors",
+              "Story page banner (A4)", "Two sponsored posts a month"]},
+    {"name": "Presenting Partner", "price": "$499", "per": "a month", "best": "One business that wants to own the paper",
+     "gets": ["Everything in Hometown Hero", "The top banner all to yourself", "\u201cFive good things, presented by\u201d on the weekly roundup post",
+              "Four sponsored posts a month", "First choice of the Sports or Celebrations of Life sponsorship"]},
+]
+AD_SPECIALS = [
+    ("Celebrations of Life partner", "$149 a month", "The quiet banner right above the Celebrations of Life carousel (A8). One funeral home at a time, so it stays respectful."),
+    ("Sports season sponsor", "$399 a season", "Top of the Sports page (A5) and \u201cBrackets presented by\u201d for one sports season."),
+    ("Events sponsor", "$69 a month", "A flyer-sized card in the Local events carousel (A6)."),
+    ("Sponsored social post", "$49 a post", "One post on Facebook and Instagram, marked as a paid partnership. We can design it for you (S1)."),
+    ("Boost a flyer or listing", "$15 a week", "Pin an event flyer, garage sale or Buy & Sell listing to the front of its carousel."),
+]
+AD_DEALS = ["Pay for 3 months, save 10%. Pay for 12 months, save 20%.", "Nonprofits, churches and schools save 25%.",
+            "Founding sponsors (the first 10) keep their price for a full year.", "Business spotlights and community posts are always free."]
+
+
+def ads_for(cfg, spot, section=None):
+    """Paid ads running now in one spot. Ads without a spot are carousel cards (A2)."""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return [a for a in cfg.get("ads") or [] if (a.get("spot") or "A2") == spot and a.get("link")
+            and (not a.get("until") or a["until"] >= today) and (not section or a.get("section") == section)]
+
+
+def banner(cfg, spot, i=0):
+    """A wide ad, or a branded "Advertise here" placeholder until one is sold."""
+    site = cfg["site_url"].rstrip("/")
+    ads = ads_for(cfg, spot)
+    if ads:
+        a = ads[i % len(ads)]
+        small = f'<source media="(max-width:600px)" srcset="{e(a["image_mobile"])}">' if a.get("image_mobile") else ""
+        return (f'<aside class="wrap adrow" aria-label="Advertisement"><span class="caps adlabel">Advertisement</span>'
+                f'<a class="adbanner" href="{e(a["link"])}" target="_blank" rel="noopener sponsored">'
+                f'<picture>{small}<img src="{e(a["image"])}" alt="{e(a.get("alt") or a["name"])}" loading="lazy"></picture></a></aside>')
+    s = AD_SPOT[spot]
+    script, text = s.get("house", ("Advertise here!", "Put your business in front of neighbors who love Mansfield."))
+    return (f'<aside class="wrap adrow" aria-label="Advertising space"><a class="adbanner house" href="{e(site)}/advertise.html#spots">'
+            f'<span class="script">{script}</span><span class="adtext">{text}</span>'
+            f'<span class="caps adspot">Spot {spot} · {e(s["name"])}</span></a></aside>')
+
+
+def sponsor_tag(cfg, section, site):
+    ads = ads_for(cfg, "A3", section)
+    if ads:
+        a = ads[0]
+        mark = f'<img src="{e(a["image"])}" alt="{e(a["name"])}">' if a.get("image") else e(a["name"])
+        return (f'<a class="sponsortag" href="{e(a["link"])}" target="_blank" rel="noopener sponsored">'
+                f'<span class="caps">Presented by</span>{mark}</a>')
+    return f'<a class="sponsortag house caps" href="{e(site)}/advertise.html#spots">Sponsor this section</a>'
+
+
+def sponsor_strip(cfg):
+    site = cfg["site_url"].rstrip("/")
+    seen, names = set(), []
+    for a in cfg.get("ads") or []:
+        if a["name"] not in seen and ads_for(cfg, a.get("spot") or "A2"):
+            seen.add(a["name"])
+            names.append(f'<a href="{e(a["link"])}" target="_blank" rel="noopener sponsored">{e(a["name"])}</a>')
+    if names:
+        return f'<div class="wrap sponsors"><span class="caps">Thank you to our sponsors</span>{" · ".join(names)}</div>'
+    return (f'<div class="wrap sponsors"><span class="caps">Founding sponsors wanted</span>'
+            f'<a href="{e(site)}/advertise.html">Your business could be the first name here</a></div>')
+
+
+def fund_card(cfg, f):
+    img = (f'<img src="{e(img_src(f["image"]))}" alt="" loading="lazy" referrerpolicy="no-referrer">' if f.get("image")
+           else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["seniors"]}</svg></span>')
+    goal = f'<span class="price">Goal {e(f["goal"])}</span>' if f.get("goal") else ""
+    when = f' · Until {f["day"].strftime("%b %-d")}' if f.get("day") else ""
+    cause = f'<span class="cause">{e(f["cause"])}</span>' if f.get("cause") else ""
+    give = (f'<a class="btn solid sm" href="{e(f["link"])}" target="_blank" rel="noopener">Donate</a>' if f.get("link") else "")
+    site = cfg["site_url"].rstrip("/")
+    share = f'<a class="btn fb sm" href="{e(fb_share(site + "/fundraisers.html#f-" + f["id"]))}" target="_blank" rel="noopener">{FB_ICON}Share</a>'
+    by = f'<span class="muted">Organized by {e(f["by"])}</span>' if f.get("by") else ""
+    return (f'<article class="slide listing fund" id="f-{f["id"]}"><span class="photo">{img}{goal}</span>'
+            f'<span class="caps kicker">{e(f.get("town") or "Richland County")}{when}</span>{cause}'
+            f'<h3 class="hed">{e(f["title"])}</h3><p class="dek">{e(f["summary"])}</p>{by}<div class="share">{give}{share}</div></article>')
+
+
+def ad_card(cfg, ad=None, spot="A2"):
     site = cfg["site_url"].rstrip("/")
     if ad:
         text = f'<span class="dek">{e(ad["text"])}</span>' if ad.get("text") else ""
@@ -1132,16 +1299,16 @@ def ad_card(cfg, ad=None):
                 f'<span class="photo"><img src="{e(ad["image"])}" alt="{e(ad["name"])}" loading="lazy"></span>'
                 f'<span class="caps sponsor">Sponsor</span><span class="hed">{e(ad["name"])}</span>'
                 f'{text}</a>')
-    return (f'<a class="slide ad house" href="{e(site)}/advertise.html"><span class="caps sponsor">Your business here</span>'
-            f'<span class="script">Shop local!</span><span class="hed">Reach thousands of neighbors who love Mansfield</span>'
-            f'<span class="btn solid sm">Advertise with us</span></a>')
+    return (f'<a class="slide ad house" href="{e(site)}/advertise.html#spots"><span class="caps sponsor">Spot {spot}</span>'
+            f'<span class="script">Advertise here!</span><span class="hed">Reach neighbors who love Mansfield</span>'
+            f'<span class="btn solid sm">See ad spots</span></a>')
 
 
 def slide(cfg, s):
     return card(cfg, s).replace('<article class="card"', '<article class="card slide"', 1)
 
 
-def render_index(cfg, stories, businesses, flyers, listings):
+def render_index(cfg, stories, businesses, flyers, listings, funds=()):
     site = cfg["site_url"].rstrip("/")
     # The front page leads with the newest stories that have a photo.
     news = sorted((s for s in stories if s["section"] != "life"), key=lambda s: not s.get("image"))
@@ -1157,22 +1324,39 @@ def render_index(cfg, stories, businesses, flyers, listings):
         front = (f'<section class="wrap front">{lead(cfg, top)}<aside class="also"><h2 class="label">Also today</h2>'
                  f'{"".join(brief(s) for s in also)}</aside></section>')
     grid = "".join(card(cfg, s, front=s["id"] in front_ids) for s in stories)
-    ads = cfg.get("ads") or []
+    ads = ads_for(cfg, "A2")
     ad_at = lambda i: ad_card(cfg, ads[i % len(ads)] if ads else None)
+    sale_ads = ads_for(cfg, "A7")
+    events_ad = ads_for(cfg, "A6")
     rails = []
     for i, (k, name) in enumerate(SECTIONS):
         items = [s for s in stories if s["section"] == k][:12]
         if not items:
             continue
         slides = [slide(cfg, s) for s in items]
-        if i % 3 == 1:
+        if i % 3 == 1 and k != "life":
             slides.insert(min(3, len(slides)), ad_at(i))  # one sponsor spot every few shelves
-        see = f'<button class="link" type="button" data-show="{k}">See all {counts[k]}</button>'
+        if k == "life":
+            see = f'<a class="link" href="{e(site)}/celebrations.html">See all {counts[k]}</a>'
+            rails.append(banner(cfg, "A8") + rail(e(name), "".join(slides), see, kind="sec"))
+            continue
+        see = f'{sponsor_tag(cfg, k, site)}<button class="link" type="button" data-show="{k}">See all {counts[k]}</button>'
         rails.append(rail(e(name), "".join(slides), see, kind="sec"))
-    events = rail("Local events", "".join(flyer_card(f) for f in flyers) + (
+    ev_ad = (f'<a class="slide flyer evad" href="{e(events_ad[0]["link"])}" target="_blank" rel="noopener sponsored"><span class="flyer-img">'
+             f'<img src="{e(events_ad[0]["image"])}" alt="{e(events_ad[0]["name"])}" loading="lazy"></span><span class="caps sponsor">Sponsor</span>'
+             f'<span class="hed">{e(events_ad[0]["name"])}</span></a>') if events_ad else (
+        f'<a class="slide flyer add evad" href="{e(site)}/advertise.html#spots"><span class="flyer-img"><span class="script">Advertise<br>here!</span></span>'
+        f'<span class="hed">Sponsor local events</span><span class="dek">Spot A6</span></a>')
+    flyer_cards = [flyer_card(f) for f in flyers]
+    flyer_cards.insert(min(2, len(flyer_cards)), ev_ad)
+    events = rail("Local events", "".join(flyer_cards) + (
         f'<a class="slide flyer add" href="{e(site)}/submit.html#flyer"><span class="flyer-img"><span class="plus">+</span></span>'
         f'<span class="hed">Post your flyer</span><span class="dek">Free for community events</span></a>'), rid="events", kind="flyers")
-    market = rail("Buy &amp; Sell", "".join(listing_card(x, cfg) for x in listings[:12]) + ad_at(0),
+    funds_rail = rail("Fundraisers &amp; causes", "".join(fund_card(cfg, f) for f in funds[:12]) + (
+        f'<a class="slide flyer add" href="{e(site)}/submit.html#fundraiser"><span class="flyer-img"><span class="plus">+</span></span>'
+        f'<span class="hed">Share a fundraiser</span><span class="dek">GoFundMe and other donation links welcome</span></a>'),
+        f'<a class="link" href="{e(site)}/fundraisers.html">See all</a>', kind="market") if funds else ""
+    market = rail("Buy &amp; Sell", "".join(listing_card(x, cfg) for x in listings[:12]) + ad_card(cfg, sale_ads[0] if sale_ads else None, "A7"),
                   f'<a class="link" href="{e(site)}/market.html">See all</a>', kind="market") if listings else ""
     return f"""{head(cfg, cfg['site_name'], cfg['tagline'], site + '/')}
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
@@ -1180,6 +1364,7 @@ def render_index(cfg, stories, businesses, flyers, listings):
 <nav class="sections" aria-label="Sections"><div class="wrap">{tabs}</div></nav>
 <main>{note}{front}
 {events}
+{funds_rail}
 <div id="shelves">{"".join(rails)}</div>
 {market}
 <section class="wrap latest" id="latest" hidden><h2 class="label">More good news</h2>
@@ -1207,7 +1392,7 @@ def shell(cfg, title, desc, url, inner, stories, image=None, extra=""):
 
 
 SB_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
-EXTRA_SECTIONS = ["Athlete Spotlight", "Business Spotlight", "Event Flyer", "Buy & Sell"]
+EXTRA_SECTIONS = ["Fundraiser", "Athlete Spotlight", "Business Spotlight", "Event Flyer", "Buy & Sell"]
 
 
 def field(name, label, kind="text", req=False, hint="", show=None, opts=None, extra=None, wide=False):
@@ -1286,7 +1471,7 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
   const done=text=>{{f.reset();showFor(f);syncSign();f.hidden=true;thanks.querySelector('[data-thanks]').textContent=text;thanks.hidden=false;thanks.scrollIntoView({{behavior:'smooth',block:'center'}})}};
   if(f.hp.value){{done('Thanks!');return}}
   const fd=new FormData(f);const row={{}};const extras=[];
-  f.querySelectorAll('[name]').forEach(el=>{{if(el.closest('[hidden]'))return;const v=(el.type==='file'?'':String(fd.get(el.name)||'').trim());if(!v)return;
+  f.querySelectorAll('[name]').forEach(el=>{{if(el.closest('[hidden]'))return;const v=(el.type==='file'?'':String(el.value||'').trim());if(!v)return;
    if(el.dataset.extra)extras.push(el.dataset.extra+': '+v);else if(COLS.includes(el.name))row[el.name]=v}});
   if(f.dataset.section)row.section=f.dataset.section;
   if(extras.length)row.summary=[row.summary,...extras].filter(Boolean).join('\\n');
@@ -1329,6 +1514,8 @@ def render_submit(cfg, stories):
          "with your photo, your story and a button people can share.", "#form:Business Spotlight", "Get a spotlight", "spotlight"),
         ("vote", "Post an event flyer", "Concerts, fish fries, fundraisers, festivals, church suppers. Upload your flyer and "
          "it rides the front page carousel until the day of the event.", "#form:Event Flyer", "Post a flyer", "flyer"),
+        ("seniors", "Share a fundraiser", "Raising money for a neighbor, a team or a special cause? Post your GoFundMe or "
+         "donation link and we'll help spread the word.", "#form:Fundraiser", "Post a fundraiser", "fundraiser"),
         ("sports", "Spotlight an athlete", "A big game, a personal best, a signing day, a kid who never quits. Send a photo "
          "and a few lines and they get their own page to share.", "#form:Athlete Spotlight", "Spotlight an athlete", "athlete"),
         ("sales", "Buy &amp; Sell", "List something for sale or wanted, with a price and how to reach you. Free, up for 30 days.",
@@ -1355,10 +1542,13 @@ def render_submit(cfg, stories):
         field("price", "Price", show=["Buy & Sell"], hint="Like $40, Free, or Best offer."),
         field("contact", "How buyers reach you", show=["Buy & Sell"], hint="Phone, email or link. This is shown on the site."),
         field("business", "Business name", show=["Business Spotlight"]),
+        field("business", "Special cause", show=["Fundraiser"], hint="Optional. Fundraisers with the same cause, like \u201cBellville flood relief\u201d, are grouped together."),
+        field("price", "Goal", show=["Fundraiser"], hint="Optional, like $5,000."),
+        field("event_date", "Last day to give", "date", show=["Fundraiser"], hint="Optional. Leave blank and it stays up 90 days."),
         field("sport", "Sport", show=["Athlete Spotlight"], extra="Sport", hint="Like Volleyball or Cross country."),
         field("school", "School or team", show=["Athlete Spotlight"], extra="School"),
         field("grad", "Class of", show=["Athlete Spotlight"], extra="Class of", hint="Graduation year, like 2027."),
-        field("link", "Link for more", "url", hint="Optional: a website, event page or Facebook post."),
+        field("link", "Link for more", "url", hint="Optional: a website, event page or Facebook post. For a fundraiser, the GoFundMe or donation page."),
         field("name", "Your name as it should appear", req=True),
         field("role", "You are a", "select", opts=["Neighbor", "Student reporter", "Business", "Mentor", "Organization"]),
         field("town", "Town or neighborhood"),
@@ -1541,6 +1731,7 @@ def render_sports(cfg, stories, brackets):
         f'<a class="link" href="{e(site)}/submit.html">Submit news</a>.</p>')
     grid = "".join(card(cfg, s) for s in news) or '<p class="empty">No sports stories this week yet.</p>'
     inner = f"""{page_title("Go team!", "Sports", "Wins, personal bests, signing days and the kids who never quit. Richland County athletes, cheered on by their neighbors.")}
+{banner(cfg, "A5")}
 {spot}
 <section class="wrap latest" id="brackets"><h2 class="label">Brackets</h2>{boxes}</section>
 <section class="wrap latest"><h2 class="label">Sports news</h2><div class="grid">{grid}</div></section>"""
@@ -1548,43 +1739,103 @@ def render_sports(cfg, stories, brackets):
                  f"{site}/sports.html", inner, stories)
 
 
+def render_fundraisers(cfg, funds, stories):
+    site = cfg["site_url"].rstrip("/")
+    groups = {}
+    for f in funds:
+        groups.setdefault(f["cause"].lower() if f["cause"] else "", []).append(f)
+    named = [(fs[0]["cause"], fs) for k, fs in groups.items() if k and len(fs) > 1]
+    rest = [f for f in funds if not f["cause"] or len(groups[f["cause"].lower()]) < 2]
+    blocks = "".join(f'<section class="wrap latest causebox"><span class="script">Special cause</span><h2 class="label">{e(name)}</h2>'
+                     f'<p class="hint">{len(fs)} fundraisers for this cause</p><div class="grid market-grid">{"".join(fund_card(cfg, f) for f in fs)}</div></section>'
+                     for name, fs in named)
+    more = "".join(fund_card(cfg, f) for f in rest)
+    if more:
+        blocks += f'<section class="wrap latest"><h2 class="label">{"More fundraisers" if named else "Fundraisers"}</h2><div class="grid market-grid">{more}</div></section>'
+    if not funds:
+        blocks = '<section class="wrap latest"><p class="empty">No fundraisers posted right now. Know a neighbor who needs a hand? Share their fundraiser.</p></section>'
+    inner = f"""{page_title("Neighbors helping neighbors", "Fundraisers &amp; causes", "Medical bills, team trips, fire recovery, school projects and special causes. Give if you can, and share if you can't.")}
+<section class="wrap"><div class="more-row" style="margin:0 0 8px"><a class="btn solid" href="{e(site)}/submit.html#fundraiser">Share a fundraiser</a></div></section>
+{blocks}
+<section class="wrap latest"><p class="note">Every fundraiser is checked by an editor before it appears, but Sunny Mansfield doesn't collect or handle money and can't promise how funds are used.
+Give through trusted sites like GoFundMe, give to people and groups you know, and never send gift cards or wire money. See something wrong? Email {e(cfg['submit_email'])}.</p></section>"""
+    return shell(cfg, f"Fundraisers · {cfg['site_name']}", "Fundraisers and special causes from Mansfield and Richland County neighbors.",
+                 f"{site}/fundraisers.html", inner, stories)
+
+
+def render_celebrations(cfg, stories):
+    site = cfg["site_url"].rstrip("/")
+    lives = [s for s in stories if s["section"] == "life"]
+    with_photo = [s for s in lives if s.get("image")] or lives
+    carousel = rail("Remembering", "".join(slide(cfg, s) for s in with_photo[:16]), kind="sec life") if with_photo else ""
+    grid = "".join(card(cfg, s) for s in lives) or '<p class="empty">No celebrations of life posted this week.</p>'
+    inner = f"""{page_title("With love", "Celebrations of Life", "Remembering the neighbors who made Richland County home. Every life here links to the full obituary and service details.")}
+{banner(cfg, "A8")}
+{carousel}
+<section class="wrap latest"><h2 class="label">All celebrations of life</h2><div class="grid">{grid}</div>
+<p class="note" style="text-align:center">Want to share a loved one's story? <a class="link" href="{e(site)}/submit.html">Send it in</a>, with the family's blessing.</p></section>"""
+    return shell(cfg, f"Celebrations of Life · {cfg['site_name']}", "Remembering Mansfield and Richland County neighbors.",
+                 f"{site}/celebrations.html", inner, stories)
+
+
 def render_market(cfg, listings, stories):
     site = cfg["site_url"].rstrip("/")
-    ads = cfg.get("ads") or []
+    ads = ads_for(cfg, "A7")
     cards = "".join(listing_card(x, cfg) for x in listings) or (
         '<p class="empty">Nothing for sale yet. Be the first!</p>')
     inner = f"""{page_title("Neighbor to neighbor", "Buy &amp; Sell", "Furniture, bikes, baby gear, tools, crafts and yard sale finds from around Richland County. Free to post. Listings stay up for 30 days.")}
 <section class="wrap latest"><div class="more-row" style="margin:0 0 24px"><a class="btn solid" href="{e(site)}/submit.html#sell">Post something for sale</a></div>
-<div class="grid market-grid">{cards}{ad_card(cfg, ads[0] if ads else None)}</div>
+<div class="grid market-grid">{cards}{ad_card(cfg, ads[0] if ads else None, "A7")}</div>
 <p class="note">Meet in a public place, bring a friend, and never wire money or pay with gift cards. Sunny Mansfield doesn't handle payments or check items. Report a listing: {e(cfg['submit_email'])}</p></section>"""
     return shell(cfg, f"Buy & Sell · {cfg['site_name']}", "Local buy and sell listings from Richland County neighbors.",
                  f"{site}/market.html", inner, stories)
 
 
+AD_RULES = [
+    ("Labeled, always.", "Every ad says Advertisement or Sponsor. Ads never look like stories, and sponsors never decide what we cover."),
+    ("Local and family friendly.", "We welcome Richland County businesses, nonprofits, churches, schools and events. No alcohol, tobacco, vaping, "
+     "cannabis, gambling, weapons, adult content, payday or title loans, or get-rich offers."),
+    ("True and fair.", "No false claims, fake buttons, before-and-after health promises or prices you won't honor."),
+    ("Political and issue ads.", "Accepted only with a clear \u201cPaid for by\u201d line, as Ohio law requires, and only for local "
+     "races and issues. We may decline any political ad."),
+    ("Your files.", "JPG or PNG, under 1 MB, at the sizes listed. Keep words big and few; most people read on a phone. "
+     "Send a short description of the image for people who use screen readers."),
+    ("A working link.", "Every ad links to your website, Facebook page, menu or event page. The page must load on a phone."),
+    ("Timing.", "Send files three business days before your start date. Ads run by the month and stop on the last day you paid for."),
+    ("Payment.", "Prepaid by the month, cancel any time before the next month. Founding sponsor prices are locked in for a year."),
+    ("Our call.", "We can turn down or take down any ad that doesn't fit these rules. If we take one down, we refund the unused days."),
+]
+
+
 def render_advertise(cfg, stories):
     site = cfg["site_url"].rstrip("/")
-    ask = "#ask"
-    packages = [
-        ("biz", "Featured business", "Top of the Businesses page and the front page Shop local box for a month, with a photo gallery and hours.", "$25 to $50 a month"),
-        ("good", "Section sponsor", "\u201cSeniors brought to you by\u2026\u201d Your logo and link on one section shelf, every day.", "$75 to $150 a month"),
-        ("hoods", "Front page sponsor", "Your logo and link in a sponsor spot on every page of the paper.", "$250 to $500 a month"),
-        ("sales", "Boost a listing", "Pin a garage sale, event flyer or Buy &amp; Sell listing to the top for a week.", "$5 to $15"),
-    ]
-    cards = "".join(f"""<article class="card path"><span class="art sm"><svg viewBox="0 0 100 100" aria-hidden="true">{ART[a]}</svg></span>
-<span class="caps kicker">{price}</span><h2 class="hed">{t}</h2><p class="dek">{d}</p></article>""" for a, t, d, price in packages)
-    inner = f"""{page_title("Shop local!", "Advertise with us", "Put your business in front of neighbors who read, share and shop local. Every ad is labeled Sponsor, and sponsors never decide what we cover.")}
-<section class="wrap latest"><div class="grid four">{cards}</div>
-<div class="more-row"><a class="btn solid" href="{e(ask)}">Ask about advertising</a></div>
-<p class="note" style="text-align:center">Prices are starting points for founding sponsors. Basic business spotlights and community posts are always free.</p></section>
+    spots = "".join(f"""<article class="spot"><span class="code">Spot {x['spot']}</span><h3>{e(x['name'])}</h3>
+<p>{e(x['where'])}.</p><p class="hint">{e(x['size'])}</p><span class="price">{e(x['price'])}</span></article>""" for x in AD_SPOTS)
+    rules = "".join(f"<li><b>{t}</b> {d}</li>" for t, d in AD_RULES)
+    tiers = "".join(f"""<article class="tier{' pick' if t.get('pick') else ''}">{'<span class="caps picked">Most popular</span>' if t.get('pick') else ''}
+<h3>{e(t['name'])}</h3><p class="cost"><b>{t['price']}</b> {t['per']}</p><p class="hint">{e(t['best'])}</p>
+<ul>{''.join(f'<li>{e(g)}</li>' for g in t['gets'])}</ul><a class="btn{' solid' if t.get('pick') else ''} sm" href="#ask">Choose {e(t['name'])}</a></article>""" for t in AD_TIERS)
+    specials = "".join(f'<article class="spot"><h3>{e(n)}</h3><p>{e(d)}</p><span class="price">{e(pr)}</span></article>' for n, pr, d in AD_SPECIALS)
+    deals = "".join(f"<li>{e(d)}</li>" for d in AD_DEALS)
+    kit = (f'<a class="btn" href="{e(site)}/brand/Sunny-Mansfield-Media-Kit.pdf" download>Download the media kit (PDF)</a>'
+           if (HERE / "brand" / "Sunny-Mansfield-Media-Kit.pdf").exists() else "")
+    inner = f"""{page_title("Shop local!", "Advertise with us", "Put your business in front of neighbors who read, share and shop local. Every ad is labeled, and sponsors never decide what we cover.")}
+<section class="wrap latest" id="spots"><h2 class="label">Ad spots</h2><div class="spots">{spots}</div>
+<div class="more-row"><a class="btn solid" href="#ask">Ask about a spot</a>{kit}</div>
+<p class="note" style="text-align:center">Prices are founding sponsor rates. Every paid sponsor is also thanked by name at the bottom of every page. Business spotlights and community posts are always free.</p></section>
+<section class="wrap latest" id="packages"><h2 class="label">Packages</h2><div class="tiers">{tiers}</div>
+<h3 class="hed" style="margin:32px 0 12px">Specialty spots</h3><div class="spots">{specials}</div>
+<ul class="deals">{deals}</ul></section>
+<section class="wrap latest" id="requirements"><h2 class="label">Ad requirements</h2><ul class="reqs">{rules}</ul></section>
 <section class="wrap formbox" id="ask"><h2 class="label">Ask about advertising</h2>{sunny_form(cfg, "ask-form", "Advertise", [
         field("business", "Business name", req=True),
         field("name", "Your name", req=True),
         field("email", "Email", "email", True),
         field("contact", "Phone", "tel"),
-        field("interest", "Interested in", "select", opts=[p[1] for p in packages] + ["Not sure yet"], extra="Interested in"),
-        field("summary", "Anything else?", "textarea"),
+        field("interest", "Interested in", "select", opts=[f"{t['name']} package" for t in AD_TIERS] + [n for n, _, _ in AD_SPECIALS] + [f"{x['spot']}: {x['name']}" for x in AD_SPOTS] + ["Not sure yet"], extra="Interested in"),
+        field("summary", "Anything else?", "textarea", hint="Dates you'd like, and whether you need help making the ad."),
     ], "Send", title_tpl="Ad inquiry: {business}")}</section>"""
-    return shell(cfg, f"Advertise · {cfg['site_name']}", "Sponsorships and featured spots on Sunny Mansfield.",
+    return shell(cfg, f"Advertise · {cfg['site_name']}", "Ad spots, prices and requirements for advertising on Sunny Mansfield.",
                  f"{site}/advertise.html", inner, stories, extra=form_script(cfg))
 
 
@@ -1711,6 +1962,7 @@ def render_story_page(cfg, s, stories):
     more = "".join(card(cfg, o) for o in [o for o in stories if o is not s][:3])
     body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
 <section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s)}</section>
+{banner(cfg, "A4")}
 {f'<p class="wrap note postimg"><a class="link" href="{e(site)}/{s["post_image"]}" download>Download the framed image for Facebook or Instagram</a></p>' if s.get("post_image") else ""}
 <section class="wrap latest"><h2 class="label">More good news</h2><div class="grid">{more}</div>
 <div class="more-row"><a class="btn" href="{e(site)}/">See all stories</a></div></section>
@@ -1752,7 +2004,7 @@ def main():
         b.setdefault("slug", slug(b["name"]))
     out = Path(args.out)
     (out / "s").mkdir(parents=True, exist_ok=True)
-    page = render_index(cfg, stories, businesses, flyers, listings)
+    page = render_index(cfg, stories, businesses, flyers, listings, got["fundraisers"])
     (out / "index.html").write_text(rebase(
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
@@ -1768,9 +2020,11 @@ def main():
     preview = re.sub(r'(["(])/(assets/[\w./-]+\.jpg)', inline, page).replace('<link rel="icon" type="image/svg+xml" href="/brand/mark.svg">\n', "")
     (out / "artifact.html").write_text(preview)
     try:
-        from posts import make_post_images
-        make_post_images(stories, out, SECTION_NAMES, UA, f"\u00a9 {datetime.now(timezone.utc).year} Ofgeneration LLC",
-                         outlet_photos=cfg.get("frame_outlet_photos", False), note=note)
+        from posts import make_daily_post, make_post_images
+        credit = f"\u00a9 {datetime.now(timezone.utc).year} Ofgeneration LLC"
+        make_post_images(stories, out, SECTION_NAMES, UA, credit, outlet_photos=cfg.get("frame_outlet_photos", False), note=note)
+        make_daily_post(cfg, stories, businesses, flyers, got["fundraisers"], listings, out, SECTION_NAMES, UA, credit,
+                        lambda s: page_url(cfg, s), note=note)
     except ImportError as exc:
         note(f"Post images: skipped ({exc})")
     for s in stories:
@@ -1782,6 +2036,8 @@ def main():
     (out / "businesses.html").write_text(rebase(render_businesses(cfg, businesses, stories)))
     (out / "submit.html").write_text(rebase(render_submit(cfg, stories)))
     (out / "rules.html").write_text(rebase(render_rules(cfg, stories)))
+    (out / "fundraisers.html").write_text(rebase(render_fundraisers(cfg, got["fundraisers"], stories)))
+    (out / "celebrations.html").write_text(rebase(render_celebrations(cfg, stories)))
     (out / "sports.html").write_text(rebase(render_sports(cfg, stories, got["brackets"])))
     (out / "market.html").write_text(rebase(render_market(cfg, listings, stories)))
     (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories)))

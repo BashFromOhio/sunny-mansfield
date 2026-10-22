@@ -107,10 +107,10 @@ def photo_post(s, section, photo, credit):
     return im
 
 
-def text_post(s, section, credit):
+def text_post(s, section, credit, script="Good news!"):
     im = stripes()
     d = ImageDraw.Draw(im)
-    d.text((W / 2, 190), "Good news!", font=font("Yellowtail", 84), fill=ORANGE, anchor="mm")
+    d.text((W / 2, 190), script, font=font("Yellowtail", 84), fill=ORANGE, anchor="mm")
     spaced(d, (W / 2, 270), section, font("Josefin-700", 26), BROWN, anchor="m")
     d.line((W / 2 - 60, 322, W / 2 + 60, 322), fill=ORANGE, width=4)
     f, lines = headline(d, s["title"], W - 220, (84, 76, 68, 60, 54), 6)
@@ -119,9 +119,27 @@ def text_post(s, section, credit):
     for line in lines:
         d.text((W / 2, y), line, font=f, fill=BROWN, anchor="ma")
         y += step
-    spaced(d, (W / 2, y + 30), f"via {s['source']}", font("Josefin-700", 22), MUTED, anchor="m")
+    if s.get("source"):
+        spaced(d, (W / 2, y + 30), f"via {s['source']}", font("Josefin-700", 22), MUTED, anchor="m")
     footer(im, d, credit, center=True)
     return im
+
+
+def load_photo(src, ua):
+    if not src:
+        return None
+    try:
+        if src.startswith("assets/"):
+            raw = (HERE / src).read_bytes()
+        else:
+            req = urllib.request.Request(src, headers={"User-Agent": ua})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                raw = resp.read(8_000_000)
+        photo = Image.open(io.BytesIO(raw))
+        photo.load()
+        return photo
+    except Exception:
+        return None
 
 
 def make_post_images(stories, out, section_names, ua, credit, outlet_photos=False, limit=40, note=print):
@@ -135,20 +153,7 @@ def make_post_images(stories, out, section_names, ua, credit, outlet_photos=Fals
 
     def one(s):
         own = s.get("community") or outlet_photos
-        photo = None
-        if own and s.get("image"):
-            try:
-                src = s["image"]
-                if src.startswith("assets/"):
-                    raw = (HERE / src).read_bytes()
-                else:
-                    req = urllib.request.Request(src, headers={"User-Agent": ua})
-                    with urllib.request.urlopen(req, timeout=15) as resp:
-                        raw = resp.read(8_000_000)
-                photo = Image.open(io.BytesIO(raw))
-                photo.load()
-            except Exception:
-                photo = None
+        photo = load_photo(s.get("image"), ua) if own else None
         section = section_names.get(s["section"], "Good News")
         im = photo_post(s, section, photo, credit) if photo else text_post(s, section, credit)
         im.save(folder / f"{s['id']}.jpg", quality=86, optimize=True, progressive=True)
@@ -168,3 +173,114 @@ def _safe(fn, s):
         return fn(s)
     except Exception:
         return None
+
+
+# ---- Social autopilot: one ready-made post a day, in the weekly rhythm from the social media kit ----
+
+TAGS = "#SunnyMansfield #MansfieldOhio #RichlandCounty"
+THEMES = {  # weekday (Monday = 0): theme name, hashtag
+    0: ("Neighbor news", "#GoodNews"),
+    1: ("Shop Local Tuesday", "#ShopLocal"),
+    2: ("What's happening", "#ThingsToDoMansfield"),
+    3: ("Game day", "#RichlandSports"),
+    4: ("5 good things", "#FiveGoodThings"),
+    5: ("Neighbors helping neighbors", "#GiveLocal"),
+    6: ("Story of the week", "#GoodNews"),
+}
+
+
+def roundup_post(items, credit):
+    im = stripes()
+    d = ImageDraw.Draw(im)
+    d.text((W / 2, 170), "This week in Mansfield", font=font("Yellowtail", 72), fill=ORANGE, anchor="mm")
+    spaced(d, (W / 2, 240), f"{len(items)} good things", font("Josefin-700", 40), BROWN, anchor="m")
+    y = 350
+    num, f = font("Caslon-700", 60), font("Caslon-700", 42)
+    for i, title in enumerate(items, 1):
+        lines = wrap(d, title, f, W - 260, 2)
+        if not lines:
+            lines = wrap(d, title, f, W - 300, 99)[:2]
+            lines[-1] = lines[-1].rstrip(".,;:") + "…"
+        d.text((96, y - 8), str(i), font=num, fill=ORANGE)
+        for line in lines:
+            d.text((170, y), line, font=f, fill=BROWN)
+            y += 54
+        y += 40
+        if i < len(items):
+            d.line((170, y - 22, W - 96, y - 22), fill=(216, 194, 160), width=2)
+    footer(im, d, credit, center=True)
+    return im
+
+
+def pick(stories, *sections, athletes=False):
+    pool = [s for s in stories if s["section"] in sections and (not athletes or s.get("athlete") is not None)]
+    pool.sort(key=lambda s: (not s.get("community"), not s.get("image")))
+    return pool[0] if pool else None
+
+
+def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, section_names, ua, credit, page_url, note=print):
+    """Write site/social/<date>.jpg and social.xml with today's post. It switches over at 8 a.m. Eastern."""
+    from datetime import datetime, timedelta
+    from email.utils import format_datetime
+    from html import escape as e
+    from zoneinfo import ZoneInfo
+    now = datetime.now(ZoneInfo("America/New_York"))
+    day = (now - timedelta(hours=8)).replace(hour=8, minute=0, second=0, microsecond=0)
+    theme, tag = THEMES[day.weekday()]
+    site = cfg["site_url"].rstrip("/")
+    story_photo = lambda s: load_photo(s.get("image"), ua) if s.get("community") else None
+    im = link = title = text = None
+    wd = day.weekday()
+    if wd == 1:
+        biz = next((b for b in businesses if not b.get("sample")), None)
+        if biz:
+            fake = {"title": biz["name"], "source": biz.get("neighborhood") or ""}
+            photo = load_photo(biz.get("image") if (biz.get("image") or "").startswith("https://") else None, ua)
+            im = photo_post(fake, "Shop local", photo, credit) if photo else text_post(fake, "Business spotlight", credit, "Shop local!")
+            link, title = f"{site}/b/{biz['slug']}.html", biz["name"]
+            text = f"Shop Local Tuesday: {biz['name']}. {biz.get('what') or ''}".strip()
+    elif wd == 2 and flyers:
+        f = flyers[0]
+        when = f["day"].strftime("%A, %B %-d") if f.get("day") else "coming up"
+        fake = {"title": f["title"], "source": f.get("town") or ""}
+        photo = load_photo(f.get("image"), ua)
+        im = photo_post(fake, f"Event · {when}", photo, credit) if photo else text_post(fake, f"Event · {when}", credit, "Save the date!")
+        link, title, text = f"{site}/#events", f["title"], f"Coming up {when}: {f['title']}. {f.get('summary') or ''}".strip()
+    elif wd == 4:
+        top = [s for s in stories if s["section"] != "life"][:5]
+        if top:
+            im = roundup_post([s["title"] for s in top], credit)
+            link, title = f"{site}/", "5 good things this week in Mansfield"
+            text = "5 good things this week in Richland County:\n" + "\n".join(f"{i}. {s['title']}" for i, s in enumerate(top, 1))
+    elif wd == 5 and funds:
+        f = funds[0]
+        fake = {"title": f["title"], "source": f.get("by") or ""}
+        photo = load_photo(f.get("image"), ua)
+        im = photo_post(fake, "Fundraiser", photo, credit) if photo else text_post(fake, "Fundraiser", credit, "Lend a hand!")
+        link, title = f"{site}/fundraisers.html#f-{f['id']}", f["title"]
+        text = f"Neighbors helping neighbors: {f['title']}. {f.get('summary') or ''} Give if you can, share if you can't.".strip()
+    if im is None:
+        s = {0: pick(stories, "hoods", "good"), 3: pick(stories, "sports", athletes=True) or pick(stories, "sports"),
+             6: pick(stories, "good", "biz", "seniors")}.get(wd) or pick(stories, "good", "hoods", "biz", "seniors", "sports") or (stories or [None])[0]
+        if s is None:
+            note("Daily post: nothing to post")
+            return
+        photo = story_photo(s)
+        section = section_names.get(s["section"], "Good News")
+        im = photo_post(s, section, photo, credit) if photo else text_post(s, section, credit)
+        link, title = page_url(s), s["title"]
+        text = f"{s['title']}. {s.get('summary') or ''}".strip()
+    folder = Path(out) / "social"
+    folder.mkdir(parents=True, exist_ok=True)
+    name = f"{day:%Y-%m-%d}.jpg"
+    im.save(folder / name, quality=86, optimize=True, progressive=True)
+    image = f"{site}/social/{name}"
+    caption = f"{theme} ☀️\n\n{text}\n\nRead more: {link}\n\n{TAGS} {tag}"
+    (Path(out) / "social.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])} daily post</title>
+<link>{e(site)}/</link><description>One ready-made post a day for Facebook and Instagram</description>
+<item><title>{e(theme + ': ' + title)}</title><link>{e(link)}</link><guid isPermaLink="false">sunny-daily-{day:%Y-%m-%d}</guid>
+<pubDate>{format_datetime(day)}</pubDate><description>{e(caption)}</description>
+<enclosure url="{e(image)}" type="image/jpeg" length="0"/><media:content url="{e(image)}" medium="image" type="image/jpeg" width="1080" height="1350"/></item>
+</channel></rss>""")
+    note(f"Daily post: {theme} - {title}")
