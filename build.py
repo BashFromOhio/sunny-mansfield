@@ -482,8 +482,10 @@ a{color:inherit}
   .motto.mobile{display:block;text-align:center;color:var(--text-2)}}
 .strip{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 24px;padding-block:6px;
   border-top:2px solid var(--border-strong);border-bottom:2px solid var(--border-strong)}
-.navgroup{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
-@media (max-width:1400px){.navlabel{display:none}}
+.navgroup{display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px}
+.navlabel{display:none}
+@media (max-width:1240px){.strip{justify-content:center;gap:0 18px}.navgroup{justify-content:center}}
+@media (max-width:820px){.navgroup{gap:2px 12px}.strip a,.navbtn{padding-block:6px}}
 .navlabel{color:var(--text-3)}
 .strip a,.navbtn{text-decoration:none;white-space:nowrap;padding-block:8px}
 .navbtn{font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;background:none;border:0;cursor:pointer;padding-inline:0}
