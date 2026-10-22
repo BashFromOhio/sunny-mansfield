@@ -283,6 +283,43 @@ SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "business spotlight":
                     "athlete spotlight": "athlete", "bracket": "bracket", "fundraiser": "fund"}
 FUND_DAYS = 90  # fundraisers without an end date come down after this
 ATHLETE_FACTS = ("Sport", "School", "Class of")  # folded into the summary by the submit form
+# Buy & Sell categories, Craigslist style: (key, name, words that suggest it when a listing has no category).
+MARKET_CATS = [
+    ("furniture", "Furniture", r"table|chair|couch|sofa|dresser|desk|bed\b|mattress|cabinet|shelf|recliner"),
+    ("household", "Household & appliances", r"washer|dryer|fridge|refrigerator|stove|microwave|vacuum|dishes|lamp|rug|decor"),
+    ("electronics", "Electronics", r"\btv\b|television|laptop|computer|phone|ipad|tablet|console|xbox|playstation|nintendo|speaker|camera"),
+    ("kids", "Kids & baby", r"kid|baby|toddler|stroller|crib|car seat|toy"),
+    ("clothing", "Clothing & shoes", r"cloth|shirt|dress|coat|jacket|shoe|boots|jeans"),
+    ("tools", "Tools & yard", r"tool|drill|saw|mower|blower|trimmer|ladder|generator|compressor|snow ?blower"),
+    ("vehicles", "Cars & trucks", r"\bcar\b|truck|suv|van\b|tires?|vehicle|motorcycle|atv|trailer"),
+    ("bikes", "Bikes & outdoors", r"bike|bicycle|kayak|canoe|camping|tent|grill|fishing|hunting"),
+    ("sports", "Sports & hobbies", r"golf|ball|sports|instrument|guitar|piano|craft|game|collect"),
+    ("farm", "Farm & garden", r"farm|garden|hay|chicken|plant|seed|tractor|livestock"),
+    ("pets", "Pet supplies", r"\bpet|dog|cat\b|kennel|aquarium|leash"),
+    ("tickets", "Tickets & events", r"ticket"),
+    ("services", "Services", r"service|repair|clean|lawn care|lessons|tutor|babysit|handyman|haul"),
+    ("free", "Free stuff", r""),
+    ("wanted", "Wanted", r""),
+    ("other", "Everything else", r""),
+]
+MARKET_CAT_NAMES = {k: n for k, n, _ in MARKET_CATS}
+MARKET_CAT_BY_NAME = {n.lower(): k for k, n, _ in MARKET_CATS}
+
+
+def market_category(title, summary, price, given=""):
+    if given.lower() in MARKET_CAT_BY_NAME:
+        return MARKET_CAT_BY_NAME[given.lower()]
+    text = f"{title} {summary}".lower()
+    if re.match(r"\s*(wanted|wtb|looking for|iso)\b", title.lower()):
+        return "wanted"
+    if re.fullmatch(r"\s*(free|\$0)\s*", (price or "").lower()):
+        return "free"
+    for key, _, words in MARKET_CATS:
+        if words and re.search(rf"\b(?:{words})", text):
+            return key
+    return "other"
+
+
 LISTING_DAYS = 30  # flyers without a date and Buy & Sell listings come down after this
 
 
@@ -355,9 +392,18 @@ def load_submissions(config, sample):
         if section == "market":
             if date + timedelta(days=LISTING_DAYS) < now:
                 continue
-            got["listings"].append({"id": sid, "title": row["title"], "summary": row["summary"], "image": image,
+            given, keep = "", []
+            for line in row["summary"].splitlines():
+                k, _, v = line.partition(": ")
+                if k == "Category" and v.strip():
+                    given = v.strip()
+                else:
+                    keep.append(line)
+            text = " ".join(keep).strip()
+            got["listings"].append({"id": sid, "title": row["title"], "summary": text, "image": image,
                                     "price": row["price"], "contact": row["contact"], "town": row["town"],
-                                    "name": row["name"], "date": date})
+                                    "name": row["name"], "date": date,
+                                    "cat": market_category(row["title"], text, row["price"], given)})
             continue
         if section == "spotlight":
             name = row["business"] or row["title"]
@@ -659,6 +705,35 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .ad.house .sponsor{padding-top:0}
 .ad:hover{border-color:var(--border-strong)}
 .market-grid .listing{border-color:var(--border-subtle)}
+.market{display:grid;grid-template-columns:240px minmax(0,1fr);gap:40px;padding-block:0 64px;align-items:start}
+@media (max-width:800px){.market{grid-template-columns:minmax(0,1fr);gap:20px}}
+.catside{display:grid;gap:14px;position:sticky;top:16px}
+@media (max-width:800px){.catside{position:static}.catgroup ul{columns:2;column-gap:16px}}
+.catside .btn{justify-self:stretch;text-align:center}
+.catgroup h3{margin:6px 0 6px;font-size:11px;letter-spacing:.14em;color:var(--text-2);border-bottom:2px solid var(--border-strong);padding-bottom:6px}
+.catgroup ul{list-style:none;margin:0;padding:0}
+.catside a[data-cat]{display:flex;justify-content:space-between;gap:8px;padding:5px 0;text-decoration:none;font-size:15px;break-inside:avoid}
+.catside a[data-cat]:hover{color:var(--secondary)}
+.catside a[aria-current="true"]{color:var(--secondary);font-weight:700}
+.catside .n{color:var(--text-3);font-size:13px}
+.allcat{font-weight:600}
+.mtools{display:flex;gap:12px;align-items:center;margin-bottom:16px}
+.mtools input{flex:1}
+.viewtog{display:flex}
+.mlist{display:grid;gap:0;border-top:2px solid var(--border-strong)}
+.mlist .listing{grid-template-columns:120px minmax(0,1fr);grid-template-rows:auto auto 1fr auto;column-gap:16px;row-gap:4px;
+  padding:14px 0;background:none;border:0;border-bottom:1px solid var(--border-subtle)}
+.mlist .listing>:not(.photo){padding-inline:0;grid-column:2}
+.mlist .listing .photo{grid-row:1/span 4;aspect-ratio:1;align-self:start}
+.mlist .listing .price{font-size:13px;padding:5px 7px}
+.mlist .listing .hed{font-size:18px}
+.mlist .listing .dek{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media (max-width:600px){.mlist .listing{grid-template-columns:88px minmax(0,1fr)}}
+.mlist.grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;border-top:0}
+.mlist.grid .listing{display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:none;background:var(--tertiary);border:2px solid var(--border-subtle);padding:0 0 16px}
+.mlist.grid .listing>:not(.photo){grid-column:1;padding-inline:16px}
+.mlist.grid .listing .photo{grid-row:auto;aspect-ratio:4/3}
+.madwrap{max-width:360px;margin:24px 0}
 .adrow{display:grid;gap:4px;justify-items:center;padding-block:16px}
 .adlabel{font-size:10px;letter-spacing:.14em;color:var(--text-3)}
 .adbanner{display:block;width:100%;max-width:728px;line-height:0;text-decoration:none}
@@ -1178,8 +1253,10 @@ def listing_card(x, cfg):
         how = f'<a class="textbtn" href="{e(contact)}" target="_blank" rel="noopener">Contact seller</a>'
     else:
         how = f'<span class="muted">{e(contact)}</span>' if contact else ""
-    return (f'<article class="slide listing" id="l-{x["id"]}"><span class="photo">{img}{price}</span>'
-            f'<span class="caps kicker">{e(x.get("town") or "Richland County")} · {ago(x["date"])}</span>'
+    cat = x.get("cat") or "other"
+    search = e(f'{x["title"]} {x["summary"]} {x.get("town") or ""}'.lower())
+    return (f'<article class="slide listing" id="l-{x["id"]}" data-cat="{cat}" data-q="{search}"><span class="photo">{img}{price}</span>'
+            f'<span class="caps kicker">{e(MARKET_CAT_NAMES.get(cat, ""))} · {e(x.get("town") or "Richland County")} · {ago(x["date"])}</span>'
             f'<h3 class="hed">{e(x["title"])}</h3><p class="dek">{e(x["summary"])}</p><div class="share">{how}</div></article>')
 
 
@@ -1545,6 +1622,7 @@ def render_submit(cfg, stories):
         field("summary", "Tell us about it", "textarea", True, "Two to four sentences. Who, what, where, when."),
         field("photo", "Photo or flyer", "file", hint="JPG or PNG up to 6 MB. Your own photo, or one you have permission to use."),
         field("event_date", "Event date", "date", show=["Event Flyer"]),
+        field("category", "Category", "select", show=["Buy & Sell"], opts=[n for _, n, _ in MARKET_CATS], extra="Category"),
         field("price", "Price", show=["Buy & Sell"], hint="Like $40, Free, or Best offer."),
         field("contact", "How buyers reach you", show=["Buy & Sell"], hint="Phone, email or link. This is shown on the site."),
         field("business", "Business name", show=["Business Spotlight"]),
@@ -1787,12 +1865,38 @@ def render_celebrations(cfg, stories):
 def render_market(cfg, listings, stories):
     site = cfg["site_url"].rstrip("/")
     ads = ads_for(cfg, "A7")
-    cards = "".join(listing_card(x, cfg) for x in listings) or (
-        '<p class="empty">Nothing for sale yet. Be the first!</p>')
-    inner = f"""{page_title("Neighbor to neighbor", "Buy &amp; Sell", "Furniture, bikes, baby gear, tools, crafts and yard sale finds from around Richland County. Free to post. Listings stay up for 30 days.")}
-<section class="wrap latest"><div class="more-row" style="margin:0 0 24px"><a class="btn solid" href="{e(site)}/submit.html#sell">Post something for sale</a></div>
-<div class="grid market-grid">{cards}{ad_card(cfg, ads[0] if ads else None, "A7")}</div>
-<p class="note">Meet in a public place, bring a friend, and never wire money or pay with gift cards. Sunny Mansfield doesn't handle payments or check items. Report a listing: {e(cfg['submit_email'])}</p></section>"""
+    counts = {k: sum(1 for x in listings if x.get("cat") == k) for k, _, _ in MARKET_CATS}
+    groups = [("For sale", ["furniture", "household", "electronics", "kids", "clothing", "tools", "vehicles", "bikes",
+                            "sports", "farm", "pets", "tickets", "other"]),
+              ("Free, wanted &amp; services", ["free", "wanted", "services"])]
+    side = "".join(f'<div class="catgroup"><h3 class="caps">{g}</h3><ul>' + "".join(
+        f'<li><a href="#cat={k}" data-cat="{k}">{e(MARKET_CAT_NAMES[k])}<span class="n">{counts[k] or ""}</span></a></li>' for k in keys)
+        + "</ul></div>" for g, keys in groups)
+    rows = "".join(listing_card(x, cfg) for x in listings)
+    empty = '<p class="empty" id="m-empty"' + (" hidden" if listings else "") + '>Nothing here yet. <a class="link" href="' + e(site) + '/submit.html#sell">Post the first one</a></p>'
+    inner = f"""{page_title("Neighbor to neighbor", "Buy &amp; Sell", "Furniture, bikes, baby gear, tools and yard sale finds from around Richland County. Free to post. Listings stay up for 30 days.")}
+<section class="wrap market">
+<aside class="catside" aria-label="Categories"><a class="btn solid" href="{e(site)}/submit.html#sell">Post a listing</a>
+<a class="allcat" href="#" data-cat="all">All listings <span class="n">{len(listings)}</span></a>{side}</aside>
+<div class="marketmain">
+<div class="mtools"><input type="search" id="m-search" placeholder="Search Buy &amp; Sell" aria-label="Search listings">
+<div class="viewtog" role="group" aria-label="View"><button type="button" class="tab" data-view="list" aria-pressed="true">List</button><button type="button" class="tab" data-view="grid" aria-pressed="false">Photos</button></div></div>
+<h2 class="label" id="m-head">All listings</h2>
+<div class="mlist" id="m-list">{rows}</div>{empty}
+<div class="madwrap">{ad_card(cfg, ads[0] if ads else None, "A7")}</div>
+<p class="note">Meet in a public place, bring a friend, and never wire money or pay with gift cards. Sunny Mansfield doesn't handle payments or check items. Report a listing: {e(cfg['submit_email'])}</p>
+</div></section>
+<script>(()=>{{const list=document.getElementById('m-list');const items=[...list.children];const q=document.getElementById('m-search');
+const head=document.getElementById('m-head');const empty=document.getElementById('m-empty');let cat='all';
+function go(){{const t=q.value.trim().toLowerCase();let n=0;items.forEach(el=>{{const ok=(cat==='all'||el.dataset.cat===cat)&&(!t||el.dataset.q.includes(t));el.hidden=!ok;n+=ok}});
+ const a=document.querySelector('.catside [data-cat="'+cat+'"]');head.textContent=cat==='all'?'All listings':a?a.firstChild.textContent:'Listings';
+ document.querySelectorAll('.catside [data-cat]').forEach(x=>x.setAttribute('aria-current',x.dataset.cat===cat?'true':'false'));empty.hidden=n>0}}
+function fromHash(){{const m=location.hash.match(/cat=(\w+)/);cat=m?m[1]:'all';go()}}
+document.querySelectorAll('.catside [data-cat]').forEach(a=>a.addEventListener('click',ev=>{{ev.preventDefault();cat=a.dataset.cat;history.replaceState(null,'',cat==='all'?location.pathname:'#cat='+cat);go();
+ if(innerWidth<800)head.scrollIntoView({{behavior:'smooth'}})}}));
+q.addEventListener('input',go);window.addEventListener('hashchange',fromHash);fromHash();
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{{list.classList.toggle('grid',b.dataset.view==='grid');
+ document.querySelectorAll('[data-view]').forEach(x=>x.setAttribute('aria-pressed',x===b))}}));}})();</script>"""
     return shell(cfg, f"Buy & Sell · {cfg['site_name']}", "Local buy and sell listings from Richland County neighbors.",
                  f"{site}/market.html", inner, stories)
 
