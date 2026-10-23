@@ -2377,7 +2377,7 @@ def main():
     (out / "artifact.html").write_text(preview)
     try:
         from posts import make_community_feed, make_daily_post, make_post_images, make_quote_image, make_top_story_feed
-        credit = f"\u00a9 {datetime.now(timezone.utc).year} Ofgeneration LLC"
+        credit = "sunnymansfield.com"  # the line along the bottom of every post image
         make_post_images(stories, out, SECTION_NAMES, UA, credit, outlet_photos=cfg.get("frame_outlet_photos", False), note=note)
         make_daily_post(cfg, stories, businesses, flyers, got["fundraisers"], listings, out, SECTION_NAMES, UA, credit,
                         lambda s: page_url(cfg, s), note=note, quote=quote)

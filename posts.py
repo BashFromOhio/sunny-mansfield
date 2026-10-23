@@ -245,7 +245,7 @@ def quote_post(quote, credit):
         spaced(d, (W / 2, y + 26), "\u2014 " + quote["author"], font("Josefin-700", 28), BROWN, anchor="m")
     d.line((140, 1120, W - 140, 1120), fill=BROWN, width=5)
     spaced(d, (W / 2, 1160), "sunnymansfield.com", font("Josefin-700", 46), BROWN, track=0.16, anchor="m")
-    spaced(d, (W / 2, 1238), "Good news for all seasons  \u00b7  " + credit, font("Josefin-700", 17), CREAM, anchor="m")
+    spaced(d, (W / 2, 1238), "Good news for all seasons", font("Josefin-700", 17), CREAM, anchor="m")
     return im
 
 
