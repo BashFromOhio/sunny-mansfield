@@ -22,6 +22,8 @@ create table if not exists public.submissions (
   reviewed_at timestamptz,
   reviewed_by text
 );
+-- What the sender confirmed (rules, photo permission, a guardian's OK for minors). Editors only, never published.
+alter table public.submissions add column if not exists consent text check (char_length(consent) <= 1000);
 create index if not exists submissions_status_idx on public.submissions (status, created_at desc);
 
 -- People who can use the admin page, and people whose posts skip the review queue.
@@ -33,17 +35,25 @@ create table if not exists public.verified (
   added_at timestamptz not null default now()
 );
 
-create or replace function public.is_admin() returns boolean
+-- The signed-in person's email, but only once they have confirmed it. Editor and verified powers hang on this,
+-- so an account someone opened with another person's address and never confirmed gets nothing.
+create or replace function public.confirmed_email() returns text
 language sql stable security definer set search_path = public as $$
-  select exists (select 1 from admins where lower(email) = lower(auth.jwt() ->> 'email'));
+  select lower(u.email) from auth.users u where u.id = auth.uid() and u.email_confirmed_at is not null;
 $$;
 
--- New posts always start in review, unless the sender is signed in and on the verified list.
--- Team applications and ad inquiries always wait for an admin.
+create or replace function public.is_admin() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from admins where lower(email) = public.confirmed_email());
+$$;
+
+-- New posts always start in review, unless the sender is signed in with a confirmed email on the verified list.
+-- Team applications, ad inquiries, fundraisers, brackets and headline picks always wait for an admin.
 create or replace function public.on_submit() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
   signed_in text := lower(auth.jwt() ->> 'email');
+  confirmed text := public.confirmed_email();
 begin
   new.status := 'pending';
   new.reviewed_at := null;
@@ -51,8 +61,9 @@ begin
   new.created_at := now();
   if signed_in is not null then
     new.email := signed_in;  -- a signed-in sender can't claim someone else's address
-    if new.section not in ('Join the team', 'Advertise')
-       and exists (select 1 from verified where lower(email) = signed_in) then
+    if new.section not in ('Join the team', 'Advertise', 'Fundraiser', 'Bracket', 'Headline')
+       and confirmed = signed_in
+       and exists (select 1 from verified where lower(email) = confirmed) then
       new.status := 'approved';
       new.reviewed_at := now();
       new.reviewed_by := 'verified';

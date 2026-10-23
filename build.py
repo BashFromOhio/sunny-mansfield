@@ -382,6 +382,7 @@ def load_submissions(config, sample):
             date = datetime.strptime(row["when"], "%m/%d/%Y %H:%M:%S").replace(tzinfo=timezone.utc)
         except ValueError:
             date = parse_date(row["when"])
+        row["link"] = full_link(row["link"])  # only http(s), so a typed javascript: or data: link never becomes an href
         image = drive_image(row["photo"])
         image = image if image.startswith("https://") or (sample and image.startswith("assets/")) else None
         sid = hashlib.sha1(("community" + row.get("id", "") + row["when"] + row["title"]).encode()).hexdigest()[:10]
@@ -460,7 +461,7 @@ def full_link(link):
     link = (link or "").strip()
     if link and not link.startswith("http") and re.match(r"^[\w-]+(\.[\w-]+)+(/|$)", link):
         link = "https://" + link
-    return link if link.startswith("http") else ""
+    return link if re.match(r"(?i)^https?://", link) else ""
 
 
 def youtube_id(link):
@@ -841,6 +842,10 @@ footer .wrap.credit{display:flex;flex-wrap:wrap;align-items:baseline;justify-con
   padding-top:18px;padding-bottom:22px;border-top:1px solid rgba(251,246,236,.18);font:600 14px/1.4 var(--sans)}
 footer .credit .script{font-size:26px;color:var(--secondary);line-height:1}
 footer .credit small{flex-basis:100%;font:400 12px/1.6 var(--sans);opacity:.7}
+footer .credit .legal{flex-basis:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;font:600 13px/1.6 var(--sans)}
+footer .credit .legal a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.note.report{font-size:14px;opacity:.85;margin-bottom:32px}
+.legaltext{max-width:760px;padding-block:8px 40px}.legaltext .hed{font-size:24px;margin:28px 0 6px}.legaltext p{font-size:17px;line-height:1.65;margin:0}
 
 /* sports: athlete cards and tournament brackets */
 .athlete .sport{color:var(--secondary)}
@@ -1251,7 +1256,15 @@ def submit_band(cfg, site):
 </div></div></section>"""
 
 
+def report_link(cfg, s=None):
+    """A mailto that names the post, so a takedown request reaches an editor with what they need."""
+    subject = f"Report or remove: {s['title']}" if s else "Report or remove a post"
+    body = f"Post: {s['link']}\n\nWhat should we fix or take down, and why?\n" if s else "Link to the post:\n\nWhat should we fix or take down, and why?\n"
+    return f"mailto:{cfg['submit_email']}?subject={urllib.parse.quote(subject[:150])}&body={urllib.parse.quote(body)}"
+
+
 def footer(cfg):
+    site = cfg["site_url"].rstrip("/")
     return f"""<footer>{skyline().replace('class="skyline"', 'class="sky"')}<div class="wrap">
 <span class="logo">{logo("logo-retro-reverse.svg")}</span>
 <p>We share headlines, short summaries and source photos, and every story links to the original reporting.
@@ -1259,6 +1272,7 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 <span class="caps">Updated {datetime.now(timezone.utc).strftime('%b %-d, %Y')}</span></div>
 {sponsor_strip(cfg)}
 <div class="wrap credit"><span class="script">Made in Mansfield</span> <span>by Ofgeneration LLC</span>
+<nav class="legal"><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
 Stories from other outlets belong to their publishers.</small></div></footer>"""
 
@@ -1692,11 +1706,17 @@ SB_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supa
 EXTRA_SECTIONS = ["Fundraiser", "Athlete Spotlight", "Business Spotlight", "Event Flyer", "Buy & Sell"]
 
 
-def field(name, label, kind="text", req=False, hint="", show=None, opts=None, extra=None, wide=False):
-    """One labeled input. show = sections it appears for; extra = label to fold it into the summary."""
+def field(name, label, kind="text", req=False, hint="", show=None, opts=None, extra=None, wide=False, consent=None):
+    """One labeled input. show = sections it appears for; extra = label to fold it into the summary;
+    consent = label to keep it in the private consent record that only editors see."""
     attrs = f' name="{name}" id="f-{name}"' + (" required" if req else "")
     if extra:
         attrs += f' data-extra="{e(extra)}"'
+    if consent:
+        attrs += f' data-consent="{e(consent)}"'
+    if kind == "checkbox":
+        vis = f' data-for="{e("|".join(show))}" hidden' if show else ""
+        return f'<label class="check wide"{vis}><input type="checkbox" value="Yes"{attrs}> <span>{label}</span></label>'
     if kind == "select":
         ctl = f'<select{attrs}><option value="">Choose one</option>' + "".join(
             f'<option>{e(o)}</option>' for o in opts) + "</select>"
@@ -1729,7 +1749,7 @@ def sunny_form(cfg, fid, section, fields, button, title_tpl="", signin=False):
     return f"""<form class="sunny" id="{fid}" data-section="{e(section)}" data-title="{e(title_tpl)}" novalidate>
 {sign}{"".join(fields)}
 <label class="hp" aria-hidden="true">Leave this empty<input name="hp" tabindex="-1" autocomplete="off"></label>
-<label class="check wide"><input type="checkbox" required name="agree"> <span>I agree to the <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/rules.html#rules" target="_blank">Sunny rules</a> and have permission to share any photo I add.</span></label>
+<label class="check wide"><input type="checkbox" required name="agree" value="Yes" data-consent="Agreed to rules, terms, photo permission and OK from people named"> <span>I agree to the <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/rules.html#rules" target="_blank">Sunny rules</a> and <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/terms.html" target="_blank">terms</a>, have permission to share any photo I add, and everyone named or pictured said it's OK (a parent or guardian for anyone under 18). <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/privacy.html" target="_blank">Privacy</a></span></label>
 <div class="wide submitrow"><button class="btn solid" type="submit"{"" if on else " disabled"}>{button}</button><span class="formmsg" role="status" aria-live="polite"></span></div>
 {closed}</form>
 <div class="thanks" hidden><span class="script">Thank you!</span><h2 class="hed">Got it.</h2><p data-thanks></p>
@@ -1742,7 +1762,7 @@ def form_script(cfg):
     conf = json.dumps({"url": cfg["supabase_url"], "key": cfg["supabase_anon_key"]})
     return f"""<script src="{SB_JS}"></script><script>
 (()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);
-const COLS=['section','title','summary','link','name','role','business','town','event_date','price','contact','email'];
+const COLS=['section','title','summary','link','name','role','business','town','event_date','price','contact','email','consent'];
 let who=null;
 function syncSign(){{document.querySelectorAll('[data-out]').forEach(x=>x.hidden=!!who);document.querySelectorAll('[data-in]').forEach(x=>x.hidden=!who);
  document.querySelectorAll('[data-who]').forEach(x=>x.textContent=who||'');document.querySelectorAll('input[name=email]').forEach(x=>{{if(who){{x.value=who;x.readOnly=true}}else x.readOnly=false}})}}
@@ -1764,12 +1784,16 @@ function showFor(f){{const sec=f.dataset.section||(f.section?f.section.value:'')
 document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListener('change',ev=>{{if(ev.target.name==='section')showFor(f)}});
  f.addEventListener('submit',async ev=>{{ev.preventDefault();const msg=f.querySelector('.formmsg');const btn=f.querySelector('[type=submit]');
   fixUrls(f);if(!f.reportValidity())return;
+  const val=n=>{{const x=f.querySelector('[name='+n+']');return x&&!x.closest('[hidden]')?(x.type==='checkbox'?x.checked:x.value.trim()):null}};
+  if(val('minor')===''){{msg.textContent='Please tell us if the athlete is under 18.';f.minor.focus();return}}
+  if(val('minor')==='Yes'&&(!val('guardian')||!val('guardian_ok'))){{msg.textContent='For an athlete under 18, add the parent or guardian name and check that they said OK.';f.guardian.focus();return}}
   const thanks=f.nextElementSibling;
   const done=text=>{{f.reset();showFor(f);syncSign();f.hidden=true;thanks.querySelector('[data-thanks]').textContent=text;thanks.hidden=false;thanks.scrollIntoView({{behavior:'smooth',block:'center'}})}};
   if(f.hp.value){{done('Thanks!');return}}
-  const fd=new FormData(f);const row={{}};const extras=[];
-  f.querySelectorAll('[name]').forEach(el=>{{if(el.closest('[hidden]'))return;const v=(el.type==='file'?'':String(el.value||'').trim());if(!v)return;
-   if(el.dataset.extra)extras.push(el.dataset.extra+': '+v);else if(COLS.includes(el.name))row[el.name]=v}});
+  const fd=new FormData(f);const row={{}};const extras=[];const consent=[];
+  f.querySelectorAll('[name]').forEach(el=>{{if(el.closest('[hidden]')||(el.type==='checkbox'&&!el.checked))return;const v=(el.type==='file'?'':String(el.value||'').trim());if(!v)return;
+   if(el.dataset.consent)consent.push(el.dataset.consent+': '+v);else if(el.dataset.extra)extras.push(el.dataset.extra+': '+v);else if(COLS.includes(el.name))row[el.name]=v}});
+  if(consent.length)row.consent=consent.join('\\n');
   if(f.dataset.section)row.section=f.dataset.section;
   if(extras.length)row.summary=[row.summary,...extras].filter(Boolean).join('\\n');
   if(f.dataset.title)row.title=f.dataset.title.replace(/\{{(\w+)\}}/g,(_,k)=>String(fd.get(k)||'').trim()).slice(0,200);
@@ -1781,7 +1805,9 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
     const rid=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);const path=new Date().getFullYear()+'/'+rid+'.'+ext;
     const up=await sb.storage.from('photos').upload(path,file,{{contentType:file.type}});if(up.error)throw up.error;
     row.photo_url=sb.storage.from('photos').getPublicUrl(path).data.publicUrl}}
-   const {{error}}=await sb.from('submissions').insert(row);if(error)throw error;
+   let {{error}}=await sb.from('submissions').insert(row);
+   if(error&&/consent/.test(error.message||'')){{delete row.consent;({{error}}=await sb.from('submissions').insert(row))}}  // until the consent column exists
+   if(error)throw error;
    msg.textContent='';done(f.dataset.section==='Join the team'?'Your application is in. An editor will email you soon.':
     f.dataset.section==='Advertise'?'We will get back to you within two business days.':
     who?'If you are verified it goes live within 20 minutes. Otherwise an editor will look at it soon.':'It is in the review queue. An editor will look at it soon, usually within a day.')}}
@@ -1846,6 +1872,13 @@ def render_submit(cfg, stories):
         field("sport", "Sport", show=["Athlete Spotlight"], extra="Sport", hint="Like Volleyball or Cross country."),
         field("school", "School or team", show=["Athlete Spotlight"], extra="School"),
         field("grad", "Class of", show=["Athlete Spotlight"], extra="Class of", hint="Graduation year, like 2027."),
+        field("minor", "Is this athlete under 18?", "select", show=["Athlete Spotlight"], opts=["No", "Yes"], consent="Under 18"),
+        field("guardian", "Parent or guardian's name", show=["Athlete Spotlight"], consent="Parent or guardian",
+              hint="Needed if the athlete is under 18. Only editors see it."),
+        field("guardian_ok", "Their parent or guardian said it's OK to share this post and photo.", "checkbox",
+              show=["Athlete Spotlight"], consent="Parent or guardian OK"),
+        field("relation", "Your relationship to them", show=["Celebrations of Life"], consent="Relationship",
+              hint="Like daughter, friend, or pastor. Only editors see it."),
         field("link", "Link for more", "url", hint="Optional: a website, event page or Facebook post. For a fundraiser, the GoFundMe or donation page."),
         field("name", "Your name as it should appear", req=True),
         field("role", "You are a", "select", opts=["Neighbor", "Student reporter", "Business", "Mentor", "Organization"]),
@@ -1920,6 +1953,64 @@ def render_rules(cfg, stories):
     ], "Send my application", title_tpl="{name}: {role}")}</section>"""
     return shell(cfg, f"Join the team · {cfg['site_name']}", "Become a verified contributor: editors, student reporters, business correspondents, mentors.",
                  f"{site}/rules.html", inner, stories, extra=form_script(cfg))
+
+
+LEGAL = {
+    "privacy": ("Privacy policy", "What we collect, who sees it, and how to get it removed.", [
+        ("Who we are", "Sunny Mansfield is a free community news site published by Ofgeneration LLC in Mansfield, Ohio. "
+         "Questions about this policy go to {email}."),
+        ("What we collect", "Only what you type into our forms: your name, your email, your town, what you write, any link "
+         "or photo you add, and for Buy & Sell the price and how buyers can reach you. Team applications also ask your role and, "
+         "for anyone under 18, a parent or guardian's name. We don't use tracking cookies, ads trackers or analytics."),
+        ("What is public", "Once an editor approves a post, its headline, words, photo, link, the name you give, your role and "
+         "town appear on the site, in our RSS feeds, and on our Facebook Page. Buy & Sell contact details are public so buyers "
+         "can reach you. Photos you upload are stored at a public web address, so only add photos you're happy to share."),
+        ("What stays private", "Your email address is never published. Only our editors can see it, and we use it only to ask "
+         "about your post or reply to you. Team applications and advertising questions are never published."),
+        ("Who helps us run the site", "Our database and photo storage are hosted by Supabase, the site is hosted by GitHub Pages, "
+         "sign-in emails are sent through Resend, and approved posts are shared to Facebook through Zapier. They process data "
+         "only to provide those services. We never sell your information."),
+        ("How long we keep it", "Approved posts stay up until they're taken down. Event flyers come down after the event, "
+         "Buy & Sell listings after 30 days and fundraisers after 90 days or their end date. Posts we decline are never "
+         "published, and we delete them from time to time."),
+        ("Children", "Sunny Mansfield is for a general audience and isn't meant for children under 13 to use on their own. "
+         "Posts about anyone under 18 need a parent or guardian's OK. A parent can ask us to remove a post or photo of their "
+         "child at any time, and we will."),
+        ("Your choices", "Ask us to correct or remove anything you sent, or anything about you, by emailing {email} or using "
+         "the \u201cReport or remove a post\u201d link at the bottom of every page. We act on removal requests as fast as we can, "
+         "usually the same day, and remove the Facebook copy too."),
+        ("Changes", "If we change this policy we'll update this page and the date below."),
+    ]),
+    "terms": ("Terms of use", "The ground rules for reading and posting on Sunny Mansfield.", [
+        ("Using the site", "Sunny Mansfield is free to read. By sending a post you agree to these terms and to the Sunny rules."),
+        ("What you send", "You keep ownership of what you write and the photos you take. You give Ofgeneration LLC permission "
+         "to publish, edit for length and clarity, and share your post on this site, in our feeds and on our social media pages. "
+         "You can ask us to take it down at any time."),
+        ("Your promises", "You promise that what you send is true as far as you know, is yours to share, and that you have the "
+         "OK of anyone named or pictured, including a parent or guardian's OK for anyone under 18. Don't send anything "
+         "hurtful, private, illegal, political campaigning, or copied from someone else."),
+        ("Editors decide", "We review posts before they appear, except for verified contributors, and we may decline, edit or "
+         "remove any post. \u201cVerified\u201d means an editor confirmed who the contributor is. It doesn't mean every post has been fact-checked."),
+        ("Fundraisers and Buy & Sell", "Fundraisers and listings are posted by neighbors, not by us. We don't run, verify or "
+         "endorse them, we don't handle any money, and we aren't part of any sale. Give and buy with care."),
+        ("Stories from other outlets", "Headlines, short summaries and photos from other news outlets belong to their publishers "
+         "and always link back to the original. Publishers who'd like their stories left out can email {email}."),
+        ("No guarantees", "We work hard to get things right, but the site is provided as is. Ofgeneration LLC isn't responsible "
+         "for posts written by neighbors or for other websites we link to."),
+        ("Problems and takedowns", "If something here is wrong, hurtful or yours and posted without permission, email {email} "
+         "or use the \u201cReport or remove a post\u201d link and we'll look at it right away."),
+    ]),
+}
+
+
+def render_legal(cfg, stories, kind):
+    site = cfg["site_url"].rstrip("/")
+    title, desc, parts = LEGAL[kind]
+    email = f'<a class="link" href="mailto:{e(cfg["submit_email"])}">{e(cfg["submit_email"])}</a>'
+    body = "".join(f'<h2 class="hed">{e(h)}</h2><p>{e(t).replace("{email}", email)}</p>' for h, t in parts)
+    inner = f"""{page_title("The fine print", title, desc)}
+<section class="wrap legaltext">{body}<p class="hint">Last updated October 23, 2026.</p></section>"""
+    return shell(cfg, f"{title} · {cfg['site_name']}", desc, f"{site}/{kind}.html", inner, stories)
 
 
 def biz_card(cfg, b):
@@ -2254,8 +2345,8 @@ async function counts(){{for(const [k,f] of [['pending',()=>sb.from('submissions
  ['ads',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Advertise').eq('status','pending')]]){{
  const {{count}}=await f();document.querySelector(`[data-q="${{k}}"] .n`).textContent=count||''}}}}
 function item(r){{const when=new Date(r.created_at).toLocaleString();
- const facts=[['Section',r.section],['By',r.name],['Role',r.role],['Town',r.town],['Business',r.business],['Event date',r.event_date],['Price',r.price],['Contact',r.contact],['Email',r.email],['Sent',when],['Status',r.status+(r.reviewed_by?' by '+r.reviewed_by:'')]].filter(x=>x[1]);
- const link=r.link?`<a class="link" href="${{esc(r.link)}}" target="_blank" rel="noopener">Open link</a>`:'';
+ const facts=[['Section',r.section],['By',r.name],['Role',r.role],['Town',r.town],['Business',r.business],['Event date',r.event_date],['Price',r.price],['Contact',r.contact],['Email',r.email],['Consent',r.consent&&r.consent.split('\\n').join(' · ')],['Sent',when],['Status',r.status+(r.reviewed_by?' by '+r.reviewed_by:'')]].filter(x=>x[1]);
+ const link=/^https?:\/\//i.test(r.link||'')?`<a class="link" href="${{esc(r.link)}}" target="_blank" rel="noopener">Open link</a>`:'';
  const btn=(a,t,c='')=>`<button class="btn sm ${{c}}" type="button" data-act="${{a}}" data-id="${{r.id}}">${{t}}</button>`;
  let acts='';if(r.section==='Join the team')acts=btn('verify-approve','Approve and verify','solid')+btn('reject','Decline');
  else if(r.section==='Bracket')acts=btn('edit-bracket','Edit','solid');
@@ -2330,6 +2421,7 @@ def render_story_page(cfg, s, stories):
 <section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s, media)}</section>
 {banner(cfg, "A4")}
 {f'<p class="wrap note postimg"><a class="link" href="{e(site)}/{s["post_image"]}" download>Download the framed image for Facebook or Instagram</a></p>' if s.get("post_image") else ""}
+<p class="wrap note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
 <section class="wrap latest"><h2 class="label">{"More Celebrations of Life" if life else "More good news"}</h2><div class="grid">{more}</div>
 <div class="more-row"><a class="btn" href="{e(site)}/{"celebrations.html" if life else ""}">{"See all Celebrations of Life" if life else "See all stories"}</a></div></section>
 {submit_band(cfg, site)}<div class="stripes" aria-hidden="true"></div></main>{footer(cfg)}</div>
@@ -2414,6 +2506,8 @@ def main():
     (out / "businesses.html").write_text(rebase(render_businesses(cfg, businesses, stories)))
     (out / "submit.html").write_text(rebase(render_submit(cfg, stories)))
     (out / "rules.html").write_text(rebase(render_rules(cfg, stories)))
+    for kind in LEGAL:
+        (out / f"{kind}.html").write_text(rebase(render_legal(cfg, stories, kind)))
     (out / "fundraisers.html").write_text(rebase(render_fundraisers(cfg, got["fundraisers"], stories)))
     (out / "celebrations.html").write_text(rebase(render_celebrations(cfg, stories)))
     (out / "sports.html").write_text(rebase(render_sports(cfg, stories, got["brackets"])))
