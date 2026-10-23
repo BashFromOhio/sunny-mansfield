@@ -50,6 +50,7 @@
   "join_form": "",
   "submissions_csv": "",
   "advertise_form": "",
+  "ads_open": false,
   "ads": [],
   "supabase_url": "https://kinmrxnnqdzagppmdkjr.supabase.co",
   "supabase_anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtpbm1yeG5ucWR6YWdwcG1ka2pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1OTMyNjYsImV4cCI6MjEwODE2OTI2Nn0.UQ1kgnA6Ezgvw13-4PjFuT4P_VCX0PdzaglHgjO3oz4"
