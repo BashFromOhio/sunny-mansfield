@@ -1609,7 +1609,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     pick = pinned(news, headlines)
     if pick:
         news = [pick] + [s for s in news if s is not pick]
-    top, also = (news[0], news[1:5]) if news else (None, [])
+    top, also = (news[0], news[1:7]) if news else (None, [])
     front_ids = {s["id"] for s in ([top] if top else []) + also}
     counts = {k: sum(1 for s in stories if s["section"] == k) for k, _ in SECTIONS}
     tabs = f'<button class="tab" type="button" data-sec="all">All <span class="n">{len(stories)}</span></button>' + "".join(
