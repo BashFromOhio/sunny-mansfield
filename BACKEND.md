@@ -54,6 +54,18 @@ Editors and verified contributors only ever get accounts that you create by hand
 
 Editor and verified powers only work for confirmed email addresses (`confirmed_email()` in `schema.sql`), so this is a second lock on the same door.
 
+## 7. Turn on private replies (Free Stuff and jobs)
+
+People answer Free Stuff and job posts through a form, and the poster gets the message by email without anyone seeing their address. The form calls a small Supabase function that sends the email through Resend. Until you finish these steps, the Reply buttons show an error and nothing is sent.
+
+1. Run the updated `supabase/schema.sql` again (SQL Editor > paste > Run). It adds the reply log and the nightly clean-up.
+2. Optional: turn on nightly clean-up. Database > Extensions > search **pg_cron** > enable, then run `schema.sql` once more.
+3. In Supabase, go to **Edge Functions > Deploy a new function > Via Editor**. Name it exactly `reply`, paste all of `supabase/functions/reply/index.ts`, and deploy. Leave **Verify JWT** on.
+4. Go to **Edge Functions > Secrets** and add `RESEND_API_KEY`. Paste your Resend API key there, and only there.
+5. Test it: open a Free Stuff post on the site, press **Message the giver**, and send yourself a note.
+
+Replies come from `replies@sunnymansfield.com` (your Resend domain), with Reply-To set to the person writing. Each person can send 8 replies an hour, 2 a day to the same post, and a post takes at most 40 a day.
+
 ## How it works day to day
 
 - **Waiting**: new posts. Choose **Approve** or **Reject**. **Approve and verify sender** also adds the sender to the verified list.
@@ -62,9 +74,9 @@ Editor and verified powers only work for confirmed email addresses (`confirmed_e
 - **Verified people**: add or remove people. A verified person who signs in on the submit page (with the "Email me a sign-in link" button) goes live without review, except for fundraisers, which always wait for an editor.
 - **Approved**: everything on the site. Choose **Take down** to remove a post.
 
-Event flyers stay up until the day after the event. Buy & Sell listings stay up for 30 days.
+Event flyers stay up until the day after the event. Free Stuff and job posts stay up for 30 days. Jobs always wait for an editor, even from verified people. Free Stuff only shows posts with no price: anything mentioning a dollar amount, a trade or a payment app is left off.
 
-To show a paid ad in the carousels and on the Buy & Sell page, add it to `config.json`:
+Ads are paused (`"ads_open": false` in `config.json`), so each ad spot shows a Sunny Mansfield promo at the same size. To show a paid ad, add it to `config.json`. It takes its spot even while ads are paused:
 
 ```json
 "ads": [{"name": "Sample Bank", "text": "Proud to keep Mansfield sunny", "image": "https://.../ad.jpg", "link": "https://..."}]

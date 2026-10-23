@@ -1,7 +1,7 @@
 -- Sunny Mansfield backend. Paste this whole file into Supabase > SQL Editor and click Run.
 -- It is safe to run again after changes.
 
--- Everything people send: stories, flyers, Buy & Sell, spotlights, team applications, ad inquiries.
+-- Everything people send: stories, flyers, Free Stuff, jobs, spotlights, team applications, ad inquiries.
 create table if not exists public.submissions (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -48,7 +48,7 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- New posts always start in review, unless the sender is signed in with a confirmed email on the verified list.
--- Team applications, ad inquiries, fundraisers, brackets and headline picks always wait for an admin.
+-- Team applications, ad inquiries, fundraisers, jobs, brackets and headline picks always wait for an admin.
 create or replace function public.on_submit() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
@@ -61,7 +61,7 @@ begin
   new.created_at := now();
   if signed_in is not null then
     new.email := signed_in;  -- a signed-in sender can't claim someone else's address
-    if new.section not in ('Join the team', 'Advertise', 'Fundraiser', 'Bracket', 'Headline')
+    if new.section not in ('Join the team', 'Advertise', 'Fundraiser', 'Job', 'Bracket', 'Headline')
        and confirmed = signed_in
        and exists (select 1 from verified where lower(email) = confirmed) then
       new.status := 'approved';
@@ -94,12 +94,44 @@ create policy "admins see admins" on public.admins for select to authenticated u
 drop policy if exists "admins manage verified" on public.verified;
 create policy "admins manage verified" on public.verified for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
--- What the public site reads: approved posts only, without anyone's email address.
-create or replace view public.published as
-  select id, created_at, section, title, summary, photo_url, link, name, role, business, town, event_date, price, contact
+-- What the public site reads: approved posts only, without anyone's email address or phone.
+-- (The old Buy & Sell "contact" column is no longer published: Free Stuff and jobs use private replies instead.)
+drop view if exists public.published;
+create view public.published as
+  select id, created_at, section, title, summary, photo_url, link, name, role, business, town, event_date, price
   from public.submissions
   where status = 'approved' and section not in ('Join the team', 'Advertise');
 grant select on public.published to anon, authenticated;
+
+-- Private replies to Free Stuff and job posts (the "reply" Edge Function writes here to stop spam).
+-- Only scrambled (hashed) senders are kept, never the message, and nobody but the function can read it.
+create table if not exists public.relay_log (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  post_id uuid not null,
+  ip_hash text not null,
+  sender_hash text not null
+);
+create index if not exists relay_log_ip_idx on public.relay_log (ip_hash, created_at desc);
+create index if not exists relay_log_post_idx on public.relay_log (post_id, created_at desc);
+alter table public.relay_log enable row level security;  -- no policies: closed to the public
+
+-- Housekeeping: declined posts go after 30 days, reply records after 30 days, and the poster's email comes off
+-- Free Stuff and job posts after 60 days (replies stop at 30). The consent record stays as proof of permission.
+create or replace function public.tidy_up() returns void
+language sql security definer set search_path = public as $$
+  delete from submissions where status = 'rejected' and created_at < now() - interval '30 days';
+  delete from relay_log where created_at < now() - interval '30 days';
+  update submissions set email = null
+    where section in ('Free Stuff', 'Job', 'Buy & Sell') and email is not null and created_at < now() - interval '60 days';
+$$;
+revoke all on function public.tidy_up() from public, anon, authenticated;
+-- Run it every night at 3 a.m. if the pg_cron extension is on (Database > Extensions > pg_cron). Safe to skip.
+do $$ begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.schedule('sunny-tidy-up', '0 8 * * *', 'select public.tidy_up()');
+  end if;
+end $$;
 
 -- Photo and flyer uploads: public to view, 6 MB images only, anyone can add, only admins can remove.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

@@ -62,7 +62,7 @@ SIL Open Font License). Regenerate with `python3 tools/make_logo.py <fonts folde
 
 ## Community posts, review queue and admin
 
-People post from forms on the site itself: `submit.html` (stories, event flyers, Buy & Sell, business spotlights),
+People post from forms on the site itself: `submit.html` (stories, event flyers, Free Stuff, jobs, business spotlights),
 `rules.html#apply` (join the team) and `advertise.html#ask` (ad inquiries). Everything lands in a free Supabase
 database in **review mode**. Editors approve it at `admin.html`, and the site publishes approved posts on its next
 refresh (every 15 minutes). Verified contributors who sign in skip the queue. Setup: [BACKEND.md](BACKEND.md).

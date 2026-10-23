@@ -6,9 +6,6 @@
 10/18/2026 10:00:00,Event Flyer,Kingwood Mum Festival,Sample flyer. Thousands of mums plus live music on Saturday afternoon.,assets/sample/sign.jpg,,Kingwood,Organization,,Mansfield,10/31/2026,,
 10/18/2026 11:00:00,Event Flyer,Lexington Band Car Wash,Sample flyer. Saturday 9 to 2 at the high school lot. Donations only.,assets/sample/2.jpg,,Band Boosters,Organization,,Lexington,11/1/2026,,
 10/17/2026 11:00:00,Event Flyer,Ontario Craft Show,Sample flyer. 80 local makers in the high school gym.,assets/sample/1.jpg,,Craft Guild,Organization,,Ontario,11/14/2026,,
-10/21/2026 8:00:00,Buy & Sell,Solid oak kitchen table with 4 chairs,Sample listing. Small scratch on one leaf. You haul.,assets/sample/5.jpg,,Pat,Neighbor,,Ontario,,$120,(419) 555-0142
-10/20/2026 8:00:00,Buy & Sell,Kids' bike 20 inch,Sample listing. Barely used and comes with a helmet.,assets/sample/6.jpg,,Lee,Neighbor,,Lexington,,$45,sample@example.com
-10/19/2026 8:00:00,Buy & Sell,Wanted: snow blower,Sample listing. Looking for a working two-stage snow blower before winter.,,,Chris,Neighbor,,Bellville,,Will pay up to $300,(419) 555-0177
 10/21/2026 19:30:00,Athlete Spotlight,Ava Thompson sets a school record in the 3200,"Sample athlete spotlight. Ava shaved 14 seconds off a record that stood since 1998, then stayed to cheer in every teammate.
 Sport: Cross country
 School: Lexington
@@ -32,11 +29,20 @@ Lucas vs Clear Fork
 Madison vs Lexington
 Final
 TBD vs TBD",,,Sunny Mansfield,,,
-10/21/2026 16:00:00,Fundraiser,Help the Millers rebuild after the barn fire,"Sample fundraiser. Neighbors are raising money to replace the Millers' barn and hay before winter.",assets/sample/3.jpg,https://www.gofundme.com/,Sarah K.,Neighbor,Shiloh family recovery,Shiloh,12/15/2026,"$15,000",
-10/20/2026 16:00:00,Fundraiser,Hay drive for the Shiloh farms,"Sample fundraiser. Donate a bale or a few dollars and the 4-H club will deliver.",assets/sample/sign.jpg,https://example.com/give,Shiloh 4-H,Organization,Shiloh family recovery,Shiloh,,"$2,000",
-10/19/2026 16:00:00,Fundraiser,Ontario band trip to the Rose Parade,"Sample fundraiser. 92 students marching in Pasadena on New Year's Day.",assets/sample/2.jpg,https://www.gofundme.com/,Band Boosters,Organization,,Ontario,,"$40,000",
-10/21/2026 9:00:00,Buy & Sell,Free firewood you haul,"Sample listing. About a cord of seasoned oak by the garage.
-Category: Free stuff",,,Dale,Neighbor,,Mansfield,,Free,(419) 555-0110
-10/21/2026 10:00:00,Buy & Sell,Craftsman push mower,"Sample listing. Starts on the first pull, new blade this spring.",assets/sample/4.jpg,,Rita,Neighbor,,Madison,,$90,(419) 555-0133
-10/20/2026 12:00:00,Buy & Sell,Lawn care and leaf cleanup,"Sample listing. High school junior saving for college. Fair prices, references from neighbors.
-Category: Services",,,Jordan,Neighbor,,Ontario,,From $25,(419) 555-0188
+10/21/2026 16:00:00,Fundraiser,Help the Millers rebuild after the barn fire,Sample fundraiser. Neighbors are raising money to replace the Millers' barn and hay before winter.,assets/sample/3.jpg,https://www.gofundme.com/,Sarah K.,Neighbor,Shiloh family recovery,Shiloh,12/15/2026,"$15,000",
+10/20/2026 16:00:00,Fundraiser,Hay drive for the Shiloh farms,Sample fundraiser. Donate a bale or a few dollars and the 4-H club will deliver.,assets/sample/sign.jpg,https://example.com/give,Shiloh 4-H,Organization,Shiloh family recovery,Shiloh,,"$2,000",
+10/19/2026 16:00:00,Fundraiser,Ontario band trip to the Rose Parade,Sample fundraiser. 92 students marching in Pasadena on New Year's Day.,assets/sample/2.jpg,https://www.gofundme.com/,Band Boosters,Organization,,Ontario,,"$40,000",
+10/21/2026 8:00:00,Free Stuff,Solid oak kitchen table with 4 chairs,"Sample listing. Small scratch on one leaf. You haul it from the porch.
+Category: Furniture",assets/sample/5.jpg,,Pat,Neighbor,,Ontario,,,
+10/20/2026 8:00:00,Free Stuff,"Kids' bike, 20 inch","Sample listing. My son outgrew it. Comes with a helmet.
+Category: Kids & baby",assets/sample/6.jpg,,Lee,Neighbor,,Lexington,,,
+10/21/2026 9:00:00,Free Stuff,"Firewood, you haul","Sample listing. About a cord of seasoned oak by the garage.
+Category: Farm & garden",,,Dale,Neighbor,,Mansfield,,,
+10/21/2026 10:00:00,Free Stuff,Craftsman push mower,"Sample listing. Starts on the first pull. Bought a rider, so this one needs a new home.
+Category: Tools & yard",assets/sample/4.jpg,,Rita,Neighbor,,Madison,,,
+10/22/2026 9:30:00,Job,Line cook,"Sample job. Busy diner on the square needs a morning line cook. We train the right person. Weekends a must.
+Type: Full-time",,,Morgan,Business,Sample Family Diner,Mansfield,,$16 to $18 an hour,
+10/21/2026 14:00:00,Job,After-school program helper,"Sample job. Help kids with homework and games, 3 to 6 pm on school days. Must pass a background check.
+Type: Part-time",,https://example.com/apply,Casey,Organization,Sample Youth Center,Shelby,,$13 an hour,
+10/20/2026 11:00:00,Job,Holiday stock and register help,"Sample job. Extra hands for the holiday rush, mid-November to New Year's.
+Type: Seasonal",,,Robin,Business,Sample Hardware,Bellville,,,

@@ -281,12 +281,13 @@ def bing_photo(s):
 SUBMIT_COLS = ["when", "section", "title", "summary", "photo", "link", "name", "role", "business", "town",
                "event_date", "price", "contact"]
 SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "business spotlight": "spotlight",
-                    "event flyer": "flyer", "buy & sell": "market", "buy and sell": "market",
+                    "event flyer": "flyer", "free stuff": "market", "buy & sell": "market", "buy and sell": "market",
+                    "job": "job", "jobs": "job",
                     "athlete spotlight": "athlete", "bracket": "bracket", "fundraiser": "fund",
                     "headline": "headline"}
 FUND_DAYS = 90  # fundraisers without an end date come down after this
 ATHLETE_FACTS = ("Sport", "School", "Class of")  # folded into the summary by the submit form
-# Buy & Sell categories, Craigslist style: (key, name, words that suggest it when a listing has no category).
+# Free Stuff categories: (key, name, words that suggest it when a listing has no category).
 MARKET_CATS = [
     ("furniture", "Furniture", r"table|chair|couch|sofa|dresser|desk|bed\b|mattress|cabinet|shelf|recliner"),
     ("household", "Household & appliances", r"washer|dryer|fridge|refrigerator|stove|microwave|vacuum|dishes|lamp|rug|decor"),
@@ -299,31 +300,34 @@ MARKET_CATS = [
     ("sports", "Sports & hobbies", r"golf|ball|sports|instrument|guitar|piano|craft|game|collect"),
     ("farm", "Farm & garden", r"farm|garden|hay|chicken|plant|seed|tractor|livestock"),
     ("pets", "Pet supplies", r"\bpet|dog|cat\b|kennel|aquarium|leash"),
-    ("tickets", "Tickets & events", r"ticket"),
-    ("services", "Services", r"service|repair|clean|lawn care|lessons|tutor|babysit|handyman|haul"),
-    ("free", "Free stuff", r""),
-    ("wanted", "Wanted", r""),
     ("other", "Everything else", r""),
 ]
 MARKET_CAT_NAMES = {k: n for k, n, _ in MARKET_CATS}
 MARKET_CAT_BY_NAME = {n.lower(): k for k, n, _ in MARKET_CATS}
 
 
-def market_category(title, summary, price, given=""):
+def market_category(title, summary, given=""):
     if given.lower() in MARKET_CAT_BY_NAME:
         return MARKET_CAT_BY_NAME[given.lower()]
     text = f"{title} {summary}".lower()
-    if re.match(r"\s*(wanted|wtb|looking for|iso)\b", title.lower()):
-        return "wanted"
-    if re.fullmatch(r"\s*(free|\$0)\s*", (price or "").lower()):
-        return "free"
     for key, _, words in MARKET_CATS:
         if words and re.search(rf"\b(?:{words})", text):
             return key
     return "other"
 
 
-LISTING_DAYS = 30  # flyers without a date and Buy & Sell listings come down after this
+LISTING_DAYS = 30  # flyers without a date and Free Stuff listings come down after this
+JOB_DAYS = 30
+JOB_TYPES = ["Full-time", "Part-time", "Seasonal", "Temporary", "Internship"]
+# Free Stuff is free only: a price, a trade or a payment app means it isn't (old Buy & Sell posts included).
+PAID = re.compile(r"\$\s?\d|\b(obo|or best offer|for sale|asking|venmo|cash ?app|zelle|paypal|wanted|wtb|iso)\b", re.I)
+PHONE = re.compile(r"(?<!\d)(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)")
+EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
+
+
+def scrub(text):
+    """Take phone numbers and email addresses out of Free Stuff and job posts. People reply through the site instead."""
+    return EMAIL.sub("[removed]", PHONE.sub("[removed]", text or ""))
 
 
 def parse_day(text):
@@ -360,7 +364,8 @@ def fetch_published(config):
 
 def load_submissions(config, sample):
     """Approved posts: from Supabase on the live site, from sample_submissions.csv in the preview."""
-    got = {"stories": [], "spotlights": [], "flyers": [], "listings": [], "brackets": [], "fundraisers": [], "headlines": []}
+    got = {"stories": [], "spotlights": [], "flyers": [], "listings": [], "jobs": [], "brackets": [], "fundraisers": [],
+           "headlines": []}
     try:
         if sample:
             rows = list(csv.reader(io.StringIO((HERE / "sample_submissions.csv").read_text())))
@@ -404,10 +409,26 @@ def load_submissions(config, sample):
                 else:
                     keep.append(line)
             text = " ".join(keep).strip()
-            got["listings"].append({"id": sid, "title": row["title"], "summary": text, "image": image,
-                                    "price": row["price"], "contact": row["contact"], "town": row["town"],
-                                    "name": row["name"], "date": date,
-                                    "cat": market_category(row["title"], text, row["price"], given)})
+            if PAID.search(f'{row["title"]} {text}') or row["price"].strip().lower() not in ("", "free", "$0"):
+                continue  # not free, so not for this page
+            got["listings"].append({"id": sid, "pid": row.get("id") or (sid if sample else ""), "title": scrub(row["title"]), "summary": scrub(text),
+                                    "image": image, "town": row["town"], "date": date,
+                                    "cat": market_category(row["title"], text, given)})
+            continue
+        if section == "job":
+            if date + timedelta(days=JOB_DAYS) < now:
+                continue
+            kind, keep = "", []
+            for line in row["summary"].splitlines():
+                k, _, v = line.partition(": ")
+                if k == "Type" and v.strip():
+                    kind = v.strip()
+                else:
+                    keep.append(line)
+            got["jobs"].append({"id": sid, "pid": row.get("id") or (sid if sample else ""), "title": scrub(row["title"]),
+                                "summary": scrub("\n".join(keep).strip()), "employer": row["business"].strip() or row["name"],
+                                "type": kind, "pay": scrub(row["price"]), "town": row["town"], "link": row["link"],
+                                "image": image, "date": date, "until": date + timedelta(days=JOB_DAYS)})
             continue
         if section == "spotlight":
             name = row["business"] or row["title"]
@@ -761,6 +782,23 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .mlist.grid .listing>:not(.photo){grid-column:1;padding-inline:16px}
 .mlist.grid .listing .photo{grid-row:auto;aspect-ratio:4/3}
 .madwrap{max-width:360px;margin:24px 0}
+.job{display:grid;gap:8px;align-content:start;background:var(--tertiary);border:2px solid var(--border-subtle);padding:20px}
+.job .hed{font-size:20px;line-height:1.25;margin:0}.job .hed a{color:inherit;text-decoration:none}.job .hed a:hover{text-decoration:underline}
+.job .employer{margin:0;font-weight:700;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
+.job .pay{background:var(--secondary);color:var(--tertiary);font:700 13px/1 var(--sans);padding:5px 8px}
+.job .dek{font-size:14px;line-height:1.55;margin:0}
+.jobs{padding-block:0 64px}.jobs .qtabs{margin:12px 0 20px}
+.joblist{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:20px}
+.railbox.jobs .rail .job{width:300px}
+.jobpage{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:40px;align-items:start;padding-block:0 32px}
+.jobpage .box{display:grid;gap:14px}
+@media (max-width:800px){.jobpage{grid-template-columns:minmax(0,1fr);gap:20px}}
+.replybox{max-width:560px;width:calc(100% - 32px);border:2px solid var(--primary);background:var(--tertiary);color:var(--primary);padding:24px;border-radius:0}
+.replybox::backdrop{background:rgba(46,26,16,.55)}
+.replybox .close{position:absolute;top:8px;right:12px;background:none;border:0;font-size:28px;line-height:1;cursor:pointer;color:inherit}
+.replybox form{position:relative;align-items:start}
+.safenote{display:flex;gap:10px;align-items:flex-start}
+.safenote svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--secondary);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .adrow{display:grid;gap:4px;justify-items:center;padding-block:16px}
 .adlabel{font-size:10px;letter-spacing:.14em;color:var(--text-3)}
 .adbanner{display:block;width:100%;max-width:728px;line-height:0;text-decoration:none}
@@ -771,6 +809,17 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .adbanner.house .adtext{font:600 15px/1.4 var(--sans)}
 .adbanner.house .adspot{font-size:11px;color:var(--text-2);flex-basis:100%}
 .adbanner.house:hover{border-style:solid}
+.adbanner.promo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 20px;min-height:90px;box-sizing:border-box;
+  line-height:1.2;padding:12px 24px;color:var(--primary);border:8px solid transparent;
+  background:linear-gradient(var(--tertiary),var(--tertiary)) padding-box,repeating-linear-gradient(-55deg,var(--secondary) 0 9px,var(--tertiary) 9px 18px) border-box}
+.adbanner.promo .ptext{display:grid;gap:6px;text-align:left}
+.adbanner.promo .script{font-size:22px;color:var(--secondary);line-height:1}
+.adbanner.promo .retro{font-size:24px;line-height:1.05}
+.adbanner.promo .adtext{font:500 14px/1.4 var(--sans);color:var(--text-2)}
+.toprow .adbanner.promo{justify-content:center;text-align:center}.toprow .adbanner.promo .ptext{text-align:center;justify-items:center}
+.ad.house.promo{border:8px solid transparent;background:linear-gradient(var(--tertiary),var(--tertiary)) padding-box,repeating-linear-gradient(-55deg,var(--secondary) 0 9px,var(--tertiary) 9px 18px) border-box}
+.ad.house.promo .dek{font-size:14px;line-height:1.5;margin:0;color:var(--text-2)}
+.evad.promo .flyer-img .script{font-size:34px}
 .sponsortag{display:flex;align-items:center;gap:8px;margin-bottom:10px;text-decoration:none;font-size:11px;color:var(--text-2)}
 .sponsortag img{height:28px;width:auto}
 .sponsortag.house{border-bottom:1px dashed var(--secondary);letter-spacing:.1em}
@@ -1234,7 +1283,7 @@ def masthead(cfg, site, stories, quote=None):
 <nav class="wrap strip caps" aria-label="Main">
 <div class="navgroup"><span class="navlabel">Read</span><a href="{e(site)}/">Front page</a><a href="{e(site)}/events.html">Events</a>
 <a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/celebrations.html">Celebrations of Life</a><a href="{e(site)}/fundraisers.html">Fundraisers</a>
-<a href="{e(site)}/market.html">Buy &amp; Sell</a><a href="{e(site)}/businesses.html">Businesses</a></div>
+<a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/businesses.html">Businesses</a></div>
 <div class="navgroup"><span class="navlabel">Take part</span><button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}
 <a class="navcta" href="{e(site)}/submit.html">Submit news</a></div></nav>
@@ -1389,21 +1438,71 @@ def flyer_card(f):
 def listing_card(x, cfg):
     img = (f'<img src="{e(img_src(x["image"]))}" alt="" loading="lazy" referrerpolicy="no-referrer">' if x.get("image")
            else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["sales"]}</svg></span>')
-    price = f'<span class="price">{e(x["price"])}</span>' if x.get("price") else ""
-    contact = x.get("contact") or ""
-    if re.fullmatch(r"[\w.+-]+@[\w-]+\.[\w.]+", contact):
-        how = f'<a class="textbtn" href="mailto:{e(contact)}?subject={e(urllib.parse.quote("Sunny Mansfield: " + x["title"]))}">Email seller</a>'
-    elif re.fullmatch(r"[\d\s().+-]{7,}", contact):
-        how = f'<a class="textbtn" href="tel:{e(re.sub(r"[^0-9+]", "", contact))}">Call or text {e(contact)}</a>'
-    elif contact.startswith("http"):
-        how = f'<a class="textbtn" href="{e(contact)}" target="_blank" rel="noopener">Contact seller</a>'
-    else:
-        how = f'<span class="muted">{e(contact)}</span>' if contact else ""
+    price = '<span class="price">Free</span>'
+    how = reply_button(cfg, x, "Message the giver")
     cat = x.get("cat") or "other"
     search = e(f'{x["title"]} {x["summary"]} {x.get("town") or ""}'.lower())
     return (f'<article class="slide listing" id="l-{x["id"]}" data-cat="{cat}" data-q="{search}"><span class="photo">{img}{price}</span>'
             f'<span class="caps kicker">{e(MARKET_CAT_NAMES.get(cat, ""))} · {e(x.get("town") or "Richland County")} · {ago(x["date"])}</span>'
             f'<h3 class="hed">{e(x["title"])}</h3><p class="dek">{e(x["summary"])}</p><div class="share">{how}</div></article>')
+
+
+def reply_button(cfg, x, label):
+    """Opens the private reply box. The poster's email never reaches the page; the reply function looks it up."""
+    if not x.get("pid") or not backend_on(cfg):
+        return f'<span class="muted">Replies open soon</span>'
+    return (f'<button class="btn solid sm" type="button" data-reply="{e(x["pid"])}" data-title="{e(x["title"])}">'
+            f'{label}</button>')
+
+
+def job_url(cfg, j):
+    return f'{cfg["site_url"].rstrip("/")}/jobs/{j["id"]}.html'
+
+
+def job_card(cfg, j, slide=False):
+    facts = " · ".join(e(v) for v in (j.get("type"), j.get("town") or "Richland County", ago(j["date"])) if v)
+    pay = f'<span class="pay">{e(j["pay"])}</span>' if j.get("pay") else ""
+    dek = j["summary"] if len(j["summary"]) < 180 else j["summary"][:170].rsplit(" ", 1)[0] + "…"
+    search = e(f'{j["title"]} {j["employer"]} {j["summary"]} {j.get("town") or ""}'.lower())
+    return (f'<article class="{"slide " if slide else ""}job" id="j-{j["id"]}" data-type="{e(slug(j.get("type") or "other"))}" data-q="{search}">'
+            f'<span class="caps kicker">{facts}</span><h3 class="hed"><a href="{e(job_url(cfg, j))}">{e(j["title"])}</a></h3>'
+            f'<p class="employer">{e(j["employer"])}{pay}</p><p class="dek">{e(dek)}</p>'
+            f'<div class="share">{reply_button(cfg, j, "Reply privately")}<a class="btn sm" href="{e(job_url(cfg, j))}">Details</a></div></article>')
+
+
+REPLY_NOTE = ("Your message, name and email go straight to the person who posted. We never show their email to you or yours "
+              "to anyone else, and we keep only a scrambled record for 30 days to stop spam.")
+
+
+def reply_box(cfg):
+    """The private reply form for Free Stuff and jobs. It calls the "reply" Supabase function, which emails the poster."""
+    if not backend_on(cfg):
+        return ""
+    conf = json.dumps({"url": cfg["supabase_url"], "key": cfg["supabase_anon_key"]})
+    site = cfg["site_url"].rstrip("/")
+    return f"""<dialog class="replybox" id="reply" aria-labelledby="reply-h"><form class="sunny" id="reply-form" novalidate>
+<button class="close" type="button" data-reply-close aria-label="Close">&times;</button>
+<span class="caps kicker">Private reply</span><h2 class="hed wide" id="reply-h">Reply</h2>
+<label class="fld"><span class="caps">Your name *</span><input name="name" maxlength="100" required autocomplete="name"></label>
+<label class="fld"><span class="caps">Your email *</span><input name="email" type="email" maxlength="200" required autocomplete="email"><span class="hint">They answer you here.</span></label>
+<label class="fld wide"><span class="caps">Message *</span><textarea name="message" rows="5" minlength="10" maxlength="3000" required></textarea></label>
+<label class="hp" aria-hidden="true">Leave this empty<input name="hp" tabindex="-1" autocomplete="off"></label>
+<p class="hint wide">{e(REPLY_NOTE)} Never send money, gift cards, your Social Security number or bank details to someone you haven't met. <a class="link" href="{e(site)}/privacy.html" target="_blank">Privacy</a></p>
+<div class="wide submitrow"><button class="btn solid" type="submit">Send</button><span class="formmsg" role="status" aria-live="polite"></span></div>
+</form></dialog>
+<script src="{SB_JS}"></script><script>
+(()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);const d=document.getElementById('reply');const f=document.getElementById('reply-form');
+const msg=f.querySelector('.formmsg');let post=null;
+document.addEventListener('click',ev=>{{const b=ev.target.closest('[data-reply]');if(b){{post=b.dataset.reply;
+ document.getElementById('reply-h').textContent='Reply about: '+b.dataset.title;msg.textContent='';f.hidden=false;d.showModal();f.name.focus();return}}
+ if(ev.target.closest('[data-reply-close]')||ev.target===d)d.close()}});
+f.addEventListener('submit',async ev=>{{ev.preventDefault();if(!f.reportValidity())return;const btn=f.querySelector('[type=submit]');
+ if(f.hp.value){{d.close();return}}btn.disabled=true;msg.textContent='Sending…';
+ try{{const {{data,error}}=await sb.functions.invoke('reply',{{body:{{post_id:post,name:f.name.value.trim(),email:f.email.value.trim(),message:f.message.value.trim()}}}});
+  if(error){{let t='';try{{t=(await error.context.json()).error}}catch(_){{}}throw new Error(t||error.message)}}
+  f.reset();msg.textContent='Sent! Watch your email for their answer.'}}
+ catch(err){{msg.textContent='Could not send: '+(err.message||err)}}finally{{btn.disabled=false}}}});}})();
+</script>"""
 
 
 # Every place an ad can go. The Advertise page and the media kit read this list.
@@ -1421,7 +1520,7 @@ AD_SPOTS = [
      "size": "1456 x 180 px, plus 640 x 200 px for phones", "price": "$75 to $150 a month"},
     {"spot": "A6", "name": "Events sponsor", "where": "A flyer-sized card in the Local events carousel", "kind": "flyer",
      "size": "1080 x 1350 px (4:5), like a flyer", "price": "$50 to $100 a month"},
-    {"spot": "A7", "name": "Buy & Sell sponsor", "where": "On the Buy & Sell page and its front page carousel", "kind": "card",
+    {"spot": "A7", "name": "Free Stuff sponsor", "where": "On the Free Stuff page and its front page carousel", "kind": "card",
      "size": "1200 x 800 px photo, a name and one short line", "price": "$25 to $50 a month"},
     {"spot": "A8", "name": "Celebrations of Life sponsor", "where": "Right above the Celebrations of Life photo carousel, on the Celebrations of Life page",
      "kind": "banner", "size": "1456 x 180 px, plus 640 x 200 px for phones. Quiet and respectful: name, logo, phone",
@@ -1431,11 +1530,43 @@ AD_SPOTS = [
      "size": "1080 x 1350 px image or we design it from your photos", "price": "$25 to $75 a post"},
 ]
 AD_SPOT = {s["spot"]: s for s in AD_SPOTS}
+# While ads are paused, each spot keeps its size and shows one of our own promos instead.
+# (script, headline, line, link, button). Banners use their spot; cards take turns through PROMO_CARDS.
+PROMO = {
+    "A1": ("Hey neighbor!", "Got good news?", "Ribbon cuttings, birthdays, team wins. Neighbors post here.", "submit.html", "Submit good news"),
+    "A4": ("Pass it on!", "Know a neighbor doing great things?", "Tell us in a few lines and add a photo.", "submit.html", "Submit good news"),
+    "A5": ("Game on!", "Spotlight an athlete", "A big game, a personal best, a kid who never quits.", "submit.html#athlete", "Spotlight an athlete"),
+    "A8": ("With love", "Remember someone special", "Share a Celebration of Life for a Richland County neighbor.", "submit.html", "Share a remembrance"),
+}
+PROMO_CARDS = [
+    ("Free to a good home", "Give away free stuff", "Neighbors message you privately.", "submit.html#free", "Give something away"),
+    ("Now hiring?", "Post a job free", "Applicants reply without seeing your email.", "submit.html#job", "Post a job"),
+    ("Shop local!", "Get a free business spotlight", "Your own page with your photo and story.", "submit.html#spotlight", "Get a spotlight"),
+    ("What's happening?", "Post your event flyer", "It rides the front page until the big day.", "submit.html#flyer", "Post a flyer"),
+]
+
+
+def promo_banner(cfg, spot):
+    site = cfg["site_url"].rstrip("/")
+    script, title, line, href, cta = PROMO[spot]
+    return (f'<aside class="wrap adrow" aria-label="From Sunny Mansfield"><a class="adbanner promo" href="{e(site)}/{href}">'
+            f'<span class="ptext"><span class="script">{e(script)}</span><span class="retro">{e(title)}</span>'
+            f'<span class="adtext">{e(line)}</span></span><span class="btn solid sm">{e(cta)}</span></a></aside>')
+
+
+def promo_card(cfg, i, flyer=False):
+    site = cfg["site_url"].rstrip("/")
+    script, title, line, href, cta = PROMO_CARDS[i % len(PROMO_CARDS)]
+    if flyer:
+        return (f'<a class="slide flyer add evad promo" href="{e(site)}/{href}"><span class="flyer-img"><span class="script">{e(script)}</span></span>'
+                f'<span class="hed">{e(title)}</span><span class="dek">{e(line)}</span></a>')
+    return (f'<a class="slide ad house promo" href="{e(site)}/{href}"><span class="script">{e(script)}</span>'
+            f'<span class="hed">{e(title)}</span><span class="dek">{e(line)}</span><span class="btn solid sm">{e(cta)}</span></a>')
 
 # Packages for the Advertise page and the media kit. Founding sponsor prices, per month unless noted.
 AD_TIERS = [
     {"name": "Neighbor", "price": "$49", "per": "a month", "best": "Shops, salons, food trucks and side businesses",
-     "gets": ["A front page carousel card (A2) or a Buy & Sell card (A7)", "Your name in the sponsor thank-you on every page",
+     "gets": ["A front page carousel card (A2) or a Free Stuff card (A7)", "Your name in the sponsor thank-you on every page",
               "One shout-out on our Facebook page each month"]},
     {"name": "Main Street", "price": "$129", "per": "a month", "best": "Restaurants, gyms, dealers and service businesses", "pick": True,
      "gets": ["Everything in Neighbor", "\u201cPresented by\u201d sponsor of one section (A3)", "One sponsored post a month on Facebook and Instagram (S1)",
@@ -1452,7 +1583,7 @@ AD_SPECIALS = [
     ("Sports season sponsor", "$399 a season", "Top of the Sports page (A5) and \u201cBrackets presented by\u201d for one sports season."),
     ("Events sponsor", "$69 a month", "A flyer-sized card in the Local events carousel (A6)."),
     ("Sponsored social post", "$49 a post", "One post on Facebook and Instagram, marked as a paid partnership. We can design it for you (S1)."),
-    ("Boost a flyer or listing", "$15 a week", "Pin an event flyer, garage sale or Buy & Sell listing to the front of its carousel."),
+    ("Boost a flyer or listing", "$15 a week", "Pin an event flyer, garage sale or Free Stuff listing to the front of its carousel."),
 ]
 AD_DEALS = ["Pay for 3 months, save 10%. Pay for 12 months, save 20%.", "Nonprofits, churches and schools save 25%.",
             "Founding sponsors (the first 10) keep their price for a full year.", "Business spotlights and community posts are always free."]
@@ -1481,7 +1612,7 @@ def banner(cfg, spot, i=0):
                 f'<a class="adbanner" href="{e(a["link"])}" target="_blank" rel="noopener sponsored">'
                 f'<picture>{small}<img src="{e(a["image"])}" alt="{e(a.get("alt") or a["name"])}" loading="lazy"></picture></a></aside>')
     if not ads_open(cfg):
-        return ""
+        return promo_banner(cfg, spot) if spot in PROMO else ""
     s = AD_SPOT[spot]
     script, text = s.get("house", ("Advertise here!", "Put your business in front of neighbors who love Mansfield."))
     return (f'<aside class="wrap adrow" aria-label="Advertising space"><a class="adbanner house" href="{e(site)}/advertise.html#spots">'
@@ -1559,7 +1690,7 @@ def fund_card(cfg, f):
             f'<div class="share">{give}{share}</div>{report}</article>')
 
 
-def ad_card(cfg, ad=None, spot="A2"):
+def ad_card(cfg, ad=None, spot="A2", i=0):
     site = cfg["site_url"].rstrip("/")
     if ad:
         text = f'<span class="dek">{e(ad["text"])}</span>' if ad.get("text") else ""
@@ -1568,7 +1699,7 @@ def ad_card(cfg, ad=None, spot="A2"):
                 f'<span class="caps sponsor">Sponsor</span><span class="hed">{e(ad["name"])}</span>'
                 f'{text}</a>')
     if not ads_open(cfg):
-        return ""
+        return promo_card(cfg, i)
     return (f'<a class="slide ad house" href="{e(site)}/advertise.html#spots"><span class="caps sponsor">Spot {spot}</span>'
             f'<span class="script">Advertise here!</span><span class="hed">Reach neighbors who love Mansfield</span>'
             f'<span class="btn solid sm">See ad spots</span></a>')
@@ -1664,7 +1795,7 @@ def shelf_order(rails, funds, events):
     return "".join(out) + funds + events  # if a section is empty today, its neighbor still shows, just lower down
 
 
-def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None):
+def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=()):
     site = cfg["site_url"].rstrip("/")
     stories = [s for s in stories if s["section"] != "life"]  # Celebrations of Life live on their own page
     # The front page leads with the newest stories that have a photo.
@@ -1685,7 +1816,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
                  f'{"".join(brief(s) for s in also)}</aside></section>')
     grid = "".join(card(cfg, s, front=s["id"] in front_ids) for s in stories)
     ads = ads_for(cfg, "A2")
-    ad_at = lambda i: ad_card(cfg, ads[i % len(ads)] if ads else None)
+    ad_at = lambda i: ad_card(cfg, ads[i % len(ads)] if ads else None, i=i // 3)
     sale_ads = ads_for(cfg, "A7")
     events_ad = ads_for(cfg, "A6")
     rails = []
@@ -1694,7 +1825,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
         if not items:
             continue
         slides = [slide(cfg, s) for s in items]
-        if i % 3 == 1 and (ads or ads_open(cfg)):
+        if i % 3 == 1:
             slides.insert(min(3, len(slides)), ad_at(i))  # one sponsor spot every few shelves
         see = f'{sponsor_tag(cfg, k, site)}<button class="link" type="button" data-show="{k}">See all {counts[k]}</button>'
         rails.append((k, rail(e(name), "".join(slides), see, kind="sec")))
@@ -1702,7 +1833,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
              f'<img src="{e(events_ad[0]["image"])}" alt="{e(events_ad[0]["name"])}" loading="lazy"></span><span class="caps sponsor">Sponsor</span>'
              f'<span class="hed">{e(events_ad[0]["name"])}</span></a>') if events_ad else (
         f'<a class="slide flyer add evad" href="{e(site)}/advertise.html#spots"><span class="flyer-img"><span class="script">Advertise<br>here!</span></span>'
-        f'<span class="hed">Sponsor local events</span><span class="dek">Spot A6</span></a>') if ads_open(cfg) else ""
+        f'<span class="hed">Sponsor local events</span><span class="dek">Spot A6</span></a>') if ads_open(cfg) else promo_card(cfg, 2, flyer=True)
     flyer_cards = [flyer_card(f) for f in flyers]
     if ev_ad:
         flyer_cards.insert(min(2, len(flyer_cards)), ev_ad)
@@ -1717,8 +1848,10 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
                   + rail("Give where it counts", "".join(fund_card(cfg, f) for f in funds[:12])).replace('class="wrap railbox ', 'class="railbox ')
                   + f'<p class="give-note">{SHIELD}<span>{FUND_SHORT} <a class="link" href="{e(site)}/fundraisers.html#before-you-give">Read before you give</a></span></p>'
                   f'</div></section>') if funds else ""
-    market = rail("Buy &amp; Sell", "".join(listing_card(x, cfg) for x in listings[:12]) + ad_card(cfg, sale_ads[0] if sale_ads else None, "A7"),
-                  f'<a class="link" href="{e(site)}/market.html">See all</a>', kind="sales") if listings else ""
+    market = rail("Free Stuff", "".join(listing_card(x, cfg) for x in listings[:12]) + ad_card(cfg, sale_ads[0] if sale_ads else None, "A7", i=1),
+                  f'<a class="link" href="{e(site)}/free.html">See all</a>', kind="sales") if listings else ""
+    market += rail("Now hiring", "".join(job_card(cfg, j, slide=True) for j in jobs[:12]),
+                   f'<a class="link" href="{e(site)}/jobs.html">See all</a>', kind="jobs") if jobs else ""
     home = {"@context": "https://schema.org", "@graph": [
         publisher(cfg),
         {"@type": "WebSite", "@id": f"{site}/#site", "name": cfg["site_name"], "url": f"{site}/", "inLanguage": "en-US",
@@ -1746,7 +1879,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 {footer(cfg)}
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
-{SCRIPT}"""
+{SCRIPT}{reply_box(cfg) if listings or jobs else ""}"""
 
 
 def shell(cfg, title, desc, url, inner, stories, image=None, extra="", data=None, index=True):
@@ -1760,13 +1893,15 @@ def shell(cfg, title, desc, url, inner, stories, image=None, extra="", data=None
 
 
 SB_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
-EXTRA_SECTIONS = ["Fundraiser", "Athlete Spotlight", "Business Spotlight", "Event Flyer", "Buy & Sell"]
+EXTRA_SECTIONS = ["Fundraiser", "Athlete Spotlight", "Business Spotlight", "Event Flyer", "Free Stuff", "Job"]
+PRIVATE_REPLY = ["Free Stuff", "Job"]  # people answer these through the reply form, so the poster's email is required
 
 
-def field(name, label, kind="text", req=False, hint="", show=None, opts=None, extra=None, wide=False, consent=None):
+def field(name, label, kind="text", req=False, hint="", show=None, opts=None, extra=None, wide=False, consent=None, need=False):
     """One labeled input. show = sections it appears for; extra = label to fold it into the summary;
-    consent = label to keep it in the private consent record that only editors see."""
-    attrs = f' name="{name}" id="f-{name}"' + (" required" if req else "")
+    consent = label to keep it in the private consent record that only editors see;
+    need = required, but only when its section shows it (browsers can't check hidden required fields)."""
+    attrs = f' name="{name}" id="f-{name}"' + (" required" if req else "") + (" data-need" if need else "")
     if extra:
         attrs += f' data-extra="{e(extra)}"'
     if consent:
@@ -1819,7 +1954,13 @@ def form_script(cfg):
     conf = json.dumps({"url": cfg["supabase_url"], "key": cfg["supabase_anon_key"]})
     return f"""<script src="{SB_JS}"></script><script>
 (()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);
-const COLS=['section','title','summary','link','name','role','business','town','event_date','price','contact','email','consent'];
+const COLS=['section','title','summary','link','name','role','business','town','event_date','price','email','consent'];
+const PRIVATE={json.dumps(PRIVATE_REPLY)};
+// Re-draw photos before upload: drops the hidden location (GPS) and camera details phones save in them, and shrinks big ones.
+async function clean(file){{let bmp;try{{bmp=await createImageBitmap(file,{{imageOrientation:'from-image'}})}}catch(_){{throw new Error('We could not read that photo. Try a JPG or PNG.')}}
+ const k=Math.min(1,2000/Math.max(bmp.width,bmp.height));const c=document.createElement('canvas');c.width=Math.round(bmp.width*k);c.height=Math.round(bmp.height*k);
+ c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);const type=file.type==='image/png'?'image/png':'image/jpeg';
+ const blob=await new Promise(r=>c.toBlob(r,type,0.86));if(!blob)throw new Error('We could not read that photo. Try a JPG or PNG.');return blob}}
 let who=null;
 function syncSign(){{document.querySelectorAll('[data-out]').forEach(x=>x.hidden=!!who);document.querySelectorAll('[data-in]').forEach(x=>x.hidden=!who);
  document.querySelectorAll('[data-who]').forEach(x=>x.textContent=who||'');document.querySelectorAll('input[name=email]').forEach(x=>{{if(who){{x.value=who;x.readOnly=true}}else x.readOnly=false}})}}
@@ -1842,10 +1983,18 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
  f.addEventListener('submit',async ev=>{{ev.preventDefault();const msg=f.querySelector('.formmsg');const btn=f.querySelector('[type=submit]');
   fixUrls(f);if(!f.reportValidity())return;
   const val=n=>{{const x=f.querySelector('[name='+n+']');return x&&!x.closest('[hidden]')?(x.type==='checkbox'?x.checked:x.value.trim()):null}};
+  const sec=f.dataset.section||val('section');
+  const missing=[...f.querySelectorAll('[data-need]')].find(x=>!x.closest('[hidden]')&&(x.type==='checkbox'?!x.checked:!x.value.trim()));
+  if(missing){{msg.textContent=missing.type==='checkbox'?'Please check the box that starts \u201c'+missing.nextElementSibling.textContent.slice(0,30)+'\u2026\u201d.':'Please fill in '+missing.closest('label').querySelector('.caps').textContent.replace(' *','')+'.';missing.focus();return}}
+  if(PRIVATE.includes(sec)&&!/^\S+@\S+\.\S+$/.test(val('email')||'')){{msg.textContent='Add your email so people can reply. It is never shown on the site.';f.email.focus();return}}
+  const pub=[val('title'),val('summary')].join(' ');const pii=/(\(?\d{{3}}\)?[\s.-]?\d{{3}}[\s.-]?\d{{4}})|([\w.+-]+@[\w-]+\.[\w.-]+)/.test(pub);
+  if(pii&&PRIVATE.includes(sec)){{msg.textContent='Please take your phone number or email out of the post. People reply through the site, so you stay private.';return}}
+  if(pii&&!f.dataset.piiOk){{f.dataset.piiOk=1;msg.textContent='Heads up: there is a phone number or email in your post, and it will be public. Take it out, or press Send again to keep it.';return}}
+  if(sec==='Free Stuff'&&/\$\s?\d|\b(obo|or best offer|for sale|asking|venmo|cash ?app|zelle|paypal|wanted|wtb|iso)\b/i.test(pub)){{msg.textContent='Free Stuff is free only. Please take out any price, trade or payment app.';return}}
   if(val('minor')===''){{msg.textContent='Please tell us if the athlete is under 18.';f.minor.focus();return}}
   if(val('minor')==='Yes'&&(!val('guardian')||!val('guardian_ok'))){{msg.textContent='For an athlete under 18, add the parent or guardian name and check that they said OK.';f.guardian.focus();return}}
   const thanks=f.nextElementSibling;
-  const done=text=>{{f.reset();showFor(f);syncSign();f.hidden=true;thanks.querySelector('[data-thanks]').textContent=text;thanks.hidden=false;thanks.scrollIntoView({{behavior:'smooth',block:'center'}})}};
+  const done=text=>{{f.reset();delete f.dataset.piiOk;showFor(f);syncSign();f.hidden=true;thanks.querySelector('[data-thanks]').textContent=text;thanks.hidden=false;thanks.scrollIntoView({{behavior:'smooth',block:'center'}})}};
   if(f.hp.value){{done('Thanks!');return}}
   const fd=new FormData(f);const row={{}};const extras=[];const consent=[];
   f.querySelectorAll('[name]').forEach(el=>{{if(el.closest('[hidden]')||(el.type==='checkbox'&&!el.checked))return;const v=(el.type==='file'?'':String(el.value||'').trim());if(!v)return;
@@ -1858,15 +2007,16 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
   try{{const file=fd.get('photo');
    if(file&&file.size&&!f.querySelector('[name=photo]').closest('[hidden]')){{
     if(file.size>6*1024*1024)throw new Error('That photo is over 6 MB. Try a smaller one.');
-    msg.textContent='Uploading photo…';const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+    msg.textContent='Uploading photo…';const pic=await clean(file);const ext=pic.type==='image/png'?'png':'jpg';
     const rid=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);const path=new Date().getFullYear()+'/'+rid+'.'+ext;
-    const up=await sb.storage.from('photos').upload(path,file,{{contentType:file.type}});if(up.error)throw up.error;
+    const up=await sb.storage.from('photos').upload(path,pic,{{contentType:pic.type}});if(up.error)throw up.error;
     row.photo_url=sb.storage.from('photos').getPublicUrl(path).data.publicUrl}}
    let {{error}}=await sb.from('submissions').insert(row);
    if(error&&/consent/.test(error.message||'')){{delete row.consent;({{error}}=await sb.from('submissions').insert(row))}}  // until the consent column exists
    if(error)throw error;
    msg.textContent='';done(f.dataset.section==='Join the team'?'Your application is in. An editor will email you soon.':
     f.dataset.section==='Advertise'?'We will get back to you within two business days.':
+    sec==='Job'?'Your job is in the review queue. Once an editor approves it, replies come to your email.':
     who?'If you are verified it goes live within 20 minutes. Otherwise an editor will look at it soon.':'It is in the review queue. An editor will look at it soon, usually within a day.')}}
   catch(err){{msg.textContent='Something went wrong: '+(err.message||err)+'. Please try again.'}}
   finally{{btn.disabled=false}}}});}});
@@ -1898,8 +2048,10 @@ def render_submit(cfg, stories):
          "donation link and we'll help spread the word. You're responsible for your fundraiser and how the money is used.", "#form:Fundraiser", "Post a fundraiser", "fundraiser"),
         ("sports", "Spotlight an athlete", "A big game, a personal best, a signing day, a kid who never quits. Send a photo "
          "and a few lines and they get their own page to share.", "#form:Athlete Spotlight", "Spotlight an athlete", "athlete"),
-        ("sales", "Buy &amp; Sell", "List something for sale or wanted, with a price and how to reach you. Free, up for 30 days.",
-         "#form:Buy & Sell", "Post a listing", "sell"),
+        ("sales", "Give away free stuff", "Clearing out the garage? Give it to a neighbor. Free only: no prices or trades. "
+         "People message you through the site, so your phone and email stay private. Up for 30 days.", "#form:Free Stuff", "Give something away", "free"),
+        ("biz", "Post a job", "Hiring in Richland County? Post it free for 30 days. Applicants reply through Sunny Mansfield, "
+         "so your email is never shown.", "#form:Job", "Post a job", "job"),
         ("research", "Join the team", "Aspiring journalists, marketers, students, mentors and motivators. Get verified and "
          "your posts go live on their own.", f"{site}/rules.html#apply", "Apply to join", "join"),
     ]
@@ -1919,9 +2071,15 @@ def render_submit(cfg, stories):
         field("summary", "Tell us about it", "textarea", True, "Two to four sentences. Who, what, where, when."),
         field("photo", "Photo or flyer", "file", hint="JPG or PNG up to 6 MB. Your own photo, or one you have permission to use."),
         field("event_date", "Event date", "date", show=["Event Flyer"]),
-        field("category", "Category", "select", show=["Buy & Sell"], opts=[n for _, n, _ in MARKET_CATS], extra="Category"),
-        field("price", "Price", show=["Buy & Sell"], hint="Like $40, Free, or Best offer."),
-        field("contact", "How buyers reach you", show=["Buy & Sell"], hint="Phone, email or link. This is shown on the site."),
+        field("category", "Category", "select", show=["Free Stuff"], opts=[n for _, n, _ in MARKET_CATS], extra="Category"),
+        field("free_ok", "It's free: no price, trade or \u201cgas money\u201d. It's legal to give away and not recalled, and I'm 18 or older.",
+              "checkbox", show=["Free Stuff"], consent="Free item rules OK", need=True),
+        field("business", "Employer", show=["Job"], need=True, hint="The business or person hiring."),
+        field("jobtype", "Job type", "select", show=["Job"], opts=JOB_TYPES, extra="Type"),
+        field("price", "Pay", show=["Job"], hint="Optional, like $16 an hour or $45,000 a year."),
+        field("job_ok", "This is a real job in Richland County. Applying is free, it isn't commission-only or a "
+              "\u201cbusiness opportunity\u201d, I follow equal-opportunity laws, and I'm 18 or older and allowed to hire for it.",
+              "checkbox", show=["Job"], consent="Job rules OK", need=True),
         field("business", "Business name", show=["Business Spotlight"]),
         field("business", "Special cause", show=["Fundraiser"], hint="Optional. Fundraisers with the same cause, like \u201cBellville flood relief\u201d, are grouped together."),
         field("price", "Goal", show=["Fundraiser"], hint="Optional, like $5,000."),
@@ -1940,7 +2098,8 @@ def render_submit(cfg, stories):
         field("name", "Your name as it should appear", req=True),
         field("role", "You are a", "select", opts=["Neighbor", "Student reporter", "Business", "Mentor", "Organization"]),
         field("town", "Town or neighborhood"),
-        field("email", "Your email", "email", hint="Only editors see it, in case we have a question."),
+        field("email", "Your email", "email", hint="Never shown on the site. Editors use it if they have a question. "
+              "For Free Stuff and jobs it's required: replies are sent here."),
     ]
     inner = f"""{page_title("Hey neighbor!", "Got good news?", "Sunny Mansfield is written by the people who live here. Pick what you want to share. It takes about two minutes.")}
 <section class="wrap latest"><div class="grid">{cards}</div></section>
@@ -1955,7 +2114,7 @@ def render_submit(cfg, stories):
 <ol class="steps">
 <li><span class="n">1</span><span>Keep it true, kind and local to Richland County.</span></li>
 <li><span class="n">2</span><span>Use your own photos, or ones you have permission to share. Ask before posting people, and a parent for kids.</span></li>
-<li><span class="n">3</span><span>No attacks, gossip or campaigning. <a class="link" href="{e(site)}/rules.html">All the rules</a></span></li>
+<li><span class="n">3</span><span>No attacks, gossip or campaigning. Keep phone numbers, emails and home addresses out of what you write: it's all public. <a class="link" href="{e(site)}/rules.html">All the rules</a></span></li>
 </ol></div></section>"""
     return shell(cfg, f"Submit good news · {cfg['site_name']}", "Share good news, spotlight your business, or join the team.",
                  f"{site}/submit.html", inner, stories, extra=form_script(cfg))
@@ -1971,7 +2130,7 @@ def render_rules(cfg, stories):
         ("Your words, your photos.", "Write it yourself and use photos you took or have permission to share. Never copy a whole article."),
         ("Ask before you post people.", "Get an OK from anyone pictured or named, and a parent or guardian's OK for anyone under 18."),
         ("Civic, not political.", "Voting dates, forums and how-to are welcome. Endorsements, attack posts and campaign ads are not."),
-        ("Honest business.", "Spotlights are free, one a month per business. No fake reviews, fake deals or pay-to-win."),
+        ("Honest business.", "Spotlights are free, one a month per business. Jobs must be real and free to apply for. Free Stuff is free. No fake reviews, fake deals or pay-to-win."),
         ("Editors have the last word.", "We may trim for length, fix spelling, or decline a post. We'll fix mistakes fast: just tell us."),
     ]
     rule_items = "".join(f'<li><span class="n">{i}</span><span><b>{a}</b> {b}</span></li>' for i, (a, b) in enumerate(rules, 1))
@@ -2017,19 +2176,27 @@ LEGAL = {
         ("Who we are", "Sunny Mansfield is a free community news site published by Ofgeneration LLC in Mansfield, Ohio. "
          "Questions about this policy go to {email}."),
         ("What we collect", "Only what you type into our forms: your name, your email, your town, what you write, any link "
-         "or photo you add, and for Buy & Sell the price and how buyers can reach you. Team applications also ask your role and, "
-         "for anyone under 18, a parent or guardian's name. We don't use tracking cookies, ads trackers or analytics."),
+         "or photo you add, and for jobs the employer and pay. Team applications also ask your role and, "
+         "for anyone under 18, a parent or guardian's name. If you reply to a Free Stuff or job post, we collect the name, email "
+         "and message you type. We don't use tracking cookies, ads trackers or analytics."),
         ("What is public", "Once an editor approves a post, its headline, words, photo, link, the name you give, your role and "
-         "town appear on the site, in our RSS feeds, and on our Facebook Page. Buy & Sell contact details are public so buyers "
-         "can reach you. Photos you upload are stored at a public web address, so only add photos you're happy to share."),
+         "town appear on the site, in our RSS feeds, and on our Facebook Page. Photos you upload are stored at a public web "
+         "address, so only add photos you're happy to share. Before a photo leaves your device, our form redraws it to strip "
+         "out hidden details phones save, like the GPS location where it was taken. Please keep phone numbers, emails and home "
+         "addresses out of what you write, because it's public."),
+        ("Private replies", "Free Stuff and job posts never show the poster's email or phone. People answer through a form, "
+         "and we email their name, email address and message to the poster. When the poster writes back, the other person "
+         "sees the poster's email address, so only reply to people you're comfortable with. To stop spam we keep a scrambled "
+         "(hashed) record of each reply for 30 days, not the message itself."),
         ("What stays private", "Your email address is never published. Only our editors can see it, and we use it only to ask "
          "about your post or reply to you. Team applications and advertising questions are never published."),
         ("Who helps us run the site", "Our database and photo storage are hosted by Supabase, the site is hosted by GitHub Pages, "
-         "sign-in emails are sent through Resend, and approved posts are shared to Facebook through Zapier. They process data "
+         "sign-in emails and private replies are sent through Resend, and approved posts are shared to Facebook through Zapier. They process data "
          "only to provide those services. We never sell your information."),
         ("How long we keep it", "Approved posts stay up until they're taken down. Event flyers come down after the event, "
-         "Buy & Sell listings after 30 days and fundraisers after 90 days or their end date. Posts we decline are never "
-         "published, and we delete them from time to time."),
+         "Free Stuff and job posts after 30 days, and fundraisers after 90 days or their end date. We erase the email address "
+         "on Free Stuff and job posts 60 days after they're posted. Posts we decline are never published and are deleted "
+         "after 30 days. We keep the record of what you agreed to when you posted, as proof of permission."),
         ("Children", "Sunny Mansfield is for a general audience and isn't meant for children under 13 to use on their own. "
          "Posts about anyone under 18 need a parent or guardian's OK. A parent can ask us to remove a post or photo of their "
          "child at any time, and we will."),
@@ -2039,7 +2206,8 @@ LEGAL = {
         ("Changes", "If we change this policy we'll update this page and the date below."),
     ]),
     "terms": ("Terms of use", "The ground rules for reading and posting on Sunny Mansfield.", [
-        ("Using the site", "Sunny Mansfield is free to read. By sending a post you agree to these terms and to the Sunny rules."),
+        ("Using the site", "Sunny Mansfield is free to read. By sending a post you agree to these terms and to the Sunny rules. "
+         "You must be 13 or older to send a post, and 18 or older to post Free Stuff or a job."),
         ("What you send", "You keep ownership of what you write and the photos you take. You give Ofgeneration LLC permission "
          "to publish, edit for length and clarity, and share your post on this site, in our feeds and on our social media pages. "
          "You can ask us to take it down at any time."),
@@ -2048,12 +2216,27 @@ LEGAL = {
          "hurtful, private, illegal, political campaigning, or copied from someone else."),
         ("Editors decide", "We review posts before they appear, except for verified contributors, and we may decline, edit or "
          "remove any post. \u201cVerified\u201d means an editor confirmed who the contributor is. It doesn't mean every post has been fact-checked."),
-        ("Fundraisers and Buy & Sell", "Fundraisers and listings are posted by neighbors, not by us. We don't run, verify or "
-         "endorse them, we don't handle any money, and we aren't part of any sale. Give and buy with care."),
+        ("Fundraisers, Free Stuff and jobs", "Fundraisers, Free Stuff and jobs are posted by neighbors and employers, not by "
+         "us. We don't run, verify or endorse them, we don't handle any money, and we aren't part of any giveaway or hire. We "
+         "aren't an employer or staffing agency. Give, pick up and apply with care."),
+        ("Free Stuff rules", "Free means free: no prices, trades, deposits or \u201cgas money\u201d. No weapons or ammunition, "
+         "alcohol, tobacco or vapes, medicine, live animals, or recalled or unsafe items like expired car seats. You're "
+         "responsible for what you give away."),
+        ("Job rules", "Only real jobs in or near Richland County. Applying must be free. No commission-only work, \u201cbusiness "
+         "opportunities\u201d, multi-level marketing or work-at-home kits, and never ask applicants for a Social Security "
+         "number, bank details or money before hiring them. Follow equal-opportunity laws: no preferences based on race, "
+         "color, religion, sex, national origin, ancestry, age, disability, military status or other protected traits. "
+         "The employer is responsible for the post and every hiring decision."),
+        ("Private replies", "Use the reply form only to answer the post. No spam, sales pitches or harassment. We may block "
+         "anyone who misuses it, and we can't promise every message is delivered."),
         ("Stories from other outlets", "Headlines, short summaries and photos from other news outlets belong to their publishers "
          "and always link back to the original. Publishers who'd like their stories left out can email {email}."),
         ("No guarantees", "We work hard to get things right, but the site is provided as is. Ofgeneration LLC isn't responsible "
-         "for posts written by neighbors or for other websites we link to."),
+         "for posts written by neighbors or employers, for anything given away or any job, or for other websites we link to."),
+        ("Your responsibility", "If something you post breaks these terms or the law and someone makes a claim against "
+         "Ofgeneration LLC because of it, you agree to cover the costs that claim causes us."),
+        ("Copyright", "If you think something here uses your work without permission, email {email} with a link to it and "
+         "what you own. We'll take it down while we look into it."),
         ("Problems and takedowns", "If something here is wrong, hurtful or yours and posted without permission, email {email} "
          "or use the \u201cReport or remove a post\u201d link and we'll look at it right away."),
     ]),
@@ -2353,30 +2536,28 @@ def render_market(cfg, listings, stories):
     site = cfg["site_url"].rstrip("/")
     ads = ads_for(cfg, "A7")
     counts = {k: sum(1 for x in listings if x.get("cat") == k) for k, _, _ in MARKET_CATS}
-    groups = [("For sale", ["furniture", "household", "electronics", "kids", "clothing", "tools", "vehicles", "bikes",
-                            "sports", "farm", "pets", "tickets", "other"]),
-              ("Free, wanted &amp; services", ["free", "wanted", "services"])]
+    groups = [("Categories", [k for k, _, _ in MARKET_CATS])]
     side = "".join(f'<div class="catgroup"><h3 class="caps">{g}</h3><ul>' + "".join(
         f'<li><a href="#cat={k}" data-cat="{k}">{e(MARKET_CAT_NAMES[k])}<span class="n">{counts[k] or ""}</span></a></li>' for k in keys)
         + "</ul></div>" for g, keys in groups)
     rows = "".join(listing_card(x, cfg) for x in listings)
-    empty = '<p class="empty" id="m-empty"' + (" hidden" if listings else "") + '>Nothing here yet. <a class="link" href="' + e(site) + '/submit.html#sell">Post the first one</a></p>'
-    inner = f"""{page_title("Neighbor to neighbor", "Buy &amp; Sell", "Furniture, bikes, baby gear, tools and yard sale finds from around Richland County. Free to post. Listings stay up for 30 days.")}
+    empty = '<p class="empty" id="m-empty"' + (" hidden" if listings else "") + '>Nothing here yet. <a class="link" href="' + e(site) + '/submit.html#free">Give something away</a></p>'
+    inner = f"""{page_title("Neighbor to neighbor", "Free Stuff", "Furniture, kids' clothes, firewood, tools and garden extras that neighbors around Richland County are giving away. Everything here is free. No prices, no trades, no selling.")}
 <section class="wrap market">
-<aside class="catside" aria-label="Categories"><a class="btn solid" href="{e(site)}/submit.html#sell">Post a listing</a>
-<a class="allcat" href="#" data-cat="all">All listings <span class="n">{len(listings)}</span></a>{side}</aside>
+<aside class="catside" aria-label="Categories"><a class="btn solid" href="{e(site)}/submit.html#free">Give something away</a>
+<a class="allcat" href="#" data-cat="all">Everything free <span class="n">{len(listings)}</span></a>{side}</aside>
 <div class="marketmain">
-<div class="mtools"><input type="search" id="m-search" placeholder="Search Buy &amp; Sell" aria-label="Search listings">
+<div class="mtools"><input type="search" id="m-search" placeholder="Search Free Stuff" aria-label="Search free stuff">
 <div class="viewtog" role="group" aria-label="View"><button type="button" class="tab" data-view="list" aria-pressed="true">List</button><button type="button" class="tab" data-view="grid" aria-pressed="false">Photos</button></div></div>
-<h2 class="label" id="m-head">All listings</h2>
+<h2 class="label" id="m-head">Everything free</h2>
 <div class="mlist" id="m-list">{rows}</div>{empty}
-{f'<div class="madwrap">{mad}</div>' if (mad := ad_card(cfg, ads[0] if ads else None, "A7")) else ""}
-<p class="note">Meet in a public place, bring a friend, and never wire money or pay with gift cards. Sunny Mansfield doesn't handle payments or check items. Report a listing: {e(cfg['submit_email'])}</p>
+{f'<div class="madwrap">{mad}</div>' if (mad := ad_card(cfg, ads[0] if ads else None, "A7", i=1)) else ""}
+<p class="note">Your phone and email are never shown. Tap Message the giver and they write back to you. Pick up in daylight, bring a friend, and never pay a "fee" for something listed as free. Sunny Mansfield doesn't check items. Report a listing: {e(cfg['submit_email'])}</p>
 </div></section>
 <script>(()=>{{const list=document.getElementById('m-list');const items=[...list.children];const q=document.getElementById('m-search');
 const head=document.getElementById('m-head');const empty=document.getElementById('m-empty');let cat='all';
 function go(){{const t=q.value.trim().toLowerCase();let n=0;items.forEach(el=>{{const ok=(cat==='all'||el.dataset.cat===cat)&&(!t||el.dataset.q.includes(t));el.hidden=!ok;n+=ok}});
- const a=document.querySelector('.catside [data-cat="'+cat+'"]');head.textContent=cat==='all'?'All listings':a?a.firstChild.textContent:'Listings';
+ const a=document.querySelector('.catside [data-cat="'+cat+'"]');head.textContent=cat==='all'?'Everything free':a?a.firstChild.textContent:'Listings';
  document.querySelectorAll('.catside [data-cat]').forEach(x=>x.setAttribute('aria-current',x.dataset.cat===cat?'true':'false'));empty.hidden=n>0}}
 function fromHash(){{const m=location.hash.match(/cat=(\w+)/);cat=m?m[1]:'all';go()}}
 document.querySelectorAll('.catside [data-cat]').forEach(a=>a.addEventListener('click',ev=>{{ev.preventDefault();cat=a.dataset.cat;history.replaceState(null,'',cat==='all'?location.pathname:'#cat='+cat);go();
@@ -2384,8 +2565,85 @@ document.querySelectorAll('.catside [data-cat]').forEach(a=>a.addEventListener('
 q.addEventListener('input',go);window.addEventListener('hashchange',fromHash);fromHash();
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{{list.classList.toggle('grid',b.dataset.view==='grid');
  document.querySelectorAll('[data-view]').forEach(x=>x.setAttribute('aria-pressed',x===b))}}));}})();</script>"""
-    return shell(cfg, f"Buy & Sell · {cfg['site_name']}", "Local buy and sell listings from Richland County neighbors.",
-                 f"{site}/market.html", inner, stories)
+    return shell(cfg, f"Free Stuff in Mansfield, Ohio · {cfg['site_name']}",
+                 "Free furniture, clothes, firewood, tools and more from neighbors in Mansfield and Richland County, Ohio. Everything is free.",
+                 f"{site}/free.html", inner, stories, extra=reply_box(cfg))
+
+
+def render_moved(cfg, stories, path, name):
+    """An old address that now lives somewhere else. Sends people on and stays out of search."""
+    site = cfg["site_url"].rstrip("/")
+    inner = f"""{page_title("We moved", name, "This page has a new home.")}
+<section class="wrap" style="text-align:center"><p><a class="btn solid" href="{e(site)}/{path}">Go to {e(name)}</a></p></section>
+<script>location.replace({json.dumps(site + "/" + path)})</script>"""
+    return shell(cfg, f"{name} · {cfg['site_name']}", f"{name} has moved.", f"{site}/{path}", inner, stories, index=False)
+
+
+def job_data(cfg, j):
+    """JobPosting structured data, so the job can show up in Google's job search."""
+    site = cfg["site_url"].rstrip("/")
+    kinds = {"Full-time": "FULL_TIME", "Part-time": "PART_TIME", "Seasonal": "TEMPORARY", "Temporary": "TEMPORARY",
+             "Internship": "INTERN"}
+    d = {"@context": "https://schema.org", "@type": "JobPosting", "title": j["title"],
+         "description": "<p>" + e(j["summary"]).replace("\n", "<br>") + "</p>", "datePosted": j["date"].strftime("%Y-%m-%d"),
+         "validThrough": j["until"].strftime("%Y-%m-%dT23:59:00+00:00"), "url": job_url(cfg, j), "directApply": True,
+         "hiringOrganization": {"@type": "Organization", "name": j["employer"]},
+         "jobLocation": {"@type": "Place", "address": {"@type": "PostalAddress", "addressLocality": j.get("town") or "Mansfield",
+                                                        "addressRegion": "OH", "addressCountry": "US"}},
+         "identifier": {"@type": "PropertyValue", "name": cfg["site_name"], "value": j["id"]}}
+    if j.get("type") in kinds:
+        d["employmentType"] = kinds[j["type"]]
+    if j.get("image"):
+        d["image"] = img_src(j["image"])
+    return [d, breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Jobs", f"{site}/jobs.html"), (j["title"], job_url(cfg, j))])]
+
+
+JOB_SAFETY = ("Real jobs never charge you to apply, send you a check to cash, or ask for your Social Security number or bank "
+              "details before an interview. Sunny Mansfield doesn't check employers or hire for them.")
+
+
+def render_job_page(cfg, j, stories):
+    site = cfg["site_url"].rstrip("/")
+    facts = "".join(f"<dt>{k}</dt><dd>{e(v)}</dd>" for k, v in (("Employer", j["employer"]), ("Type", j.get("type")),
+                    ("Pay", j.get("pay")), ("Where", j.get("town") or "Richland County"),
+                    ("Posted", j["date"].strftime("%B %-d, %Y")), ("Open until", j["until"].strftime("%B %-d, %Y"))) if v)
+    apply = (f'<a class="btn sm" href="{e(j["link"])}" target="_blank" rel="noopener nofollow ugc">Apply on their site</a>'
+             if j.get("link") else "")
+    body = "".join(f"<p>{e(p)}</p>" for p in j["summary"].split("\n") if p.strip())
+    inner = f"""<section class="wrap pagehead"><span class="script">Now hiring</span><h1 class="retro sm">{e(j["title"])}</h1>
+<p class="intro">{e(j["employer"])} · {e(j.get("town") or "Richland County")}</p></section>
+<section class="wrap jobpage"><div class="legaltext">{body}</div>
+<aside class="box"><dl class="facts">{facts}</dl><div class="share">{reply_button(cfg, j, "Reply privately")}{apply}</div>
+<p class="hint">{e(REPLY_NOTE)}</p></aside></section>
+<section class="wrap latest"><p class="note safenote">{SHIELD}<span>{e(JOB_SAFETY)} <a class="link" href="{e(report_link(cfg, {"title": j["title"], "link": job_url(cfg, j)}))}">Report this job</a> · <a class="link" href="{e(site)}/jobs.html">All local jobs</a></span></p></section>"""
+    return shell(cfg, f"{j['title']} at {j['employer']}, {j.get('town') or 'Richland County'} OH · {cfg['site_name']}",
+                 f"{j['title']} at {j['employer']} in {j.get('town') or 'Richland County'}, Ohio. {j['summary'][:110]}",
+                 job_url(cfg, j), inner, stories, data=job_data(cfg, j), extra=reply_box(cfg))
+
+
+def render_jobs(cfg, jobs, stories):
+    site = cfg["site_url"].rstrip("/")
+    types = [t for t in JOB_TYPES if any(j.get("type") == t for j in jobs)]
+    tabs = "".join(f'<button class="tab" type="button" data-jt="{slug(t)}" aria-pressed="false">{t}</button>' for t in types)
+    cards = "".join(job_card(cfg, j) for j in jobs)
+    inner = f"""{page_title("Now hiring", "Jobs in Richland County", "Local jobs posted by Mansfield-area employers. Free to post, free to apply. Reply privately: nobody's email is shown on the site.")}
+<section class="wrap jobs"><div class="mtools"><input type="search" id="j-search" placeholder="Search jobs" aria-label="Search jobs">
+<a class="btn solid" href="{e(site)}/submit.html#job">Post a job</a></div>
+<div class="qtabs" role="group" aria-label="Job type"><button class="tab" type="button" data-jt="all" aria-pressed="true">All jobs</button>{tabs}</div>
+<div class="joblist" id="j-list">{cards}</div>
+<p class="empty" id="j-empty"{" hidden" if jobs else ""}>No jobs posted right now. <a class="link" href="{e(site)}/submit.html#job">Hiring? Post it free</a></p>
+<p class="note safenote">{SHIELD}<span>{e(JOB_SAFETY)} Report a job: {e(cfg['submit_email'])}</span></p></section>
+<script>(()=>{{const items=[...document.getElementById('j-list').children];const q=document.getElementById('j-search');let t='all';
+function go(){{const s=q.value.trim().toLowerCase();let n=0;items.forEach(el=>{{const ok=(t==='all'||el.dataset.type===t)&&(!s||el.dataset.q.includes(s));el.hidden=!ok;n+=ok}});
+ document.getElementById('j-empty').hidden=n>0||!items.length;document.querySelectorAll('[data-jt]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.jt===t))}}
+document.querySelectorAll('[data-jt]').forEach(b=>b.addEventListener('click',()=>{{t=b.dataset.jt;go()}}));q.addEventListener('input',go)}})();</script>"""
+    data = [{"@context": "https://schema.org", "@type": "ItemList", "name": "Jobs in Richland County, Ohio", "itemListElement": [
+        {"@type": "ListItem", "position": i, "url": job_url(cfg, j), "name": j["title"]} for i, j in enumerate(jobs[:30], 1)]},
+            breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Jobs", f"{site}/jobs.html")])]
+    return shell(cfg, f"Jobs in Mansfield, Ohio & Richland County · {cfg['site_name']}",
+                 "Local jobs in Mansfield, Ontario, Lexington, Shelby, Bellville and Richland County, Ohio. Full-time, part-time "
+                 "and seasonal work posted by local employers. Free to apply.", f"{site}/jobs.html", inner, stories, data=data,
+                 extra=reply_box(cfg))
 
 
 AD_RULES = [
@@ -2540,7 +2798,7 @@ function item(r){{const when=new Date(r.created_at).toLocaleString();
  else if(r.section==='Bracket')acts=btn('edit-bracket','Edit','solid');
  else if(r.status!=='approved')acts=btn('approve','Approve','solid')+btn('reject','Reject')+(r.email?btn('verify-approve','Approve and verify sender'):'');
  else acts=btn('reject','Take down');acts+=btn('delete','Delete','ghost');
- return `<article class="qitem" data-row='${{esc(JSON.stringify({{email:r.email,name:r.name,role:r.role,title:r.title,summary:r.summary,link:r.link}}))}}'>
+ return `<article class="qitem" data-row='${{esc(JSON.stringify({{email:r.email,name:r.name,role:r.role,title:r.title,summary:r.summary,link:r.link,photo:r.photo_url}}))}}'>
  ${{r.photo_url?`<a class="qphoto" href="${{esc(r.photo_url)}}" target="_blank" rel="noopener"><img src="${{esc(r.photo_url)}}" alt=""></a>`:''}}
  <div class="qbody"><span class="caps kicker">${{esc(r.section)}}</span><h3 class="hed">${{esc(r.title)}}</h3><p class="qtext">${{esc(r.summary||'')}}</p>
  <dl class="facts">${{facts.map(([k,v])=>`<dt>${{k}}</dt><dd>${{esc(v)}}</dd>`).join('')}}</dl>${{link}}<div class="share">${{acts}}</div></div></article>`}}
@@ -2567,7 +2825,8 @@ document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q
   $('b-head').textContent='Edit bracket';$('bracket-ed').scrollIntoView({{behavior:'smooth'}});return}}
  if(act==='delete'&&!b.dataset.sure){{b.dataset.sure=1;b.textContent='Tap again to delete';return}}
  b.disabled=true;let error;
- if(act==='delete')(({{error}}=await sb.from('submissions').delete().eq('id',id)));
+ if(act==='delete'){{(({{error}}=await sb.from('submissions').delete().eq('id',id)));const m=(row.photo||'').match(/\/object\/public\/photos\/(.+)$/);
+  if(!error&&m)await sb.storage.from('photos').remove([decodeURIComponent(m[1])])}}
  else{{if(act==='verify-approve'&&row.email){{({{error}}=await sb.from('verified').upsert({{email:row.email.toLowerCase(),name:row.name,role:row.role}}));}}
   if(!error)(({{error}}=await sb.from('submissions').update({{status:act==='reject'?'rejected':'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',id)));}}
  if(error){{say(error.message);b.disabled=false;return}}say(act==='reject'?'Done. It will not appear on the site.':act==='delete'?'Deleted.':'Approved. It will be on the site within 20 minutes.');load()}});
@@ -2720,7 +2979,7 @@ def merge_community(cfg, stories, community):
 
 
 PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
-         ("fundraisers.html", "daily", "0.7"), ("celebrations.html", "daily", "0.7"), ("market.html", "daily", "0.6"),
+         ("fundraisers.html", "daily", "0.7"), ("celebrations.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"),
          ("quote.html", "daily", "0.5"), ("submit.html", "monthly", "0.6"), ("rules.html", "monthly", "0.4"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
 
@@ -2730,7 +2989,7 @@ AI_BOTS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-Searc
            "Amazonbot", "Meta-ExternalAgent", "MistralAI-User", "YouBot", "CCBot"]
 
 
-def write_search_files(cfg, stories, businesses, out, towns=(), flyers=()):
+def write_search_files(cfg, stories, businesses, out, towns=(), flyers=(), jobs=()):
     """robots.txt, sitemap.xml, news-sitemap.xml and llms.txt: how search engines and AI assistants find the paper."""
     site = cfg["site_url"].rstrip("/")
     now = datetime.now(timezone.utc)
@@ -2739,6 +2998,7 @@ def write_search_files(cfg, stories, businesses, out, towns=(), flyers=()):
     urls += [(page_url(cfg, s), day(s["date"]), "weekly", "0.7") for s in stories if indexable(s)]
     urls += [(biz_url(cfg, b), day(now), "monthly", "0.6") for b in businesses if not b.get("sample")]
     urls += [(town_url(cfg, t), day(now), "daily", "0.8") for t in towns]
+    urls += [(job_url(cfg, j), day(j["date"]), "weekly", "0.6") for j in jobs if j.get("pid")]
     (out / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join(
             f"<url><loc>{e(u)}</loc><lastmod>{m}</lastmod><changefreq>{f}</changefreq><priority>{p}</priority></url>\n"
@@ -2782,7 +3042,8 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 - [Business spotlights]({site}/businesses.html): free pages for Richland County businesses
 - [Fundraisers]({site}/fundraisers.html): local causes posted by neighbors (not run or verified by Sunny Mansfield)
 - [Celebrations of Life]({site}/celebrations.html): remembering Richland County neighbors
-- [Buy & Sell]({site}/market.html): neighbor listings, up for 30 days
+- [Free Stuff]({site}/free.html): things neighbors are giving away, free only
+- [Jobs]({site}/jobs.html): local jobs posted by Richland County employers
 - [Quote of the day]({site}/quote.html): a new Mansfield quote every morning and evening
 
 ## Towns
@@ -2849,7 +3110,7 @@ def main():
     out = Path(args.out)
     (out / "s").mkdir(parents=True, exist_ok=True)
     quote = quote_of_the_day()
-    page = render_index(cfg, stories, businesses, flyers, listings, got["fundraisers"], got["headlines"], quote)
+    page = render_index(cfg, stories, businesses, flyers, listings, got["fundraisers"], got["headlines"], quote, got["jobs"])
     (out / "index.html").write_text(rebase(
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
@@ -2897,7 +3158,12 @@ def main():
     (out / "fundraisers.html").write_text(rebase(render_fundraisers(cfg, got["fundraisers"], stories)))
     (out / "celebrations.html").write_text(rebase(render_celebrations(cfg, stories)))
     (out / "sports.html").write_text(rebase(render_sports(cfg, stories, got["brackets"])))
-    (out / "market.html").write_text(rebase(render_market(cfg, listings, stories)))
+    (out / "free.html").write_text(rebase(render_market(cfg, listings, stories)))
+    (out / "market.html").write_text(rebase(render_moved(cfg, stories, "free.html", "Free Stuff")))
+    (out / "jobs.html").write_text(rebase(render_jobs(cfg, got["jobs"], stories)))
+    (out / "jobs").mkdir(exist_ok=True)
+    for j in got["jobs"]:
+        (out / "jobs" / f"{j['id']}.html").write_text(rebase(render_job_page(cfg, j, stories)))
     (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories) if ads_open(cfg) else render_ads_soon(cfg, stories)))
     (out / "admin.html").write_text(rebase(render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"]))))
     (out / "town").mkdir(exist_ok=True)
@@ -2907,7 +3173,7 @@ def main():
         if any(town_items(name, stories, businesses, got["fundraisers"])):
             live_towns.append(name)
     (out / "events.html").write_text(rebase(render_events(cfg, flyers, stories)))
-    write_search_files(cfg, stories, businesses, out, live_towns, flyers)
+    write_search_files(cfg, stories, businesses, out, live_towns, flyers, got["jobs"])
     check_seo(out)
     if not args.sample and os.environ.get("GITHUB_ACTIONS") and datetime.now(timezone.utc).minute < 15:
         ping_indexnow(cfg, stories, flyers)  # once an hour on the live site
