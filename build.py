@@ -548,9 +548,9 @@ a{color:inherit}
 .motto{line-height:1.7}.motto.mobile{display:none}
 @media (max-width:900px){.plate{grid-template-columns:minmax(0,1fr);justify-items:center;padding-block:24px 16px;gap:12px}.ear{display:none}.plate .logo{width:min(100%,420px)}
   .motto.mobile{display:block;text-align:center;color:var(--text-2)}}
-.strip{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 24px;padding-block:6px;
+.strip{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:0 18px;padding-block:6px;
   border-top:2px solid var(--border-strong);border-bottom:2px solid var(--border-strong)}
-.navgroup{display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px}
+.navgroup{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px 18px}
 .navlabel{display:none}
 @media (max-width:1240px){.strip{justify-content:center;gap:0 18px}.navgroup{justify-content:center}}
 @media (max-width:820px){.navgroup{gap:2px 12px}.strip a,.navbtn{padding-block:6px}}
@@ -1145,7 +1145,7 @@ def masthead(cfg, site, stories):
 </div>
 <nav class="wrap strip caps" aria-label="Main">
 <div class="navgroup"><span class="navlabel">Read</span><a href="{e(site)}/">Front page</a><a href="{e(site)}/#events">Events</a>
-<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/celebrations.html">Celebrations</a><a href="{e(site)}/fundraisers.html">Fundraisers</a>
+<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/celebrations.html">Celebrations of Life</a><a href="{e(site)}/fundraisers.html">Fundraisers</a>
 <a href="{e(site)}/market.html">Buy &amp; Sell</a><a href="{e(site)}/businesses.html">Businesses</a></div>
 <div class="navgroup"><span class="navlabel">Take part</span><button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a><a href="{e(site)}/advertise.html">Advertise</a>
