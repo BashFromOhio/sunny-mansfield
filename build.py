@@ -905,6 +905,7 @@ input[type=file]{font:400 14px/1.4 var(--sans)}
 .toprow{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:20px;align-items:stretch;padding-block:16px}
 .toprow .adrow{padding:0;display:flex;flex-direction:column}.toprow .adbanner{max-width:none;flex:1;box-sizing:border-box}
 .toprow .adbanner img{height:100%;object-fit:cover}
+.toprow.solo{grid-template-columns:minmax(0,1fr)}
 @media (max-width:860px){.toprow{grid-template-columns:minmax(0,1fr)}}
 /* quote of the day: the logo's framed retro look, inverted (cream letters with a brown drop on orange, brown frame) */
 .qotd{position:relative;margin:0;display:grid;align-content:center;justify-items:center;text-align:center;gap:2px;padding:20px 26px 16px;
@@ -1216,7 +1217,7 @@ def top_row(cfg, quote):
     if not quote:
         return banner(cfg, "A1")
     ad = banner(cfg, "A1").replace('class="wrap adrow"', 'class="adrow"', 1)
-    return f'<div class="wrap toprow">{ad}{quote_card(cfg, quote)}</div>'
+    return f'<div class="wrap toprow{"" if ad else " solo"}">{ad}{quote_card(cfg, quote)}</div>'
 
 
 def masthead(cfg, site, stories, quote=None):
@@ -1235,7 +1236,7 @@ def masthead(cfg, site, stories, quote=None):
 <a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/celebrations.html">Celebrations of Life</a><a href="{e(site)}/fundraisers.html">Fundraisers</a>
 <a href="{e(site)}/market.html">Buy &amp; Sell</a><a href="{e(site)}/businesses.html">Businesses</a></div>
 <div class="navgroup"><span class="navlabel">Take part</span><button class="navbtn" type="button" data-about>About</button>
-<a href="{e(site)}/rules.html">Join the team</a><a href="{e(site)}/advertise.html">Advertise</a>
+<a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}
 <a class="navcta" href="{e(site)}/submit.html">Submit news</a></div></nav>
 </header>
 {top_row(cfg, quote)}
@@ -1457,6 +1458,11 @@ AD_DEALS = ["Pay for 3 months, save 10%. Pay for 12 months, save 20%.", "Nonprof
             "Founding sponsors (the first 10) keep their price for a full year.", "Business spotlights and community posts are always free."]
 
 
+def ads_open(cfg):
+    """False hides every "Advertise here" placeholder and the Advertise page. Paid ads in config still show."""
+    return cfg.get("ads_open", True)
+
+
 def ads_for(cfg, spot, section=None):
     """Paid ads running now in one spot. Ads without a spot are carousel cards (A2)."""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -1474,6 +1480,8 @@ def banner(cfg, spot, i=0):
         return (f'<aside class="wrap adrow" aria-label="Advertisement"><span class="caps adlabel">Advertisement</span>'
                 f'<a class="adbanner" href="{e(a["link"])}" target="_blank" rel="noopener sponsored">'
                 f'<picture>{small}<img src="{e(a["image"])}" alt="{e(a.get("alt") or a["name"])}" loading="lazy"></picture></a></aside>')
+    if not ads_open(cfg):
+        return ""
     s = AD_SPOT[spot]
     script, text = s.get("house", ("Advertise here!", "Put your business in front of neighbors who love Mansfield."))
     return (f'<aside class="wrap adrow" aria-label="Advertising space"><a class="adbanner house" href="{e(site)}/advertise.html#spots">'
@@ -1488,6 +1496,8 @@ def sponsor_tag(cfg, section, site):
         mark = f'<img src="{e(a["image"])}" alt="{e(a["name"])}">' if a.get("image") else e(a["name"])
         return (f'<a class="sponsortag" href="{e(a["link"])}" target="_blank" rel="noopener sponsored">'
                 f'<span class="caps">Presented by</span>{mark}</a>')
+    if not ads_open(cfg):
+        return ""
     return f'<a class="sponsortag house caps" href="{e(site)}/advertise.html#spots">Sponsor this section</a>'
 
 
@@ -1500,6 +1510,8 @@ def sponsor_strip(cfg):
             names.append(f'<a href="{e(a["link"])}" target="_blank" rel="noopener sponsored">{e(a["name"])}</a>')
     if names:
         return f'<div class="wrap sponsors"><span class="caps">Thank you to our sponsors</span>{" · ".join(names)}</div>'
+    if not ads_open(cfg):
+        return ""
     return (f'<div class="wrap sponsors"><span class="caps">Founding sponsors wanted</span>'
             f'<a href="{e(site)}/advertise.html">Your business could be the first name here</a></div>')
 
@@ -1555,6 +1567,8 @@ def ad_card(cfg, ad=None, spot="A2"):
                 f'<span class="photo"><img src="{e(ad["image"])}" alt="{e(ad["name"])}" loading="lazy"></span>'
                 f'<span class="caps sponsor">Sponsor</span><span class="hed">{e(ad["name"])}</span>'
                 f'{text}</a>')
+    if not ads_open(cfg):
+        return ""
     return (f'<a class="slide ad house" href="{e(site)}/advertise.html#spots"><span class="caps sponsor">Spot {spot}</span>'
             f'<span class="script">Advertise here!</span><span class="hed">Reach neighbors who love Mansfield</span>'
             f'<span class="btn solid sm">See ad spots</span></a>')
@@ -1680,7 +1694,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
         if not items:
             continue
         slides = [slide(cfg, s) for s in items]
-        if i % 3 == 1:
+        if i % 3 == 1 and (ads or ads_open(cfg)):
             slides.insert(min(3, len(slides)), ad_at(i))  # one sponsor spot every few shelves
         see = f'{sponsor_tag(cfg, k, site)}<button class="link" type="button" data-show="{k}">See all {counts[k]}</button>'
         rails.append((k, rail(e(name), "".join(slides), see, kind="sec")))
@@ -1688,9 +1702,10 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
              f'<img src="{e(events_ad[0]["image"])}" alt="{e(events_ad[0]["name"])}" loading="lazy"></span><span class="caps sponsor">Sponsor</span>'
              f'<span class="hed">{e(events_ad[0]["name"])}</span></a>') if events_ad else (
         f'<a class="slide flyer add evad" href="{e(site)}/advertise.html#spots"><span class="flyer-img"><span class="script">Advertise<br>here!</span></span>'
-        f'<span class="hed">Sponsor local events</span><span class="dek">Spot A6</span></a>')
+        f'<span class="hed">Sponsor local events</span><span class="dek">Spot A6</span></a>') if ads_open(cfg) else ""
     flyer_cards = [flyer_card(f) for f in flyers]
-    flyer_cards.insert(min(2, len(flyer_cards)), ev_ad)
+    if ev_ad:
+        flyer_cards.insert(min(2, len(flyer_cards)), ev_ad)
     events = rail("Local events", "".join(flyer_cards) + (
         f'<a class="slide flyer add" href="{e(site)}/submit.html#flyer"><span class="flyer-img"><span class="plus">+</span></span>'
         f'<span class="hed">Post your flyer</span><span class="dek">Free for community events</span></a>'), rid="events", kind="flyers")
@@ -2355,7 +2370,7 @@ def render_market(cfg, listings, stories):
 <div class="viewtog" role="group" aria-label="View"><button type="button" class="tab" data-view="list" aria-pressed="true">List</button><button type="button" class="tab" data-view="grid" aria-pressed="false">Photos</button></div></div>
 <h2 class="label" id="m-head">All listings</h2>
 <div class="mlist" id="m-list">{rows}</div>{empty}
-<div class="madwrap">{ad_card(cfg, ads[0] if ads else None, "A7")}</div>
+{f'<div class="madwrap">{mad}</div>' if (mad := ad_card(cfg, ads[0] if ads else None, "A7")) else ""}
 <p class="note">Meet in a public place, bring a friend, and never wire money or pay with gift cards. Sunny Mansfield doesn't handle payments or check items. Report a listing: {e(cfg['submit_email'])}</p>
 </div></section>
 <script>(()=>{{const list=document.getElementById('m-list');const items=[...list.children];const q=document.getElementById('m-search');
@@ -2387,6 +2402,16 @@ AD_RULES = [
     ("Payment.", "Prepaid by the month, cancel any time before the next month. Founding sponsor prices are locked in for a year."),
     ("Our call.", "We can turn down or take down any ad that doesn't fit these rules. If we take one down, we refund the unused days."),
 ]
+
+
+def render_ads_soon(cfg, stories):
+    """Stand-in while advertising is paused, so old links don't 404. Kept out of search."""
+    site = cfg["site_url"].rstrip("/")
+    inner = f"""{page_title("Coming soon", "Advertising is paused", "We're not selling ad spots right now. Local businesses can still share news, deals and events for free.")}
+<section class="wrap" style="text-align:center"><p><a class="btn solid" href="{e(site)}/submit.html">Share your news</a></p>
+<p class="note">Questions? Email <a href="mailto:{e(cfg['submit_email'])}">{e(cfg['submit_email'])}</a>.</p></section>"""
+    return shell(cfg, f"Advertising · {cfg['site_name']}", "Advertising on Sunny Mansfield is paused for now.",
+                 f"{site}/advertise.html", inner, stories, index=False)
 
 
 def render_advertise(cfg, stories):
@@ -2710,7 +2735,7 @@ def write_search_files(cfg, stories, businesses, out, towns=(), flyers=()):
     site = cfg["site_url"].rstrip("/")
     now = datetime.now(timezone.utc)
     day = lambda d: d.strftime("%Y-%m-%d")
-    urls = [(f"{site}/{p}", day(now), f, pr) for p, f, pr in PAGES]
+    urls = [(f"{site}/{p}", day(now), f, pr) for p, f, pr in PAGES if p != "advertise.html" or ads_open(cfg)]
     urls += [(page_url(cfg, s), day(s["date"]), "weekly", "0.7") for s in stories if indexable(s)]
     urls += [(biz_url(cfg, b), day(now), "monthly", "0.6") for b in businesses if not b.get("sample")]
     urls += [(town_url(cfg, t), day(now), "daily", "0.8") for t in towns]
@@ -2767,8 +2792,7 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 
 - [Submit good news]({site}/submit.html)
 - [Sunny rules and how verification works]({site}/rules.html)
-- [Advertise]({site}/advertise.html)
-- [Privacy policy]({site}/privacy.html) and [terms]({site}/terms.html)
+{f"- [Advertise]({site}/advertise.html)" + chr(10) if ads_open(cfg) else ""}- [Privacy policy]({site}/privacy.html) and [terms]({site}/terms.html)
 - Contact: {cfg['submit_email']}
 
 ## Feeds
@@ -2874,7 +2898,7 @@ def main():
     (out / "celebrations.html").write_text(rebase(render_celebrations(cfg, stories)))
     (out / "sports.html").write_text(rebase(render_sports(cfg, stories, got["brackets"])))
     (out / "market.html").write_text(rebase(render_market(cfg, listings, stories)))
-    (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories)))
+    (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories) if ads_open(cfg) else render_ads_soon(cfg, stories)))
     (out / "admin.html").write_text(rebase(render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"]))))
     (out / "town").mkdir(exist_ok=True)
     live_towns = []
