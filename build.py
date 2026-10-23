@@ -782,6 +782,22 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .mlist.grid .listing>:not(.photo){grid-column:1;padding-inline:16px}
 .mlist.grid .listing .photo{grid-row:auto;aspect-ratio:4/3}
 .madwrap{max-width:360px;margin:24px 0}
+.freehero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px 48px;align-items:center;padding-block:48px 40px}
+.freehero .fcopy{display:grid;gap:4px;justify-items:start}
+.freehero .retro{margin:0}
+.freehero .flead{font:700 clamp(22px,2.6vw,30px)/1.25 var(--serif);margin:12px 0 0}
+.freehero .intro{font-size:17px;line-height:1.65;color:var(--text-2);margin:8px 0 12px;max-width:56ch}
+.ftiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.ftile{position:relative;display:grid;justify-items:center;gap:6px;padding:22px 12px 16px;background:var(--tertiary);border:2px solid var(--primary);box-shadow:5px 5px 0 var(--secondary)}
+.ftile svg{width:64%;max-width:110px;stroke:var(--primary);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.ftag{position:absolute;top:-2px;right:-2px;background:var(--secondary);color:var(--tertiary);font:700 13px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:6px 9px}
+.flabel{font:600 13px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase}
+.fsteps{grid-column:1/-1;list-style:none;margin:16px 0 0;padding:20px 0 0;border-top:2px solid var(--primary);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.fsteps li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;align-items:start;font-size:15px;line-height:1.5;color:var(--text-2)}
+.fsteps b{display:block;color:var(--text);font-size:16px}
+.fsteps svg{width:52px;height:52px;stroke:var(--secondary);fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+@media (max-width:800px){.freehero{grid-template-columns:minmax(0,1fr);padding-block:32px}.fsteps{grid-template-columns:minmax(0,1fr)}
+ .ftiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.ftile{padding:14px 6px 10px}.flabel{font-size:10px}.ftag{font-size:10px;padding:4px 6px}}
 .job{display:grid;gap:8px;align-content:start;background:var(--tertiary);border:2px solid var(--border-subtle);padding:20px}
 .job .hed{font-size:20px;line-height:1.25;margin:0}.job .hed a{color:inherit;text-decoration:none}.job .hed a:hover{text-decoration:underline}
 .job .employer{margin:0;font-weight:700;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center}
@@ -2542,7 +2558,7 @@ def render_market(cfg, listings, stories):
         + "</ul></div>" for g, keys in groups)
     rows = "".join(listing_card(x, cfg) for x in listings)
     empty = '<p class="empty" id="m-empty"' + (" hidden" if listings else "") + '>Nothing here yet. <a class="link" href="' + e(site) + '/submit.html#free">Give something away</a></p>'
-    inner = f"""{page_title("Neighbor to neighbor", "Free Stuff", "Furniture, kids' clothes, firewood, tools and garden extras that neighbors around Richland County are giving away. Everything here is free. No prices, no trades, no selling.")}
+    inner = f"""{free_hero(site, len(listings))}
 <section class="wrap market">
 <aside class="catside" aria-label="Categories"><a class="btn solid" href="{e(site)}/submit.html#free">Give something away</a>
 <a class="allcat" href="#" data-cat="all">Everything free <span class="n">{len(listings)}</span></a>{side}</aside>
@@ -2568,6 +2584,37 @@ document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',(
     return shell(cfg, f"Free Stuff in Mansfield, Ohio · {cfg['site_name']}",
                  "Free furniture, clothes, firewood, tools and more from neighbors in Mansfield and Richland County, Ohio. Everything is free.",
                  f"{site}/free.html", inner, stories, extra=reply_box(cfg))
+
+
+# Line drawings for the Free Stuff header, in the same style as ART.
+FREE_ART = {
+    "couch": '<path d="M14 72V50c0-5 4-8 8-8h56c4 0 8 3 8 8v22M24 42V32c0-4 3-7 7-7h38c4 0 7 3 7 7v10M14 72h72M20 72v8M80 72v8M28 58h44"/>',
+    "bike": '<circle cx="26" cy="64" r="15"/><circle cx="74" cy="64" r="15"/><path d="M26 64l14-24h26l8 24M40 40l12 24h22M34 32h12M60 32h10l-4 8"/>',
+    "blocks": '<path d="M14 86V62h26v24zM40 86V62h26v24zM27 62V38h26v24zM24 74h6M50 74h6M37 50h6"/>',
+    "plant": '<path d="M32 86h36l-4-24H36zM50 62V34M50 46c-12 0-20-8-20-20 12 0 20 8 20 20zM50 38c10 0 18-8 18-18-10 0-18 8-18 18z"/>',
+    "camera": '<path d="M14 34h18l6-10h24l6 10h18v46H14z"/><circle cx="50" cy="57" r="14"/>',
+    "message": '<path d="M14 24h72v46H44L28 84V70H14z"/><path d="M30 40h40M30 53h26"/>',
+    "porch": '<path d="M10 46l40-30 40 30M18 40v46h64V40M40 86V62h20v24M26 86V70M74 86V70"/>',
+}
+
+
+def free_hero(site, n):
+    """The Free Stuff page opener: says plainly what it is and asks people to give something away."""
+    art = lambda k: f'<svg viewBox="0 0 100 100" aria-hidden="true">{FREE_ART[k]}</svg>'
+    tiles = "".join(f'<span class="ftile">{art(k)}<span class="ftag">Free</span><span class="flabel">{t}</span></span>'
+                    for k, t in (("couch", "Couches"), ("bike", "Bikes"), ("blocks", "Toys"), ("plant", "Plants")))
+    steps = "".join(f'<li>{art(k)}<span><b>{a}</b> {b}</span></li>' for k, a, b in (
+        ("camera", "Snap a photo and post it.", "Takes two minutes. An editor gives it a quick look."),
+        ("message", "Neighbors message you privately.", "Your phone and email are never shown."),
+        ("porch", "Set it out or hand it off.", "Pick who gets it. No money ever changes hands.")))
+    browse = f'<a class="btn" href="#m-list">See what\'s free ({n})</a>' if n else ""
+    return f"""<section class="wrap freehero"><div class="fcopy"><span class="script">Neighbor to neighbor</span>
+<h1 class="retro sm">Free Stuff</h1>
+<p class="flead">Got something you don't need? Give it to a neighbor who does.</p>
+<p class="intro">Free Stuff is Richland County's giveaway board. Post the couch, crib, bike or garden extras you're done with, and a neighbor picks it up. Everything here is free: no prices, no trades, no selling. Selling belongs on Marketplace. This is neighbors helping neighbors.</p>
+<div class="share"><a class="btn solid" href="{e(site)}/submit.html#free">Give something away</a>{browse}</div></div>
+<div class="ftiles" aria-hidden="true">{tiles}</div>
+<ol class="fsteps">{steps}</ol></section>"""
 
 
 def render_moved(cfg, stories, path, name):
