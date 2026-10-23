@@ -848,6 +848,7 @@ footer .credit .legal a{color:inherit;text-decoration:underline;text-underline-o
 .note.report{font-size:14px;opacity:.85;margin-bottom:32px}
 footer .credit .legal.towns{font-weight:400;opacity:.85}
 .note.towns{font-size:15px;margin-top:8px}
+.grid.events .slide.flyer{width:auto}
 .vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .legaltext{max-width:760px;padding-block:8px 40px}.legaltext .hed{font-size:24px;margin:28px 0 6px}.legaltext p{font-size:17px;line-height:1.65;margin:0}
 
@@ -1230,7 +1231,7 @@ def masthead(cfg, site, stories, quote=None):
 <span class="caps motto mobile">Good news for all seasons · Mansfield &amp; Richland County, Ohio</span>
 </div>
 <nav class="wrap strip caps" aria-label="Main">
-<div class="navgroup"><span class="navlabel">Read</span><a href="{e(site)}/">Front page</a><a href="{e(site)}/#events">Events</a>
+<div class="navgroup"><span class="navlabel">Read</span><a href="{e(site)}/">Front page</a><a href="{e(site)}/events.html">Events</a>
 <a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/celebrations.html">Celebrations of Life</a><a href="{e(site)}/fundraisers.html">Fundraisers</a>
 <a href="{e(site)}/market.html">Buy &amp; Sell</a><a href="{e(site)}/businesses.html">Businesses</a></div>
 <div class="navgroup"><span class="navlabel">Take part</span><button class="navbtn" type="button" data-about>About</button>
@@ -1618,8 +1619,9 @@ def render_quote_page(cfg, quote, stories, has_image):
     site = cfg["site_url"].rstrip("/")
     text = quote["text"].strip() if quote else ""
     img = f'<p class="wrap note postimg"><a class="link" href="{e(site)}/quote.jpg" download>Download today\'s quote as an image</a></p>' if has_image else ""
-    inner = (f'<section class="wrap" style="padding-block:32px;max-width:760px">{quote_card(cfg, quote, big=True)}</section>{img}' if quote else
-             f'<section class="wrap latest"><p class="empty">No quote today. Check back tomorrow.</p></section>')
+    inner = (f'<h1 class="vh">Mansfield quote of the day</h1>'
+             f'<section class="wrap" style="padding-block:32px;max-width:760px">{quote_card(cfg, quote, big=True)}</section>{img}' if quote else
+             f'<h1 class="vh">Mansfield quote of the day</h1><section class="wrap latest"><p class="empty">No quote today. Check back tomorrow.</p></section>')
     desc = (f"\u201c{text}\u201d" + (f" \u2014 {quote['author']}" if quote.get("author") else "")) if quote else "Mansfield quote of the day"
     return shell(cfg, f"Mansfield quote of the day · {cfg['site_name']}", desc, f"{site}/quote.html", inner, stories,
                  image=f"{site}/quote.jpg" if has_image else None)
@@ -2251,6 +2253,87 @@ def render_town(cfg, name, about, stories, businesses, funds):
                  data=data, index=bool(good or shops or causes))
 
 
+def event_data(cfg, f):
+    site = cfg["site_url"].rstrip("/")
+    town = f.get("town") or "Mansfield"
+    ev = {"@context": "https://schema.org", "@type": "Event", "name": f["title"], "startDate": f["day"].strftime("%Y-%m-%d"),
+          "eventStatus": "https://schema.org/EventScheduled",
+          "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+          "location": {"@type": "Place", "name": f"{town}, Ohio", "address": {"@type": "PostalAddress",
+                       "addressLocality": town, "addressRegion": "OH", "addressCountry": "US"}},
+          "url": f.get("link") or f"{site}/events.html", "description": f.get("summary") or f["title"]}
+    if (f.get("image") or "").startswith("https://"):
+        ev["image"] = [f["image"]]
+    return ev
+
+
+def render_events(cfg, flyers, stories):
+    site = cfg["site_url"].rstrip("/")
+    today = datetime.now(timezone.utc).date()
+    weekend_end = today + timedelta(days=(6 - today.weekday()) % 7)  # through Sunday
+    dated = [f for f in flyers if f.get("day")]
+    now_ = [f for f in dated if f["day"].date() <= weekend_end]
+    later = [f for f in dated if f["day"].date() > weekend_end] + [f for f in flyers if not f.get("day")]
+    grid = lambda xs: '<div class="grid events">' + "".join(flyer_card(f) for f in xs) + "</div>"
+    block = lambda label, xs, empty: (f'<section class="wrap latest"><h2 class="label">{label}</h2>'
+                                      + (grid(xs) if xs else f'<p class="empty">{empty}</p>') + "</section>")
+    inner = f"""{page_title("What's happening", "Things to do in Mansfield", "Concerts, fish fries, festivals, games, church suppers and fundraisers around Mansfield and Richland County, Ohio, posted by the people putting them on.")}
+{block("This weekend in Richland County", now_, "Nothing posted for this weekend yet.")}
+{block("Coming up", later, "No upcoming events posted yet.")}
+<section class="wrap latest"><p class="note" style="text-align:center">Putting on an event? <a class="link" href="{e(site)}/submit.html#flyer">Post your flyer free</a> and it rides the front page until the big day.</p></section>"""
+    data = [event_data(cfg, f) for f in dated] + [breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Events", f"{site}/events.html")])]
+    return shell(cfg, f"Things to Do in Mansfield, Ohio This Weekend · Events · {cfg['site_name']}",
+                 "Local events in Mansfield and Richland County, Ohio this weekend and coming up: concerts, festivals, "
+                 "fish fries, games and fundraisers, posted by neighbors.", f"{site}/events.html", inner, stories, data=data)
+
+
+def check_seo(out):
+    """Flag pages search engines can't read well: broken structured data, a missing title, canonical or H1, or a
+    sitemap pointing at pages that weren't built. The site still publishes; problems show as warnings on the run."""
+    problems = []
+    pages = [p for p in out.rglob("*.html") if p.name != "artifact.html"]
+    for p in pages:
+        t = p.read_text()
+        for block in re.findall(r'<script type="application/ld\+json">(.*?)</script>', t, re.S):
+            try:
+                json.loads(block)
+            except ValueError as exc:
+                problems.append(f"{p.relative_to(out)}: bad structured data ({exc})")
+        for what, pat in (("title", r"<title>[^<]+</title>"), ("canonical", r'rel="canonical"'), ("description", r'name="description" content="[^"]+')):
+            if not re.search(pat, t):
+                problems.append(f"{p.relative_to(out)}: no {what}")
+        if len(re.findall(r"<h1[ >]", t)) != 1:
+            problems.append(f"{p.relative_to(out)}: {len(re.findall(r'<h1[ >]', t))} H1 headings")
+    base = (out / "robots.txt").read_text().split("Sitemap: ")[1].split("/sitemap.xml")[0]
+    for loc in re.findall(r"<loc>([^<]+)</loc>", (out / "sitemap.xml").read_text()):
+        path = html.unescape(loc)[len(base):].lstrip("/") or "index.html"
+        if not (out / urllib.parse.urlparse(path).path).exists():
+            problems.append(f"sitemap lists {loc}, which wasn't built")
+    for p in problems[:40]:
+        print(("::warning::" if os.environ.get("GITHUB_ACTIONS") else "  SEO: ") + p, file=sys.stderr)
+    if not problems:
+        note(f"SEO check: {len(pages)} pages OK")
+
+
+def ping_indexnow(cfg, stories, flyers):
+    """Tell Bing (and through it ChatGPT search) about new pages right away instead of waiting for a crawl."""
+    key = cfg.get("indexnow_key")
+    if not key:
+        return
+    site = cfg["site_url"].rstrip("/")
+    cutoff = datetime.now(timezone.utc) - timedelta(days=2)
+    urls = [f"{site}/", f"{site}/events.html"] + [page_url(cfg, s) for s in stories if indexable(s) and s["date"] > cutoff]
+    body = json.dumps({"host": urllib.parse.urlparse(site).netloc, "key": key, "keyLocation": f"{site}/{key}.txt",
+                       "urlList": urls[:200]}).encode()
+    try:
+        req = urllib.request.Request("https://api.indexnow.org/indexnow", data=body,
+                                     headers={"Content-Type": "application/json; charset=utf-8", "User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            note(f"IndexNow: sent {len(urls)} pages ({r.status})")
+    except Exception as exc:
+        note(f"IndexNow: skipped ({exc})")
+
+
 def render_market(cfg, listings, stories):
     site = cfg["site_url"].rstrip("/")
     ads = ads_for(cfg, "A7")
@@ -2611,13 +2694,18 @@ def merge_community(cfg, stories, community):
     return sorted(stories + community, key=lambda s: s["date"], reverse=True)
 
 
-PAGES = [("", "daily", "1.0"), ("sports.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
+PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
          ("fundraisers.html", "daily", "0.7"), ("celebrations.html", "daily", "0.7"), ("market.html", "daily", "0.6"),
          ("quote.html", "daily", "0.5"), ("submit.html", "monthly", "0.6"), ("rules.html", "monthly", "0.4"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
 
 
-def write_search_files(cfg, stories, businesses, out, towns=()):
+AI_BOTS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-SearchBot", "Claude-User", "PerplexityBot",
+           "Perplexity-User", "Google-Extended", "Applebot", "Applebot-Extended", "Bingbot", "DuckAssistBot",
+           "Amazonbot", "Meta-ExternalAgent", "MistralAI-User", "YouBot", "CCBot"]
+
+
+def write_search_files(cfg, stories, businesses, out, towns=(), flyers=()):
     """robots.txt, sitemap.xml, news-sitemap.xml and llms.txt: how search engines and AI assistants find the paper."""
     site = cfg["site_url"].rstrip("/")
     now = datetime.now(timezone.utc)
@@ -2638,8 +2726,10 @@ def write_search_files(cfg, stories, businesses, out, towns=()):
                   f"<news:language>en</news:language></news:publication><news:publication_date>{s['date'].isoformat()}"
                   f"</news:publication_date><news:title>{e(s['title'])}</news:title></news:news></url>\n" for s in fresh)
         + "</urlset>\n")
-    (out / "robots.txt").write_text(f"""# Everyone is welcome to read and index Sunny Mansfield, including AI assistants.
-User-agent: *
+    welcome = "".join(f"User-agent: {b}\nAllow: /\nDisallow: /admin.html\n\n" for b in AI_BOTS)
+    (out / "robots.txt").write_text(f"""# Everyone is welcome to read, index and cite Sunny Mansfield, including AI assistants.
+# Neighbors' good news should be easy to find wherever people ask.
+{welcome}User-agent: *
 Allow: /
 Disallow: /admin.html
 Disallow: /artifact.html
@@ -2662,6 +2752,7 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 ## Sections
 
 - [Front page]({site}/): today's good news, the editor's headline, local business, causes, sports and events
+- [Events]({site}/events.html): things to do in Mansfield and Richland County this weekend and coming up
 - [Sports]({site}/sports.html): athlete spotlights, tournament brackets and good sports news
 - [Business spotlights]({site}/businesses.html): free pages for Richland County businesses
 - [Fundraisers]({site}/fundraisers.html): local causes posted by neighbors (not run or verified by Sunny Mansfield)
@@ -2685,10 +2776,28 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 - [All stories (RSS)]({site}/feed.xml)
 - [Neighbor posts (RSS)]({site}/community.xml)
 - [Sitemap]({site}/sitemap.xml)
+- [Full text of recent posts and events for AI tools]({site}/llms-full.txt)
 
 ## Recent neighbor posts
 
 """ + "".join(f"- [{s['title']}]({page_url(cfg, s)}): {(s['summary'] or '')[:160]}\n" for s in recent))
+    full = [f"# {cfg['site_name']}: full text\n\nPositive local news from Mansfield and Richland County, Ohio. "
+            f"Generated {now.strftime('%B %-d, %Y at %H:%M UTC')}. Each item links to its page on {site}.\n"]
+    soon = [f for f in flyers if f.get("day")]
+    if soon:
+        full.append("\n## Upcoming events\n")
+        full += [f"\n### {f['title']}\n- When: {f['day'].strftime('%A, %B %-d, %Y')}\n- Where: {f.get('town') or 'Richland County'}, Ohio\n"
+                 + (f"- Details: {f['link']}\n" if f.get("link") else "") + (f"\n{f['summary']}\n" if f.get("summary") else "")
+                 for f in soon]
+    full.append("\n## Neighbor posts\n")
+    for s in [s for s in stories if indexable(s)][:60]:
+        where = ", ".join(story_towns(s)) or "Richland County"
+        full.append(f"\n### {s['title']}\n- URL: {page_url(cfg, s)}\n- Published: {s['date'].strftime('%B %-d, %Y')}\n"
+                    f"- Section: {SECTION_NAMES.get(s['section'], 'Good News')}\n- Where: {where}, Ohio\n"
+                    f"- By: {s.get('source') or cfg['site_name']}\n\n{s['summary']}\n")
+    (out / "llms-full.txt").write_text("".join(full))
+    if cfg.get("indexnow_key"):
+        (out / f"{cfg['indexnow_key']}.txt").write_text(cfg["indexnow_key"])
 
 
 def main():
@@ -2773,7 +2882,11 @@ def main():
         (out / "town" / f"{slug(name)}.html").write_text(rebase(render_town(cfg, name, about, stories, businesses, got["fundraisers"])))
         if any(town_items(name, stories, businesses, got["fundraisers"])):
             live_towns.append(name)
-    write_search_files(cfg, stories, businesses, out, live_towns)
+    (out / "events.html").write_text(rebase(render_events(cfg, flyers, stories)))
+    write_search_files(cfg, stories, businesses, out, live_towns, flyers)
+    check_seo(out)
+    if not args.sample and os.environ.get("GITHUB_ACTIONS") and datetime.now(timezone.utc).minute < 15:
+        ping_indexnow(cfg, stories, flyers)  # once an hour on the live site
     print(f"Built {len(stories)} stories -> {out}", file=sys.stderr)
 
 
