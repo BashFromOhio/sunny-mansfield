@@ -1325,7 +1325,7 @@ AD_SPOTS = [
      "size": "1080 x 1350 px (4:5), like a flyer", "price": "$50 to $100 a month"},
     {"spot": "A7", "name": "Buy & Sell sponsor", "where": "On the Buy & Sell page and its front page carousel", "kind": "card",
      "size": "1200 x 800 px photo, a name and one short line", "price": "$25 to $50 a month"},
-    {"spot": "A8", "name": "Celebrations of Life sponsor", "where": "Right above the Celebrations of Life photo carousel, on its own page and the front page",
+    {"spot": "A8", "name": "Celebrations of Life sponsor", "where": "Right above the Celebrations of Life photo carousel, on the Celebrations of Life page",
      "kind": "banner", "size": "1456 x 180 px, plus 640 x 200 px for phones. Quiet and respectful: name, logo, phone",
      "price": "$100 to $200 a month", "for": "Funeral homes, memorial and monument companies, florists, grief support",
      "house": ("Honoring lives", "A quiet, respectful spot for funeral homes, florists and memorial services.")},
@@ -1469,8 +1469,9 @@ def slide(cfg, s):
 
 def render_index(cfg, stories, businesses, flyers, listings, funds=()):
     site = cfg["site_url"].rstrip("/")
+    stories = [s for s in stories if s["section"] != "life"]  # Celebrations of Life live on their own page
     # The front page leads with the newest stories that have a photo.
-    news = sorted((s for s in stories if s["section"] != "life"), key=lambda s: not s.get("image"))
+    news = sorted(stories, key=lambda s: not s.get("image"))
     top, also = (news[0], news[1:5]) if news else (None, [])
     front_ids = {s["id"] for s in ([top] if top else []) + also}
     counts = {k: sum(1 for s in stories if s["section"] == k) for k, _ in SECTIONS}
@@ -1493,12 +1494,8 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=()):
         if not items:
             continue
         slides = [slide(cfg, s) for s in items]
-        if i % 3 == 1 and k != "life":
+        if i % 3 == 1:
             slides.insert(min(3, len(slides)), ad_at(i))  # one sponsor spot every few shelves
-        if k == "life":
-            see = f'<a class="link" href="{e(site)}/celebrations.html">See all {counts[k]}</a>'
-            rails.append(banner(cfg, "A8") + rail(e(name), "".join(slides), see, kind="sec"))
-            continue
         see = f'{sponsor_tag(cfg, k, site)}<button class="link" type="button" data-show="{k}">See all {counts[k]}</button>'
         rails.append(rail(e(name), "".join(slides), see, kind="sec"))
     ev_ad = (f'<a class="slide flyer evad" href="{e(events_ad[0]["link"])}" target="_blank" rel="noopener sponsored"><span class="flyer-img">'
@@ -1526,8 +1523,8 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=()):
 {masthead(cfg, site, stories)}
 <nav class="sections" aria-label="Sections"><div class="wrap">{tabs}</div></nav>
 <main>{note}{front}
-{events}
 {funds_rail}
+{events}
 <div id="shelves">{"".join(rails)}</div>
 {market}
 <section class="wrap latest" id="latest" hidden><h2 class="label">More good news</h2>
