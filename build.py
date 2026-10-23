@@ -435,13 +435,31 @@ def load_submissions(config, sample):
                     keep.append(line)
             row["summary"], section = " ".join(keep), "sports"
         byline = row["name"] or "A neighbor"
+        link = full_link(row["link"])
+        video = youtube_id(link)
+        if video:  # play it right on the story page instead of sending readers off to YouTube
+            image = image or f"https://img.youtube.com/vi/{video}/hqdefault.jpg"
+            link = ""
         got["stories"].append({"athlete": facts if facts or row["section"].lower() == "athlete spotlight" else None,"id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
-                        "link": row["link"] if row["link"].startswith("http") else "", "source": byline,
+                        "link": link, "video": video, "source": byline,
                         "role": row["role"], "image": image, "date": date, "section": section, "community": True})
     got["flyers"].sort(key=lambda f: f["day"] or f["date"] + timedelta(days=LISTING_DAYS))
     got["listings"].sort(key=lambda x: x["date"], reverse=True)
     note("Community: " + ", ".join(f"{len(v)} {k}" for k, v in got.items()))
     return got
+
+
+def full_link(link):
+    """Neighbors often type "youtube.com/..." or "www.site.com"; give those an https:// so they open."""
+    link = (link or "").strip()
+    if link and not link.startswith("http") and re.match(r"^[\w-]+(\.[\w-]+)+(/|$)", link):
+        link = "https://" + link
+    return link if link.startswith("http") else ""
+
+
+def youtube_id(link):
+    m = re.search(r"(?:youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/)|youtu\.be/)([\w-]{11})", link or "")
+    return m.group(1) if m else ""
 
 
 def add_photos(stories, limit=80):
@@ -769,6 +787,9 @@ footer .sponsors a{color:inherit}
 .goal-k{font:700 10px/1 var(--caps);letter-spacing:.16em;text-transform:uppercase;opacity:.9}
 .goal-v{font:700 24px/1.05 var(--serif);margin:3px 0 2px;white-space:nowrap}.goal-v.long{font-size:19px}
 .fund .photo{overflow:visible}.fund .photo>img,.fund .photo>.art{overflow:hidden}
+.play{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:rgba(46,26,16,.78);border:3px solid var(--tertiary)}
+.play::after{content:"";position:absolute;left:24px;top:17px;border-style:solid;border-width:12px 0 12px 19px;border-color:transparent transparent transparent var(--tertiary)}
+.photo.video{aspect-ratio:16/9;background:#000}.photo.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .fund .tagline{font:700 10px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
 .fund .report{font-size:12px;color:var(--text-3);text-decoration:underline;justify-self:start}
 .fund .report:hover{color:var(--secondary)}
@@ -1064,7 +1085,8 @@ def photo(s):
     src = src if src.startswith("https://") else "/" + src  # sample photos live under /assets
     inner = (f'<img src="{e(src)}" alt="" loading="lazy" referrerpolicy="no-referrer">' if s.get("image")
              else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART[s["section"]]}</svg></span>')
-    return f'<a class="photo" href="{e(s["link"])}"{target(s)} tabindex="-1" aria-hidden="true">{inner}</a>'
+    play = '<span class="play"></span>' if s.get("video") else ""
+    return f'<a class="photo" href="{e(s["link"])}"{target(s)} tabindex="-1" aria-hidden="true">{inner}{play}</a>'
 
 
 def kicker(s):
@@ -1094,9 +1116,9 @@ def hed(s, tag="h3"):
     return f'<{tag} class="hed"><a href="{e(s["link"])}"{target(s)}>{e(s["title"])}</a></{tag}>'
 
 
-def lead(cfg, s):
+def lead(cfg, s, media=None):
     dek = f'<p class="dek">{e(s["summary"])}</p>' if s["summary"] else ""
-    return f'<article class="lead">{photo(s)}{kicker(s)}{hed(s, "h2")}{dek}{meta(s)}{share(cfg, s, read=True)}</article>'
+    return f'<article class="lead">{media or photo(s)}{kicker(s)}{hed(s, "h2")}{dek}{meta(s)}{share(cfg, s, read=True)}</article>'
 
 
 def brief(s):
@@ -1133,6 +1155,7 @@ def masthead(cfg, site, stories):
 <aside class="about" id="about" role="dialog" aria-labelledby="about-h" hidden>
 <button class="close" type="button" data-about-close aria-label="Close">&times;</button>
 <span class="script">Welcome, neighbor!</span><h2 class="hed" id="about-h">Why Sunny Mansfield?</h2>
+<p><b>Created for the people. Written by the people.</b></p>
 <p>Sunny Mansfield is a curated local media outlet that focuses on highlighting the positive side of Mansfield and Richland County: neighbors helping neighbors, new shops opening, students and athletes winning, lives worth celebrating, and the events that bring us together.</p>
 <ul><li><b>Curated, not crowded.</b> We hand-pick the good news from local outlets and neighbors, and every story links back to its original source.</li>
 <li><b>Uplifting, always.</b> We skip crime, crashes and arguing. There's plenty of that elsewhere.</li>
@@ -2131,8 +2154,16 @@ def render_story_page(cfg, s, stories):
     desc = s["summary"] or f"Good news from {cfg['site_name']}"
     image = s["image"] if (s.get("image") or "").startswith("https://") else None
     more = "".join(card(cfg, o) for o in [o for o in stories if o is not s][:3])
+    media = None
+    if s.get("video"):
+        media = (f'<div class="photo video"><iframe src="https://www.youtube-nocookie.com/embed/{e(s["video"])}" title="{e(s["title"])}" '
+                 f'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>')
+    elif s.get("community") and "/s/" in s["link"] and s.get("image"):
+        src = s["image"] if s["image"].startswith("https://") else "/" + s["image"]
+        media = (f'<a class="photo" href="{e(src)}" target="_blank" rel="noopener" title="See the full photo">'
+                 f'<img src="{e(src)}" alt="" referrerpolicy="no-referrer"></a>')  # the page is the story, so open the full photo
     body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
-<section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s)}</section>
+<section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s, media)}</section>
 {banner(cfg, "A4")}
 {f'<p class="wrap note postimg"><a class="link" href="{e(site)}/{s["post_image"]}" download>Download the framed image for Facebook or Instagram</a></p>' if s.get("post_image") else ""}
 <section class="wrap latest"><h2 class="label">More good news</h2><div class="grid">{more}</div>
