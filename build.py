@@ -764,6 +764,30 @@ footer .sponsors a{color:inherit}
 .fund .muted{font-size:13px;color:var(--text-2)}
 .fund .share{display:flex;flex-wrap:wrap;gap:8px}
 .causebox .script{display:block;font-size:28px;line-height:1.3;color:var(--secondary)}
+.goal{position:absolute;right:14px;bottom:-26px;z-index:1;width:104px;height:104px;border-radius:50%;display:grid;place-content:center;justify-items:center;
+  background:var(--secondary);color:var(--tertiary);border:3px solid var(--tertiary);outline:2px solid var(--secondary);transform:rotate(-8deg);text-align:center}
+.goal-k{font:700 10px/1 var(--caps);letter-spacing:.16em;text-transform:uppercase;opacity:.9}
+.goal-v{font:700 24px/1.05 var(--serif);margin:3px 0 2px;white-space:nowrap}.goal-v.long{font-size:19px}
+.fund .photo{overflow:visible}.fund .photo>img,.fund .photo>.art{overflow:hidden}
+.fund .tagline{font:700 10px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
+.fund .report{font-size:12px;color:var(--text-3);text-decoration:underline;justify-self:start}
+.fund .report:hover{color:var(--secondary)}
+.givebox{padding-block:0 48px}
+.give{background:var(--surface);border:2px solid var(--border-strong);padding:28px clamp(16px,3vw,32px) 24px}
+.give-top{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:16px 32px;margin-bottom:24px}
+.give-top .script{display:block;margin-bottom:14px;transform-origin:0 100%}
+.give-top .retro{font-size:clamp(28px,3.6vw,44px);line-height:1}
+.give-top p{margin:10px 0 0;max-width:52ch;color:var(--text-2)}
+.give-top .share{display:flex;flex-wrap:wrap;gap:8px}
+.give .rail-head{border-bottom-color:var(--border-medium);margin-bottom:16px}
+.give .railbox{padding:0}
+.give .listing{border-color:var(--border-medium)}
+.give-note{display:flex;gap:12px;align-items:flex-start;margin-top:20px;padding-top:16px;border-top:1px dashed var(--border-medium);font-size:13px;line-height:1.55;color:var(--text-2)}
+.give-note b{color:var(--text)}
+.give-note svg{flex:none;width:20px;height:20px;margin-top:1px;fill:none;stroke:var(--secondary);stroke-width:2}
+.givefacts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px 32px;margin:0;padding:24px clamp(16px,3vw,32px);background:var(--surface);border:2px solid var(--border-strong);list-style:none}
+.givefacts li{font-size:14px;line-height:1.55;color:var(--text-2)}
+.givefacts b{display:block;font:700 12px/1.3 var(--caps);letter-spacing:.1em;text-transform:uppercase;color:var(--text);margin-bottom:4px}
 .tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px;align-items:stretch}
 .tier{position:relative;background:var(--tertiary);border:2px solid var(--border-strong);padding:24px 20px;display:grid;gap:8px;align-content:start}
 .tier.pick{border:3px solid var(--secondary);background:#fffdf8}
@@ -1109,9 +1133,10 @@ def masthead(cfg, site, stories):
 <aside class="about" id="about" role="dialog" aria-labelledby="about-h" hidden>
 <button class="close" type="button" data-about-close aria-label="Close">&times;</button>
 <span class="script">Welcome, neighbor!</span><h2 class="hed" id="about-h">Why Sunny Mansfield?</h2>
-<p>Sunny Mansfield is a free paper for one thing: the good news. Neighbors helping neighbors, new shops opening, students winning, lives worth celebrating, and the events that bring Richland County together.</p>
-<ul><li><b>Uplifting, always.</b> We skip crime, crashes and arguing. There's plenty of that elsewhere.</li>
-<li><b>Written with neighbors.</b> Local outlets, students, business owners and mentors all add stories.</li>
+<p>Sunny Mansfield is a curated local media outlet that focuses on highlighting the positive side of Mansfield and Richland County: neighbors helping neighbors, new shops opening, students and athletes winning, lives worth celebrating, and the events that bring us together.</p>
+<ul><li><b>Curated, not crowded.</b> We hand-pick the good news from local outlets and neighbors, and every story links back to its original source.</li>
+<li><b>Uplifting, always.</b> We skip crime, crashes and arguing. There's plenty of that elsewhere.</li>
+<li><b>Written with neighbors.</b> Students, business owners, churches and mentors all add stories, and an editor reviews every post.</li>
 <li><b>Made to share.</b> Every story has a Share button. One share can make someone's day.</li></ul>
 <div class="share"><button class="btn solid" type="button" data-about-close>Start reading</button><a class="textbtn" href="{e(site)}/submit.html">Share good news</a></div>
 </aside>"""
@@ -1359,19 +1384,47 @@ def sponsor_strip(cfg):
             f'<a href="{e(site)}/advertise.html">Your business could be the first name here</a></div>')
 
 
+SHIELD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z"/><path d="M12 8v5M12 16v.5"/></svg>'
+FUND_SHORT = ("<b>Posted by neighbors, not by us.</b> Sunny Mansfield and Ofgeneration LLC don't run, verify or endorse these fundraisers, "
+              "and we never handle the money. Give only if you trust the organizer, and never send gift cards or wire money.")
+FUND_FACTS = [
+    ("Community submissions", "Fundraisers are posted by neighbors. Sunny Mansfield and Ofgeneration LLC don't run, endorse or "
+     "verify them, and aren't connected to the people or causes asking."),
+    ("We never touch the money", "Donations go straight to the fundraising site, like GoFundMe. We don't collect, hold or pass along "
+     "any money, and we get nothing from your gift."),
+    ("No promises", "An editor gives each post a quick look before it appears, but we can't confirm who is asking, how much is "
+     "needed or how the money will be spent. Giving is your choice and your risk."),
+    ("Not tax advice", "Your gift may not be tax-deductible. Ask the organizer or the fundraising site."),
+    ("Give safely", "Use trusted sites, give to people and groups you know, and never send gift cards, wire transfers, crypto or "
+     "cash-app payments to someone you don't know."),
+    ("Something wrong?", "Report it and we'll take it down while we look into it."),
+]
+
+
+def money(v):
+    """Turn a goal like 5000 or "5000" into "$5,000"; leave anything wordier alone."""
+    digits = v.replace(",", "").replace("$", "").strip()
+    return f"${int(digits):,}" if digits.isdigit() else v
+
+
 def fund_card(cfg, f):
     img = (f'<img src="{e(img_src(f["image"]))}" alt="" loading="lazy" referrerpolicy="no-referrer">' if f.get("image")
            else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["seniors"]}</svg></span>')
-    goal = f'<span class="price">Goal {e(f["goal"])}</span>' if f.get("goal") else ""
+    goal = (f'<span class="goal"><span class="goal-k">Goal</span><span class="goal-v{" long" if len(money(f["goal"])) > 6 else ""}">{e(money(f["goal"]))}</span>'
+            f'<span class="goal-k">needed</span></span>') if f.get("goal") else ""
     when = f' · Until {f["day"].strftime("%b %-d")}' if f.get("day") else ""
     cause = f'<span class="cause">{e(f["cause"])}</span>' if f.get("cause") else ""
-    give = (f'<a class="btn solid sm" href="{e(f["link"])}" target="_blank" rel="noopener">Donate</a>' if f.get("link") else "")
+    give = (f'<a class="btn solid sm" href="{e(f["link"])}" target="_blank" rel="noopener nofollow ugc">Donate</a>' if f.get("link") else "")
     site = cfg["site_url"].rstrip("/")
     share = f'<a class="btn fb sm" href="{e(fb_share(site + "/fundraisers.html#f-" + f["id"]))}" target="_blank" rel="noopener">{FB_ICON}Share</a>'
     by = f'<span class="muted">Organized by {e(f["by"])}</span>' if f.get("by") else ""
+    report = (f'<a class="report" href="mailto:{e(cfg["submit_email"])}?subject={urllib.parse.quote("Report fundraiser: " + f["title"])}">'
+              f'Report this fundraiser</a>')
     return (f'<article class="slide listing fund" id="f-{f["id"]}"><span class="photo">{img}{goal}</span>'
             f'<span class="caps kicker">{e(f.get("town") or "Richland County")}{when}</span>{cause}'
-            f'<h3 class="hed">{e(f["title"])}</h3><p class="dek">{e(f["summary"])}</p>{by}<div class="share">{give}{share}</div></article>')
+            f'<h3 class="hed">{e(f["title"])}</h3><p class="dek">{e(f["summary"])}</p>{by}'
+            f'<span class="tagline">Community post · Not verified by us</span>'
+            f'<div class="share">{give}{share}</div>{report}</article>')
 
 
 def ad_card(cfg, ad=None, spot="A2"):
@@ -1435,12 +1488,16 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=()):
     events = rail("Local events", "".join(flyer_cards) + (
         f'<a class="slide flyer add" href="{e(site)}/submit.html#flyer"><span class="flyer-img"><span class="plus">+</span></span>'
         f'<span class="hed">Post your flyer</span><span class="dek">Free for community events</span></a>'), rid="events", kind="flyers")
-    funds_rail = rail("Fundraisers &amp; causes", "".join(fund_card(cfg, f) for f in funds[:12]) + (
-        f'<a class="slide flyer add" href="{e(site)}/submit.html#fundraiser"><span class="flyer-img"><span class="plus">+</span></span>'
-        f'<span class="hed">Share a fundraiser</span><span class="dek">GoFundMe and other donation links welcome</span></a>'),
-        f'<a class="link" href="{e(site)}/fundraisers.html">See all</a>', kind="market") if funds else ""
+    funds_rail = (f'<section class="wrap givebox" id="give"><div class="give"><div class="give-top">'
+                  f'<div><span class="script">Neighbors helping neighbors</span><h2 class="retro sm">Local causes that need your help</h2>'
+                  f'<p>Medical bills, team trips, fire recovery and special causes shared by people in Richland County.</p></div>'
+                  f'<div class="share"><a class="btn solid" href="{e(site)}/fundraisers.html">See all {len(funds)}</a>'
+                  f'<a class="btn" href="{e(site)}/submit.html#fundraiser">Share a fundraiser</a></div></div>'
+                  + rail("Give where it counts", "".join(fund_card(cfg, f) for f in funds[:12])).replace('class="wrap railbox ', 'class="railbox ')
+                  + f'<p class="give-note">{SHIELD}<span>{FUND_SHORT} <a class="link" href="{e(site)}/fundraisers.html#before-you-give">Read before you give</a></span></p>'
+                  f'</div></section>') if funds else ""
     market = rail("Buy &amp; Sell", "".join(listing_card(x, cfg) for x in listings[:12]) + ad_card(cfg, sale_ads[0] if sale_ads else None, "A7"),
-                  f'<a class="link" href="{e(site)}/market.html">See all</a>', kind="market") if listings else ""
+                  f'<a class="link" href="{e(site)}/market.html">See all</a>', kind="shop") if listings else ""
     return f"""{head(cfg, cfg['site_name'], cfg['tagline'], site + '/')}
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
 {masthead(cfg, site, stories)}
@@ -1598,7 +1655,7 @@ def render_submit(cfg, stories):
         ("vote", "Post an event flyer", "Concerts, fish fries, fundraisers, festivals, church suppers. Upload your flyer and "
          "it rides the front page carousel until the day of the event.", "#form:Event Flyer", "Post a flyer", "flyer"),
         ("seniors", "Share a fundraiser", "Raising money for a neighbor, a team or a special cause? Post your GoFundMe or "
-         "donation link and we'll help spread the word.", "#form:Fundraiser", "Post a fundraiser", "fundraiser"),
+         "donation link and we'll help spread the word. You're responsible for your fundraiser and how the money is used.", "#form:Fundraiser", "Post a fundraiser", "fundraiser"),
         ("sports", "Spotlight an athlete", "A big game, a personal best, a signing day, a kid who never quits. Send a photo "
          "and a few lines and they get their own page to share.", "#form:Athlete Spotlight", "Spotlight an athlete", "athlete"),
         ("sales", "Buy &amp; Sell", "List something for sale or wanted, with a price and how to reach you. Free, up for 30 days.",
@@ -1839,10 +1896,14 @@ def render_fundraisers(cfg, funds, stories):
     if not funds:
         blocks = '<section class="wrap latest"><p class="empty">No fundraisers posted right now. Know a neighbor who needs a hand? Share their fundraiser.</p></section>'
     inner = f"""{page_title("Neighbors helping neighbors", "Fundraisers &amp; causes", "Medical bills, team trips, fire recovery, school projects and special causes. Give if you can, and share if you can't.")}
-<section class="wrap"><div class="more-row" style="margin:0 0 8px"><a class="btn solid" href="{e(site)}/submit.html#fundraiser">Share a fundraiser</a></div></section>
+<section class="wrap"><div class="more-row" style="margin:0 0 8px"><a class="btn solid" href="{e(site)}/submit.html#fundraiser">Share a fundraiser</a></div>
+<p class="give-note">{SHIELD}<span>{FUND_SHORT} <a class="link" href="#before-you-give">Read before you give</a></span></p></section>
 {blocks}
-<section class="wrap latest"><p class="note">Every fundraiser is checked by an editor before it appears, but Sunny Mansfield doesn't collect or handle money and can't promise how funds are used.
-Give through trusted sites like GoFundMe, give to people and groups you know, and never send gift cards or wire money. See something wrong? Email {e(cfg['submit_email'])}.</p></section>"""
+<section class="wrap latest" id="before-you-give"><h2 class="label">Read before you give</h2>
+<ul class="givefacts">{"".join(f"<li><b>{t}</b>{d}</li>" for t, d in FUND_FACTS[:-1])}
+<li><b>{FUND_FACTS[-1][0]}</b>{FUND_FACTS[-1][1]} Email <a class="link" href="mailto:{e(cfg['submit_email'])}">{e(cfg['submit_email'])}</a>.</li></ul>
+<p class="note">Sunny Mansfield is a publication of Ofgeneration LLC. Fundraiser listings are provided as a free community service, as is, with no warranty.
+Each organizer is responsible for their own fundraiser, its claims and its use of funds.</p></section>"""
     return shell(cfg, f"Fundraisers · {cfg['site_name']}", "Fundraisers and special causes from Mansfield and Richland County neighbors.",
                  f"{site}/fundraisers.html", inner, stories)
 
