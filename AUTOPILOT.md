@@ -48,4 +48,12 @@ The free plan allows 100 posts a month, and each Zap can have only one action. T
 | Daily post | `/social.xml` | Instagram (Publish Photo) | ~30 |
 | Posted by neighbors | `/community.xml` (every story, athlete spotlight, event flyer, fundraiser and business spotlight sent in through the site, once it's approved) | Facebook Page (Create Page Photo) | usually under 40 |
 
+| Quote of the day | `/quotes.xml` (a framed quote image at 8 a.m. and 8 p.m. Eastern, from `quotes.csv`) | Facebook Page (Create Page Photo) | ~60 |
+
+Facebook only (no Instagram Zap yet): daily post ~30 + quotes ~60 = ~90, which leaves about 10 for community posts.
+Once neighbors post more than that, either upgrade Zapier or turn the quote Zap off on busy months.
+
+Set up the quote Zap like the daily post one: RSS by Zapier, New Item in Feed, feed URL `https://sunnymansfield.com/quotes.xml`,
+then Facebook Pages, Create Page Photo, with Photo = the item's Link and Message = the item's Description.
+
 `/top.xml` (the best new story each day) is also there if you upgrade later or want it instead.

@@ -1517,9 +1517,8 @@ def slide(cfg, s):
 
 
 def quote_of_the_day(path=HERE / "quotes.csv"):
-    """Today's quote from quotes.csv. A row with today's date wins; otherwise the undated quotes take turns, one a day.
-    Columns can be named quote, author and date (any order), or just quote then author with no header row.
-    The day turns over at 8 a.m. Eastern, the same time as the daily Facebook post."""
+    """The current quote from quotes.csv. Columns can be named quote, author, date and hashtags (any order),
+    or just quote then author with no header row."""
     from zoneinfo import ZoneInfo
     if not path.exists():
         return None
@@ -1540,12 +1539,19 @@ def quote_of_the_day(path=HERE / "quotes.csv"):
               for r in rows if get(r, qi)]
     if not quotes:
         return None
-    today = (datetime.now(ZoneInfo("America/New_York")) - timedelta(hours=8)).date()
-    for q in quotes:
-        if q["date"] and q["date"].date() == today:
-            return q
-    pool = [q for q in quotes if not q["date"]] or quotes
-    return pool[today.toordinal() % len(pool)]
+    # Two quotes a day, at 8 a.m. and 8 p.m. Eastern, walking down the list in date order (file order if undated).
+    quotes.sort(key=lambda q: q["date"] or datetime.max.replace(tzinfo=timezone.utc))
+    start = (quotes[0]["date"] or datetime(2026, 10, 22, tzinfo=timezone.utc)).date()
+    now = datetime.now(ZoneInfo("America/New_York"))
+    turn = now.replace(hour=20 if now.hour >= 20 or now.hour < 8 else 8, minute=0, second=0, microsecond=0)
+    if now.hour < 8:
+        turn -= timedelta(days=1)
+    recent = []
+    for back in range(2):  # this turn and the one before, so the Facebook feed always has something new to find
+        at = turn - timedelta(hours=12 * back)
+        n = (at.date() - start).days * 2 + (at.hour == 20)
+        recent.append({**quotes[n % len(quotes)], "at": at})
+    return {**recent[0], "recent": recent}
 
 
 def quote_card(cfg, quote, big=False):
@@ -2376,12 +2382,14 @@ def main():
     preview = re.sub(r'(["(])/(assets/[\w./-]+\.jpg)', inline, page).replace('<link rel="icon" type="image/svg+xml" href="/brand/mark.svg">\n', "")
     (out / "artifact.html").write_text(preview)
     try:
-        from posts import make_community_feed, make_daily_post, make_post_images, make_quote_image, make_top_story_feed
+        from posts import (make_community_feed, make_daily_post, make_post_images, make_quote_feed, make_quote_image,
+                           make_top_story_feed)
         credit = "sunnymansfield.com"  # the line along the bottom of every post image
         make_post_images(stories, out, SECTION_NAMES, UA, credit, outlet_photos=cfg.get("frame_outlet_photos", False), note=note)
         make_daily_post(cfg, stories, businesses, flyers, got["fundraisers"], listings, out, SECTION_NAMES, UA, credit,
-                        lambda s: page_url(cfg, s), note=note, quote=quote)
+                        lambda s: page_url(cfg, s), note=note)
         make_quote_image(quote, out, credit, note=note)
+        make_quote_feed(cfg, quote, out, credit, note=note)
         make_top_story_feed(cfg, stories, out, lambda s: page_url(cfg, s), note=note)
         make_community_feed(cfg, stories, flyers, got["fundraisers"], businesses, out, lambda s: page_url(cfg, s), UA, credit, note=note)
     except ImportError as exc:

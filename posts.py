@@ -262,13 +262,47 @@ def make_quote_image(quote, out, credit, note=print):
     return "quote.jpg"
 
 
+def make_quote_feed(cfg, quote, out, credit, note=print):
+    """quotes.xml: a framed quote image twice a day (8 a.m. and 8 p.m. Eastern), ready to post to Facebook.
+    Like social.xml, each item's link is the image itself and the caption is in the description."""
+    from email.utils import format_datetime
+    from html import escape as e
+    if not quote:
+        return
+    site = cfg["site_url"].rstrip("/")
+    folder = Path(out) / "social"
+    folder.mkdir(parents=True, exist_ok=True)
+    items = []
+    for q in quote["recent"]:
+        key = q["at"].strftime("%Y-%m-%d-") + ("pm" if q["at"].hour >= 12 else "am")
+        try:
+            quote_post(q, credit).save(folder / f"quote-{key}.jpg", quality=88, optimize=True, progressive=False)
+        except Exception as exc:
+            note(f"Quote feed: skipped ({exc})")
+            return
+        text = q["text"].strip().strip('"\u201c\u201d')
+        tags = " ".join(dict.fromkeys(TAGS.split() + [x for x in q.get("tags", "").split() if x.startswith("#")]))
+        caption = (f"💬 Mansfield quote of the day\n\n\u201c{text}\u201d" + (f"\n\u2014 {q['author']}" if q.get("author") else "")
+                   + f"\n\nMore good news: {site}/\n\n{tags}")
+        image = f"{site}/social/quote-{key}.jpg"
+        items.append(f"""<item><title>{e("Quote of the day: " + text[:80])}</title><link>{e(image)}</link>
+<guid isPermaLink="false">sunny-quote-{key}</guid><pubDate>{format_datetime(q["at"])}</pubDate>
+<description>{e(caption)}</description><enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>""")
+    (Path(out) / "quotes.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>{e(cfg['site_name'])} quote of the day</title><link>{e(site)}/quote.html</link>
+<description>A Mansfield quote twice a day, ready for Facebook</description>
+{"".join(items)}
+</channel></rss>""")
+    note(f"Quote feed: {quote['text'][:60]}")
+
+
 def pick(stories, *sections, athletes=False):
     pool = [s for s in stories if s["section"] in sections and (not athletes or s.get("athlete") is not None)]
     pool.sort(key=lambda s: (not s.get("community"), not s.get("image")))
     return pool[0] if pool else None
 
 
-def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, section_names, ua, credit, page_url, note=print, quote=None):
+def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, section_names, ua, credit, page_url, note=print):
     """Write site/social/<date>.jpg and social.xml with today's post. It switches over at 8 a.m. Eastern."""
     from datetime import datetime, timedelta
     from email.utils import format_datetime
@@ -325,11 +359,7 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
     name = f"{day:%Y-%m-%d}.jpg"
     im.save(folder / name, quality=86, optimize=True, progressive=False)
     image = f"{site}/social/{name}"
-    said = ""
-    if quote:
-        said = f"\n\n💬 Mansfield quote of the day:\n\u201c{quote['text'].strip().strip(chr(34))}\u201d" + (f"\n\u2014 {quote['author']}" if quote.get("author") else "")
-    extra = " ".join(x for x in (quote or {}).get("tags", "").split() if x.startswith("#") and x not in TAGS and x != tag)
-    caption = f"{theme} ☀️\n\n{text}\n\nRead more: {link}{said}\n\n{TAGS} {tag}{' ' + extra if extra else ''}"
+    caption = f"{theme} ☀️\n\n{text}\n\nRead more: {link}\n\n{TAGS} {tag}"
     (Path(out) / "social.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])} daily post</title>
 <link>{e(site)}/</link><description>One ready-made post a day for Facebook and Instagram</description>
@@ -428,7 +458,7 @@ def fill_enclosure_lengths(out, site):
     """Give each enclosure its real file size. Some RSS readers, Zapier among them, skip enclosures with length 0."""
     import re
     site = site.rstrip("/")
-    for name in ("social.xml", "community.xml", "top.xml", "feed.xml"):
+    for name in ("social.xml", "community.xml", "top.xml", "quotes.xml", "feed.xml"):
         path = Path(out) / name
         if not path.exists():
             continue

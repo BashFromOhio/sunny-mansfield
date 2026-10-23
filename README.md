@@ -70,6 +70,6 @@ refresh (every 15 minutes). Verified contributors who sign in skip the queue. Se
 ## Quote of the day
 
 `quotes.csv` feeds the "Mansfield quote of the day" box next to the top banner, the shareable `quote.html` page and
-`quote.jpg` image, and the caption of the daily Facebook post. Columns are `quote`, `author` and an optional `date`
-(like 2026-11-26), plus optional `Suggested Hashtags` that go on the Facebook caption. A quote with today's date wins; otherwise the undated quotes take turns, one a day, switching at
-8 a.m. Eastern.
+`quote.jpg` image, and `quotes.xml`, which posts a framed quote image to Facebook twice a day. Columns are `quote`,
+`author`, an optional `date` and optional `Suggested Hashtags`. The quote changes at 8 a.m. and 8 p.m. Eastern,
+walking down the list in date order (file order if there are no dates), and starts over at the end.
