@@ -799,11 +799,21 @@ footer .sponsors a{color:inherit}
 .fund .report{font-size:12px;color:var(--text-3);text-decoration:underline;justify-self:start}
 .fund .report:hover{color:var(--secondary)}
 .givebox{padding-block:0 48px}
-.give{background:var(--surface);border:2px solid var(--border-strong);padding:28px clamp(16px,3vw,32px) 24px}
-.give-top{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:16px 32px;margin-bottom:24px}
-.give-top .script{display:block;margin-bottom:14px;transform-origin:0 100%}
-.give-top .retro{font-size:clamp(28px,3.6vw,44px);line-height:1}
-.give-top p{margin:10px 0 0;max-width:52ch;color:var(--text-2)}
+.give{background:var(--surface);border:2px solid var(--border-strong);padding:18px clamp(14px,2.4vw,24px) 14px}
+.give-top{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:10px 24px;margin-bottom:12px}
+.give-top .script{display:block;margin-bottom:6px;font-size:24px;transform-origin:0 100%}
+.give-top .retro{font-size:clamp(22px,2.6vw,32px);line-height:1}
+.give-top p{margin:6px 0 0;max-width:60ch;font-size:14px;color:var(--text-2)}
+.give .rail-head{margin-bottom:12px}.give .rail-head .label{padding-bottom:6px}
+.give .rail{grid-auto-columns:calc((100% - 72px)/4)}
+@media (max-width:960px){.give .rail{grid-auto-columns:calc((100% - 24px)/2.3)}}
+@media (max-width:600px){.give .rail{grid-auto-columns:74%}}
+.give .listing{gap:6px;padding-bottom:14px}.give .listing>:not(.photo){padding-inline:14px}
+.give .listing .photo{aspect-ratio:16/10}.give .listing .hed{font-size:17px}
+.give .listing .dek{font-size:13px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.give .fund .cause{margin-inline:14px;font-size:10px;padding:4px 6px}.give .fund .muted{font-size:12px}
+.give .goal{width:80px;height:80px;bottom:-20px;right:10px}.give .goal-v{font-size:18px}.give .goal-v.long{font-size:15px}.give .goal-k{font-size:8px}
+.give .give-note{margin-top:12px;padding-top:10px;font-size:12px}
 .give-top .share{display:flex;flex-wrap:wrap;gap:8px}
 .give .rail-head{border-bottom-color:var(--border-medium);margin-bottom:16px}
 .give .railbox{padding:0}
@@ -884,24 +894,25 @@ input[type=file]{font:400 14px/1.4 var(--sans)}
 .toprow .adrow{padding:0;display:flex;flex-direction:column}.toprow .adbanner{max-width:none;flex:1;box-sizing:border-box}
 .toprow .adbanner img{height:100%;object-fit:cover}
 @media (max-width:860px){.toprow{grid-template-columns:minmax(0,1fr)}}
-.qotd{position:relative;overflow:hidden;margin:0;display:grid;align-content:center;gap:2px;padding:18px 24px 16px;border:2px solid var(--border-strong);
-  background:radial-gradient(circle at 50% 150%,#f7b54a 0 22%,#e8762a 23% 46%,var(--secondary) 47% 70%,var(--secondary-dk));color:var(--tertiary);isolation:isolate}
-.qotd::before{content:"";position:absolute;left:50%;top:150%;width:1800px;height:1800px;margin:-900px 0 0 -900px;z-index:-1;
-  background:repeating-conic-gradient(rgba(251,246,236,.09) 0 5deg,transparent 5deg 13deg)}
-.qotd::after{content:"\u201c";position:absolute;right:10px;top:-22px;font:700 150px/1 var(--serif);color:rgba(251,246,236,.16);z-index:-1}
-.qotd .script{font-size:30px;color:var(--tertiary);margin:0;transform:rotate(-4deg);transform-origin:0 100%;text-shadow:0 2px 0 rgba(46,26,16,.25)}
-.qotd .qlabel{font-size:11px;letter-spacing:.2em;color:var(--primary);margin-bottom:6px}
-.qotd blockquote{margin:0;font:700 21px/1.3 var(--serif);text-wrap:balance}
+/* quote of the day: the logo's framed retro look, inverted (cream letters with a brown drop on orange, brown frame) */
+.qotd{position:relative;margin:0;display:grid;align-content:center;justify-items:center;text-align:center;gap:2px;padding:20px 26px 16px;
+  background:var(--secondary);color:var(--tertiary);border:2px solid var(--secondary);box-shadow:inset 0 0 0 6px var(--secondary),inset 0 0 0 8px var(--primary)}
+.qotd .script{font-size:32px;color:var(--tertiary);margin:0 0 8px;transform:rotate(-5deg);text-shadow:2px 2px 0 var(--primary)}
+.qotd .qlabel{font-size:11px;letter-spacing:.24em;color:var(--primary);margin-bottom:8px}
+.qotd blockquote{margin:0;font:700 21px/1.28 var(--serif);text-wrap:balance;text-shadow:2px 2px 0 var(--primary)}
+.qotd blockquote::before{content:"\u201c"}.qotd blockquote::after{content:"\u201d"}
 .qotd blockquote.mid{font-size:18px}.qotd blockquote.long{font-size:15.5px}
-.qotd figcaption{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;margin-top:10px}
-.qotd cite{font:700 11px/1.3 var(--caps);letter-spacing:.14em;text-transform:uppercase;font-style:normal;color:#ffe3b8}
+.qotd cite{font:700 11px/1.3 var(--caps);letter-spacing:.14em;text-transform:uppercase;font-style:normal;color:var(--primary);margin-top:8px}
 .qotd cite::before{content:"\u2014 "}
+.qotd figcaption{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 14px;margin-top:12px;padding-top:10px;border-top:2px solid var(--primary);width:100%}
+.qsite{font-size:12px;letter-spacing:.2em;color:var(--primary);text-decoration:none}.qsite:hover{color:var(--tertiary)}
 .qshare{display:inline-flex;align-items:center;gap:6px;font:700 11px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--tertiary);
-  text-decoration:none;border:1.5px solid rgba(251,246,236,.7);padding:6px 10px}.qshare:hover{background:var(--tertiary);color:var(--secondary)}
+  text-decoration:none;background:var(--primary);padding:6px 10px}.qshare:hover{background:var(--tertiary);color:var(--secondary)}
 .qshare svg{width:12px;height:12px;fill:currentColor}
-.qotd.big{padding:40px clamp(20px,5vw,56px) 32px}.qotd.big .script{font-size:52px}.qotd.big .qlabel{font-size:14px}
-.qotd.big blockquote{font-size:clamp(26px,4vw,40px)}.qotd.big blockquote.mid{font-size:clamp(22px,3.4vw,32px)}.qotd.big blockquote.long{font-size:clamp(19px,2.8vw,26px)}
-.qotd.big cite{font-size:14px}
+.qotd.big{padding:44px clamp(24px,5vw,60px) 30px;box-shadow:inset 0 0 0 10px var(--secondary),inset 0 0 0 13px var(--primary)}
+.qotd.big .script{font-size:56px}.qotd.big .qlabel{font-size:14px}
+.qotd.big blockquote{font-size:clamp(26px,4vw,40px);text-shadow:3px 3px 0 var(--primary)}.qotd.big blockquote.mid{font-size:clamp(22px,3.4vw,32px)}
+.qotd.big blockquote.long{font-size:clamp(19px,2.8vw,26px)}.qotd.big cite,.qotd.big .qsite{font-size:14px}
 .qitem.pick{grid-template-columns:120px minmax(0,1fr);padding:12px;align-items:center}.qitem.pick .hed{font-size:18px;margin:4px 0 8px}
 .qitem.pick.on{border-color:var(--secondary);background:var(--surface)}.qitem.pick .qphoto img{aspect-ratio:3/2;object-fit:cover;width:100%;display:block}
 .qitem{display:grid;grid-template-columns:200px minmax(0,1fr);gap:20px;background:var(--tertiary);border:2px solid var(--border-subtle);padding:20px}
@@ -1517,13 +1528,15 @@ def quote_of_the_day(path=HERE / "quotes.csv"):
         return None
     names = [c.strip().lower() for c in rows[0]]
     col = lambda *keys: next((i for i, n in enumerate(names) if n in keys), None)
-    qi, ai, di = col("quote", "text", "quotes"), col("author", "by", "who", "name", "said by"), col("date", "day")
+    qi, ai, di = col("quote", "text", "quotes"), col("author", "by", "who", "name", "said by"), col("date")
+    ti = col("suggested hashtags", "hashtags", "tags")
     if qi is None:
-        qi, ai, di = 0, 1 if len(rows[0]) > 1 else None, None
+        qi, ai, di, ti = 0, 1 if len(rows[0]) > 1 else None, None, None
     else:
         rows = rows[1:]
     get = lambda r, i: r[i].strip() if i is not None and i < len(r) else ""
-    quotes = [{"text": get(r, qi), "author": get(r, ai), "date": parse_day(get(r, di)) if di is not None and get(r, di) else None}
+    quotes = [{"text": get(r, qi), "author": get(r, ai), "tags": get(r, ti),
+               "date": parse_day(get(r, di)) if di is not None and get(r, di) else None}
               for r in rows if get(r, qi)]
     if not quotes:
         return None
@@ -1544,7 +1557,8 @@ def quote_card(cfg, quote, big=False):
     who = f'<cite>{e(quote["author"])}</cite>' if quote.get("author") else ""
     share = (f'<a class="qshare" href="{e(fb_share(site + "/quote.html"))}" target="_blank" rel="noopener">{FB_ICON}Share</a>')
     return (f'<figure class="qotd{" big" if big else ""}"><span class="script">Mansfield</span><span class="caps qlabel">Quote of the day</span>'
-            f'<blockquote class="{size}">{e(text)}</blockquote><figcaption>{who}{share}</figcaption></figure>')
+            f'<blockquote class="{size}">{e(text)}</blockquote>{who}'
+            f'<figcaption><a class="caps qsite" href="{e(site)}/">sunnymansfield.com</a>{share}</figcaption></figure>')
 
 
 def render_quote_page(cfg, quote, stories, has_image):
@@ -1565,6 +1579,20 @@ def pinned(stories, headlines):
             if (h["link"] and h["link"] == s["link"]) or s["title"].strip().lower() == h["title"].strip().lower():
                 return s
     return None
+
+
+def shelf_order(rails, funds, events):
+    """Good News, then local causes, then Sports, then local events, then the rest of the sections."""
+    out = []
+    for k, html_ in rails:
+        out.append(html_)
+        if k == "good":
+            out.append(funds)
+            funds = ""
+        if k == "sports":
+            out.append(events)
+            events = ""
+    return "".join(out) + funds + events  # if a section is empty today, its neighbor still shows, just lower down
 
 
 def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None):
@@ -1600,7 +1628,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
         if i % 3 == 1:
             slides.insert(min(3, len(slides)), ad_at(i))  # one sponsor spot every few shelves
         see = f'{sponsor_tag(cfg, k, site)}<button class="link" type="button" data-show="{k}">See all {counts[k]}</button>'
-        rails.append(rail(e(name), "".join(slides), see, kind="sec"))
+        rails.append((k, rail(e(name), "".join(slides), see, kind="sec")))
     ev_ad = (f'<a class="slide flyer evad" href="{e(events_ad[0]["link"])}" target="_blank" rel="noopener sponsored"><span class="flyer-img">'
              f'<img src="{e(events_ad[0]["image"])}" alt="{e(events_ad[0]["name"])}" loading="lazy"></span><span class="caps sponsor">Sponsor</span>'
              f'<span class="hed">{e(events_ad[0]["name"])}</span></a>') if events_ad else (
@@ -1614,8 +1642,8 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     funds_rail = (f'<section class="wrap givebox" id="give"><div class="give"><div class="give-top">'
                   f'<div><span class="script">Neighbors helping neighbors</span><h2 class="retro sm">Local causes that need your help</h2>'
                   f'<p>Medical bills, team trips, fire recovery and special causes shared by people in Richland County.</p></div>'
-                  f'<div class="share"><a class="btn solid" href="{e(site)}/fundraisers.html">See all {len(funds)}</a>'
-                  f'<a class="btn" href="{e(site)}/submit.html#fundraiser">Share a fundraiser</a></div></div>'
+                  f'<div class="share"><a class="btn solid sm" href="{e(site)}/fundraisers.html">See all {len(funds)}</a>'
+                  f'<a class="btn sm" href="{e(site)}/submit.html#fundraiser">Share a fundraiser</a></div></div>'
                   + rail("Give where it counts", "".join(fund_card(cfg, f) for f in funds[:12])).replace('class="wrap railbox ', 'class="railbox ')
                   + f'<p class="give-note">{SHIELD}<span>{FUND_SHORT} <a class="link" href="{e(site)}/fundraisers.html#before-you-give">Read before you give</a></span></p>'
                   f'</div></section>') if funds else ""
@@ -1626,15 +1654,13 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 {masthead(cfg, site, stories, quote)}
 <nav class="sections" aria-label="Sections"><div class="wrap">{tabs}</div></nav>
 <main>{note}{front}
-{funds_rail}
-{events}
-<div id="shelves">{"".join(rails)}</div>
+{civic(cfg, businesses)}
+<div id="shelves">{shelf_order(rails, funds_rail, events)}</div>
 {market}
 <section class="wrap latest" id="latest" hidden><h2 class="label">More good news</h2>
 <div class="grid">{grid}<p class="empty" hidden>Nothing here this week yet. Know a story? <a class="link" href="{e(site)}/submit.html">Submit it</a></p></div>
 <div class="more-row"><button class="btn" type="button" id="more" hidden>Show more stories</button></div></section>
 {memories(cfg)}
-{civic(cfg, businesses)}
 {submit_band(cfg, site)}
 <div class="stripes" aria-hidden="true"></div>
 </main>

@@ -1,6 +1,366 @@
-quote,author,date
-"Good things happen when neighbors show up for each other.",Sunny Mansfield (sample),
-"Every porch light in Richland County is somebody looking out for somebody.",Sunny Mansfield (sample),
-"Shop local, wave a lot, and share the good news.",Sunny Mansfield (sample),
-"A small town is just a big family with more casseroles.",Sunny Mansfield (sample),
-"The best view in Mansfield is a neighbor helping a neighbor.",Sunny Mansfield (sample),
+﻿Day,Date,Theme,Quote,Style,Suggested Hashtags
+1,2026-10-22,"Shawshank, Spooky Season & Courage",Mansfield's spooky season teaches courage: move forward even when your knees shake.,Positive quote,#MansfieldOhio #419Pride
+2,2026-10-23,"Shawshank, Spooky Season & Courage",Mansfield has enough ghost stories. Let's give its future something joyful to tell.,Positive quote,#MansfieldOhio #419Pride
+3,2026-10-24,"Shawshank, Spooky Season & Courage",Mansfield's Reformatory makes a great backdrop; the community deserves the spotlight.,Positive quote,#MansfieldOhio #419Pride #ShawshankTrail
+4,2026-10-25,"Shawshank, Spooky Season & Courage","Even in Mansfield, a city famous for a prison, freedom is a powerful hometown theme.",Positive quote,#MansfieldOhio #419Pride
+5,2026-10-26,"Shawshank, Spooky Season & Courage","Walk Mansfield's Shawshank Trail, then blaze a trail of your own.",Positive quote,#MansfieldOhio #419Pride #ShawshankTrail
+6,2026-10-27,"Shawshank, Spooky Season & Courage",A Mansfield horror show ends; one brave act can keep changing lives.,Positive quote,#MansfieldOhio #419Pride
+7,2026-10-28,"Shawshank, Spooky Season & Courage",The Mansfield difference: we can laugh about ghosts and get serious about hope.,Positive quote,#MansfieldOhio #419Pride
+8,2026-10-29,"Shawshank, Spooky Season & Courage","Mansfield reminder for spooky season: turn fear into curiosity, then take a step.",Positive quote,#MansfieldOhio #419Pride
+9,2026-10-30,"Shawshank, Spooky Season & Courage","If you survived Mansfield's haunted attraction, you can survive a first meeting.",Local humor,#MansfieldOhio #419Pride
+10,2026-10-31,"Shawshank, Spooky Season & Courage",Let the only thing haunting Mansfield be how much good we still hope to do.,Positive quote,#MansfieldOhio #419Pride
+11,2026-11-01,"Gratitude, Neighbors & Legacy",Thank the Mansfield people who knew you before the big achievement.,Positive quote,#MansfieldOhio #419Pride
+12,2026-11-02,"Gratitude, Neighbors & Legacy",Mansfield families know a table feels fuller when the stories start flowing.,Positive quote,#MansfieldOhio #419Pride
+13,2026-11-03,"Gratitude, Neighbors & Legacy","Mansfield's Westinghouse shifts are history, but the work ethic still gets passed down at dinner.",Positive quote,#MansfieldOhio #419Pride
+14,2026-11-04,"Gratitude, Neighbors & Legacy","Honor a Mansfield factory worker, teacher, nurse, or neighbor who helped build your world.",Positive quote,#MansfieldOhio #419Pride
+15,2026-11-05,"Gratitude, Neighbors & Legacy",Mansfield's history is full of ordinary people doing extraordinary amounts of work.,Positive quote,#MansfieldOhio #419Pride
+16,2026-11-06,"Gratitude, Neighbors & Legacy",The kindness you show this November might become someone's favorite Mansfield memory.,Positive quote,#MansfieldOhio #419Pride
+17,2026-11-07,"Gratitude, Neighbors & Legacy",Not everybody got an easy start in Mansfield. Everybody deserves dignity here.,Positive quote,#MansfieldOhio #419Pride
+18,2026-11-08,"Gratitude, Neighbors & Legacy",Thank a Mansfield coach who stayed late or a teacher who never gave up.,Positive quote,#MansfieldOhio #419Pride
+19,2026-11-09,"Gratitude, Neighbors & Legacy",A Mansfield reunion usually starts with 'I haven't seen you in forever!',Positive quote,#MansfieldOhio #419Pride
+20,2026-11-10,"Gratitude, Neighbors & Legacy",An old Mansfield yearbook can show how many people shaped your journey.,Positive quote,#MansfieldOhio #419Pride
+21,2026-11-11,"Gratitude, Neighbors & Legacy",Mansfield history gets richer when we remember the people outside the headlines.,Positive quote,#MansfieldOhio #419Pride
+22,2026-11-12,"Gratitude, Neighbors & Legacy","From Malabar Farm to Mansfield blocks, every generation leaves something behind.",Positive quote,#MansfieldOhio #419Pride
+23,2026-11-13,"Gratitude, Neighbors & Legacy",There's room at the Mansfield table when we choose to make room.,Positive quote,#MansfieldOhio #419Pride
+24,2026-11-14,"Gratitude, Neighbors & Legacy",A good neighbor is one of Mansfield's best long-term investments.,Positive quote,#MansfieldOhio #419Pride
+25,2026-11-15,"Gratitude, Neighbors & Legacy",The biggest Mansfield flex is success without acting too big for home.,Positive quote,#MansfieldOhio #419Pride
+26,2026-11-16,"Gratitude, Neighbors & Legacy",Thank the Mansfield businesses that knew your family long before your first paycheck.,Local humor,#MansfieldOhio #419Pride
+27,2026-11-17,"Gratitude, Neighbors & Legacy","Mansfield courage can look like opening a shop, coaching a team, or forgiving somebody.",Positive quote,#MansfieldOhio #419Pride
+28,2026-11-18,"Gratitude, Neighbors & Legacy",Remember Mansfield elders who worked shifts so someone else could chase a dream.,Positive quote,#MansfieldOhio #419Pride
+29,2026-11-19,"Gratitude, Neighbors & Legacy",A Mansfield family's best inheritance might be four words: 'You can do it.',Positive quote,#MansfieldOhio #419Pride
+30,2026-11-20,"Gratitude, Neighbors & Legacy",Mansfield isn't one story; it's thousands worth hearing.,Positive quote,#MansfieldOhio #419Pride
+31,2026-11-21,"Gratitude, Neighbors & Legacy",Don't wait until an obituary to tell a Mansfield hero thank you.,Positive quote,#MansfieldOhio #419Pride
+32,2026-11-22,"Gratitude, Neighbors & Legacy",Mansfield's character shows in how we treat the people receiving the least applause.,Positive quote,#MansfieldOhio #419Pride
+33,2026-11-23,"Gratitude, Neighbors & Legacy",Mansfield's greatest landmark may be the neighbor who kept the whole block together.,Positive quote,#MansfieldOhio #419Pride
+34,2026-11-24,"Gratitude, Neighbors & Legacy",Mansfield Thanksgiving tastes sweeter when nobody has to eat alone.,Positive quote,#MansfieldOhio #419Pride
+35,2026-11-25,"Gratitude, Neighbors & Legacy",Call your Mansfield people. Make the visit. November doesn't last forever.,Positive quote,#MansfieldOhio #419Pride
+36,2026-11-26,"Gratitude, Neighbors & Legacy",Mansfield is stronger when its neighborhoods celebrate each other.,Positive quote,#MansfieldOhio #419Pride
+37,2026-11-27,"Gratitude, Neighbors & Legacy",Mansfield gratitude is remembering where you came from without stopping where you are.,Positive quote,#MansfieldOhio #419Pride
+38,2026-11-28,"Gratitude, Neighbors & Legacy",Old Mansfield memories keep us grounded; new ones keep us growing.,Positive quote,#MansfieldOhio #419Pride
+39,2026-11-29,"Gratitude, Neighbors & Legacy","If Mansfield helped you find your feet, help the next person find theirs.",Positive quote,#MansfieldOhio #419Pride
+40,2026-11-30,"Gratitude, Neighbors & Legacy",Give your Mansfield people their flowers while they're here to enjoy them.,Positive quote,#MansfieldOhio #419Pride
+41,2026-12-01,Winter Lights & A Year of Hope,"When downtown Mansfield lights up, even a cold night feels welcoming.",Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+42,2026-12-02,Winter Lights & A Year of Hope,Snow Trails taught Ohio to ski; Mansfield taught us to make the most of winter.,Positive quote,#MansfieldOhio #419Pride
+43,2026-12-03,Winter Lights & A Year of Hope,"If life feels uphill, remember a Snow Trails run near Mansfield starts with a lift.",Positive quote,#MansfieldOhio #419Pride
+44,2026-12-04,Winter Lights & A Year of Hope,A Mansfield December is for warm coats and warmer conversations.,Positive quote,#MansfieldOhio #419Pride
+45,2026-12-05,Winter Lights & A Year of Hope,Mansfield's year is almost over. Your opportunities aren't.,Positive quote,#MansfieldOhio #419Pride
+46,2026-12-06,Winter Lights & A Year of Hope,Mansfield knows how to shovel a driveway and clear room for a fresh start.,Positive quote,#MansfieldOhio #419Pride
+47,2026-12-07,Winter Lights & A Year of Hope,Some of the brightest Mansfield moments happen when the days are shortest.,Positive quote,#MansfieldOhio #419Pride
+48,2026-12-08,Winter Lights & A Year of Hope,Make a Mansfield child smile this season; that's a gift with no wrapping required.,Positive quote,#MansfieldOhio #419Pride
+49,2026-12-09,Winter Lights & A Year of Hope,A holiday night at Mansfield's Renaissance can make the whole month feel special.,Positive quote,#MansfieldOhio #419Pride
+50,2026-12-10,Winter Lights & A Year of Hope,The holiday glow at Mansfield's Kingwood is special; a neighbor's kindness shines all the way home.,Positive quote,#MansfieldOhio #419Pride
+51,2026-12-11,Winter Lights & A Year of Hope,A Mansfield winter builds character; a thoughtful neighbor makes it easier.,Positive quote,#MansfieldOhio #419Pride
+52,2026-12-12,Winter Lights & A Year of Hope,Your Mansfield roots are worth celebrating wherever the holidays find you.,Positive quote,#MansfieldOhio #419Pride
+53,2026-12-13,Winter Lights & A Year of Hope,A visit to Mansfield can fit a year's worth of memories into one afternoon.,Positive quote,#MansfieldOhio #419Pride
+54,2026-12-14,Winter Lights & A Year of Hope,Don't judge your Mansfield December by how much you can afford to give.,Positive quote,#MansfieldOhio #419Pride
+55,2026-12-15,Winter Lights & A Year of Hope,"In Mansfield, showing up can be the best present in the room.",Positive quote,#MansfieldOhio #419Pride
+56,2026-12-16,Winter Lights & A Year of Hope,The best Mansfield holiday stories usually involve somebody's kitchen.,Positive quote,#MansfieldOhio #419Pride
+57,2026-12-17,Winter Lights & A Year of Hope,A Mansfield street under new snow can make an old view feel brand new.,Positive quote,#MansfieldOhio #419Pride
+58,2026-12-18,Winter Lights & A Year of Hope,Celebrate the Mansfield progress nobody else noticed this year.,Positive quote,#MansfieldOhio #419Pride
+59,2026-12-19,Winter Lights & A Year of Hope,Even Mansfield's Elektro robot would've needed a recharge. Rest matters.,Positive quote,#MansfieldOhio #419Pride
+60,2026-12-20,Winter Lights & A Year of Hope,The holiday spirit travels easily from Mansfield's Square to every block.,Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+61,2026-12-21,Winter Lights & A Year of Hope,Keep Mansfield holiday expectations gentle and generosity real.,Positive quote,#MansfieldOhio #419Pride
+62,2026-12-22,Winter Lights & A Year of Hope,"If surviving the year was your biggest Mansfield win, it still counts.",Positive quote,#MansfieldOhio #419Pride
+63,2026-12-23,Winter Lights & A Year of Hope,Mansfield doesn't need a perfect year to deserve a joyful ending.,Positive quote,#MansfieldOhio #419Pride
+64,2026-12-24,Winter Lights & A Year of Hope,"Mansfield has outlasted hard seasons before, and so have you.",Positive quote,#MansfieldOhio #419Pride
+65,2026-12-25,Winter Lights & A Year of Hope,Take your Mansfield gratitude wherever your holiday suitcase goes.,Positive quote,#MansfieldOhio #419Pride
+66,2026-12-26,Winter Lights & A Year of Hope,"May every Mansfield kid feel seen, safe, and hopeful this season.",Positive quote,#MansfieldOhio #419Pride
+67,2026-12-27,Winter Lights & A Year of Hope,Good Mansfield things can grow under snow long before anyone sees them.,Positive quote,#MansfieldOhio #419Pride
+68,2026-12-28,Winter Lights & A Year of Hope,A Mansfield winter night won't last forever. Neither will a hard chapter.,Positive quote,#MansfieldOhio #419Pride
+69,2026-12-29,Winter Lights & A Year of Hope,Here's to the people who made Mansfield feel like home this year.,Positive quote,#MansfieldOhio #419Pride
+70,2026-12-30,Winter Lights & A Year of Hope,Carry Mansfield's lessons and love into the new year; leave the extra weight behind.,Positive quote,#MansfieldOhio #419Pride
+71,2026-12-31,Winter Lights & A Year of Hope,"New year, same Mansfield roots, even bigger reasons to believe.",Positive quote,#MansfieldOhio #419Pride
+72,2027-01-01,Roots & Resilience,Mansfield raised me. The rest of the world just gets to meet me.,Positive quote,#MansfieldOhio #419Pride
+73,2027-01-02,Roots & Resilience,Mansfield winters taught me this: cold seasons don't cancel warm futures.,Positive quote,#MansfieldOhio #419Pride
+74,2027-01-03,Roots & Resilience,You can grow up in Mansfield and still have a world-sized purpose.,Positive quote,#MansfieldOhio #419Pride
+75,2027-01-04,Roots & Resilience,Route 30 can take you out of Mansfield; determination decides how far you go.,Positive quote,#MansfieldOhio #419Pride
+76,2027-01-05,Roots & Resilience,A Mansfield sunrise is proof you get another shot today.,Positive quote,#MansfieldOhio #419Pride
+77,2027-01-06,Roots & Resilience,Mansfield was built by makers. Go make something worth remembering.,Positive quote,#MansfieldOhio #419Pride
+78,2027-01-07,Roots & Resilience,"Mansfield roots, limitless reach.",Positive quote,#MansfieldOhio #419Pride
+79,2027-01-08,Roots & Resilience,Mansfield raised people who don't wait on perfect weather to get to work.,Positive quote,#MansfieldOhio #419Pride
+80,2027-01-09,Roots & Resilience,Ohio's first commercial ski resort grew outside Mansfield; big firsts can start on a small hill.,Positive quote,#MansfieldOhio #419Pride
+81,2027-01-10,Roots & Resilience,Mansfield kept building through hard times. It can keep rebuilding tomorrow.,Positive quote,#MansfieldOhio #419Pride
+82,2027-01-11,Roots & Resilience,Never confuse a quiet Mansfield morning with a lack of ambition.,Positive quote,#MansfieldOhio #419Pride
+83,2027-01-12,Roots & Resilience,Some people see an old factory; Mansfield people see the next opportunity.,Positive quote,#MansfieldOhio #419Pride
+84,2027-01-13,Roots & Resilience,You don't need to leave Mansfield to start building a bigger life.,Positive quote,#MansfieldOhio #419Pride
+85,2027-01-14,Roots & Resilience,"From 44902 to 44907, every Mansfield ZIP code can produce somebody extraordinary.",Positive quote,#MansfieldOhio #419Pride
+86,2027-01-15,Roots & Resilience,Mansfield survived factory closures. We understand comebacks here.,Positive quote,#MansfieldOhio #419Pride
+87,2027-01-16,Roots & Resilience,Keep showing up. Even January in Mansfield eventually turns to spring.,Positive quote,#MansfieldOhio #419Pride
+88,2027-01-17,Roots & Resilience,"In Mansfield, an honest day's work is still a family tradition worth keeping.",Positive quote,#MansfieldOhio #419Pride
+89,2027-01-18,Roots & Resilience,Dream loud enough to echo from Mansfield's North Main to the South Side.,Positive quote,#MansfieldOhio #419Pride
+90,2027-01-19,Roots & Resilience,"Mansfield has hills, and so does life. Climb anyway.",Positive quote,#MansfieldOhio #419Pride
+91,2027-01-20,Roots & Resilience,"If you can handle a Mansfield winter, you can handle a tough Monday.",Positive quote,#MansfieldOhio #419Pride
+92,2027-01-21,Roots & Resilience,Mansfield reminder: your people don't have to understand the whole plan to believe in you.,Positive quote,#MansfieldOhio #419Pride
+93,2027-01-22,Roots & Resilience,"From Mansfield's Central Park to your front porch, greatness starts close to home.",Positive quote,#MansfieldOhio #419Pride
+94,2027-01-23,Roots & Resilience,Mansfield knows a working-class story has more heart than a fancy introduction.,Positive quote,#MansfieldOhio #419Pride
+95,2027-01-24,Roots & Resilience,Snow doesn't stop Mansfield from making moves.,Positive quote,#MansfieldOhio #419Pride
+96,2027-01-25,Roots & Resilience,Give your Mansfield block something good to brag about today.,Positive quote,#MansfieldOhio #419Pride
+97,2027-01-26,Roots & Resilience,Westinghouse wasn't Mansfield's last big idea.,Positive quote,#MansfieldOhio #419Pride
+98,2027-01-27,Roots & Resilience,"In a Mansfield January, faith and an ice scraper are both essentials.",Positive quote,#MansfieldOhio #419Pride
+99,2027-01-28,Roots & Resilience,Mansfield has reinvented itself before; so can you.,Positive quote,#MansfieldOhio #419Pride
+100,2027-01-29,Roots & Resilience,Mansfield's best export is somebody who succeeds and still comes back to help.,Positive quote,#MansfieldOhio #419Pride
+101,2027-01-30,Roots & Resilience,Mansfield has history. Your job is to help write what's next.,Positive quote,#MansfieldOhio #419Pride
+102,2027-01-31,Roots & Resilience,Don't sleep on Mansfield. This city knows how to wake up and work.,Positive quote,#MansfieldOhio #419Pride
+103,2027-02-01,Tyger Pride & School Spirit,Mansfield spells Tygers with a Y because ordinary was never our thing.,Positive quote,#MansfieldOhio #419Pride #TygerPride
+104,2027-02-02,Tyger Pride & School Spirit,Mansfield Tygers: a Y in the name and confidence in the walk.,Positive quote,#MansfieldOhio #419Pride #TygerPride
+105,2027-02-03,Tyger Pride & School Spirit,Autocorrect says Tiger. Mansfield says mind your business.,Local humor,#MansfieldOhio #419Pride
+106,2027-02-04,Tyger Pride & School Spirit,"In Mansfield, the Y isn't a typo. It's part of the family name.",Local humor,#MansfieldOhio #419Pride
+107,2027-02-05,Tyger Pride & School Spirit,Some schools teach spelling. Mansfield Senior High teaches loyalty too.,Positive quote,#MansfieldOhio #419Pride
+108,2027-02-06,Tyger Pride & School Spirit,"You can graduate from Mansfield Senior High, but you never graduate from being a Tyger.",Positive quote,#MansfieldOhio #419Pride #TygerPride
+109,2027-02-07,Tyger Pride & School Spirit,A Friday night at Mansfield's Arlin Field can turn neighbors into one cheering section.,Positive quote,#MansfieldOhio #419Pride
+110,2027-02-08,Tyger Pride & School Spirit,Only Mansfield can make T-Y mean more than two letters.,Positive quote,#MansfieldOhio #419Pride
+111,2027-02-09,Tyger Pride & School Spirit,"Dear autocorrect: Mansfield said TYGER, and Mansfield meant TYGER.",Positive quote,#MansfieldOhio #419Pride #TygerPride
+112,2027-02-10,Tyger Pride & School Spirit,A Mansfield Tyger knows the difference between a mascot and a mentality.,Positive quote,#MansfieldOhio #419Pride #TygerPride
+113,2027-02-11,Tyger Pride & School Spirit,Mansfield's boldest school tradition might be the letter Y nobody's allowed to correct.,Positive quote,#MansfieldOhio #419Pride
+114,2027-02-12,Tyger Pride & School Spirit,"The best Mansfield comeback starts with someone yelling, 'Let's go, Tygers!'",Positive quote,#MansfieldOhio #419Pride #TygerPride
+115,2027-02-13,Tyger Pride & School Spirit,Massillon has its Tigers. Mansfield has its own spelling and its own story.,Positive quote,#MansfieldOhio #419Pride
+116,2027-02-14,Tyger Pride & School Spirit,"Mansfield Tyger pride means showing up for the next class, not just remembering yours.",Positive quote,#MansfieldOhio #419Pride #TygerPride
+117,2027-02-15,Tyger Pride & School Spirit,"Mansfield's Y survived generations of spellcheck. Your dream can survive doubters, too.",Local humor,#MansfieldOhio #419Pride
+118,2027-02-16,Tyger Pride & School Spirit,Only in Mansfield can a spelling joke turn into a century-sized sense of pride.,Positive quote,#MansfieldOhio #419Pride
+119,2027-02-17,Tyger Pride & School Spirit,Winning is sweet; seeing all of Mansfield behind you is even sweeter.,Positive quote,#MansfieldOhio #419Pride
+120,2027-02-18,Tyger Pride & School Spirit,"From the stands at Mansfield's Arlin Field, every kid deserves to see possibility.",Positive quote,#MansfieldOhio #419Pride
+121,2027-02-19,Tyger Pride & School Spirit,A Mansfield Tyger doesn't need perfect odds to give perfect effort.,Positive quote,#MansfieldOhio #419Pride #TygerPride
+122,2027-02-20,Tyger Pride & School Spirit,People debate Mansfield's Tyger spelling; your character answers for itself.,Positive quote,#MansfieldOhio #419Pride
+123,2027-02-21,Tyger Pride & School Spirit,"In Mansfield, 'T-Y for Tygers' is family vocabulary, not just a cheer.",Positive quote,#MansfieldOhio #419Pride #TygerPride
+124,2027-02-22,Tyger Pride & School Spirit,A Mansfield jersey comes off after the game. The lessons stay for life.,Positive quote,#MansfieldOhio #419Pride
+125,2027-02-23,Tyger Pride & School Spirit,"In Mansfield, we cheer for the name on the front and lift the people behind it.",Positive quote,#MansfieldOhio #419Pride
+126,2027-02-24,Tyger Pride & School Spirit,"If Mansfield could turn one letter into tradition, imagine what you can do with one idea.",Positive quote,#MansfieldOhio #419Pride
+127,2027-02-25,Tyger Pride & School Spirit,A Mansfield Tyger's roar goes farther when it makes room for another voice.,Positive quote,#MansfieldOhio #419Pride #TygerPride
+128,2027-02-26,Tyger Pride & School Spirit,"Played, cheered, danced, or watched? Mansfield's Tyger story has room for you.",Positive quote,#MansfieldOhio #419Pride
+129,2027-02-27,Tyger Pride & School Spirit,A little orange and brown can carry a whole lot of Mansfield love.,Positive quote,#MansfieldOhio #419Pride
+130,2027-02-28,Tyger Pride & School Spirit,Mansfield's best victory is raising kids their younger selves would cheer for.,Positive quote,#MansfieldOhio #419Pride
+131,2027-03-01,"History, Industry & Big Ideas",Mansfield started in 1808. We're still working on the next chapter.,Positive quote,#MansfieldOhio #419Pride
+132,2027-03-02,"History, Industry & Big Ideas",Mansfield was named for a surveyor; don't let anyone map your limits.,Positive quote,#MansfieldOhio #419Pride
+133,2027-03-03,"History, Industry & Big Ideas","Before the headlines, there were hands building Mansfield piece by piece.",Positive quote,#MansfieldOhio #419Pride
+134,2027-03-04,"History, Industry & Big Ideas",A railroad helped Mansfield grow. Connection still moves us forward.,Positive quote,#MansfieldOhio #419Pride
+135,2027-03-05,"History, Industry & Big Ideas",Mansfield's old shop floors remind us that progress begins when somebody builds.,Positive quote,#MansfieldOhio #419Pride
+136,2027-03-06,"History, Industry & Big Ideas",Elektro the robot came from Mansfield. Innovation has a 419 address.,Positive quote,#MansfieldOhio #419Pride
+137,2027-03-07,"History, Industry & Big Ideas","If Westinghouse could build a talking robot in Mansfield, your idea deserves a chance.",Positive quote,#MansfieldOhio #419Pride
+138,2027-03-08,"History, Industry & Big Ideas",Mansfield introduced Elektro to the world. Never underestimate a city with ideas.,Positive quote,#MansfieldOhio #419Pride
+139,2027-03-09,"History, Industry & Big Ideas",Mansfield's past made things. Mansfield's future can make anything.,Positive quote,#MansfieldOhio #419Pride
+140,2027-03-10,"History, Industry & Big Ideas",The Big Spring helped shape Mansfield; small beginnings still matter.,Positive quote,#MansfieldOhio #419Pride
+141,2027-03-11,"History, Industry & Big Ideas",Mansfield's old brick walls aren't dead ends; some protect incredible stories.,Positive quote,#MansfieldOhio #419Pride
+142,2027-03-12,"History, Industry & Big Ideas",The oldest Mansfield dreams belong to people who refused to quit.,Positive quote,#MansfieldOhio #419Pride
+143,2027-03-13,"History, Industry & Big Ideas",Mansfield grew through railroads and factories; we grow through each other now.,Positive quote,#MansfieldOhio #419Pride
+144,2027-03-14,"History, Industry & Big Ideas",The Mansfield Memorial Museum keeps our past; today's neighbors are building tomorrow's exhibits.,Positive quote,#MansfieldOhio #419Pride
+145,2027-03-15,"History, Industry & Big Ideas",Walking downtown Mansfield? Remember that somebody first had to dream those streets.,Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+146,2027-03-16,"History, Industry & Big Ideas",The future doesn't owe Mansfield a revival. We can help build one.,Positive quote,#MansfieldOhio #419Pride
+147,2027-03-17,"History, Industry & Big Ideas",Mansfield's heritage is hard work; its inheritance should include opportunity.,Positive quote,#MansfieldOhio #419Pride
+148,2027-03-18,"History, Industry & Big Ideas",Mansfield advantage: you can walk through history and still add your own chapter.,Positive quote,#MansfieldOhio #419Pride
+149,2027-03-19,"History, Industry & Big Ideas",Factories made products. Families made Mansfield.,Positive quote,#MansfieldOhio #419Pride
+150,2027-03-20,"History, Industry & Big Ideas",Mansfield grandparents turned shifts into futures. Let's turn skills into opportunity.,Positive quote,#MansfieldOhio #419Pride
+151,2027-03-21,"History, Industry & Big Ideas","The Reformatory's stone walls in Mansfield hold history, not the limits of our future.",Positive quote,#MansfieldOhio #419Pride #ShawshankTrail
+152,2027-03-22,"History, Industry & Big Ideas",Mansfield has been making comeback stories since long before your timeline.,Positive quote,#MansfieldOhio #419Pride
+153,2027-03-23,"History, Industry & Big Ideas","Let Mansfield's industrial past be a foundation, never a ceiling.",Positive quote,#MansfieldOhio #419Pride
+154,2027-03-24,"History, Industry & Big Ideas",Aultman & Taylor made machinery; Mansfield still knows how to move things.,Positive quote,#MansfieldOhio #419Pride
+155,2027-03-25,"History, Industry & Big Ideas",Mansfield's innovation roots go deeper than the latest trend.,Positive quote,#MansfieldOhio #419Pride
+156,2027-03-26,"History, Industry & Big Ideas",Imagine explaining Wi-Fi to Mansfield's Elektro robot. Then imagine what's next.,Positive quote,#MansfieldOhio #419Pride
+157,2027-03-27,"History, Industry & Big Ideas","Mansfield has built machines, neighborhoods, businesses, and second chances.",Local humor,#MansfieldOhio #419Pride
+158,2027-03-28,"History, Industry & Big Ideas","A factory whistle once signaled a Mansfield shift. Today, let purpose set your pace.",Positive quote,#MansfieldOhio #419Pride
+159,2027-03-29,"History, Industry & Big Ideas",Not every Mansfield landmark is a building. Some are people who stayed and served.,Positive quote,#MansfieldOhio #419Pride
+160,2027-03-30,"History, Industry & Big Ideas","Mansfield belongs in the history books, and you belong in its next chapter.",Positive quote,#MansfieldOhio #419Pride
+161,2027-03-31,"History, Industry & Big Ideas","From 1808 to tomorrow, there's always more Mansfield to make.",Positive quote,#MansfieldOhio #419Pride
+162,2027-04-01,Downtown & Small Joys,Downtown Mansfield is proof that a little main-street magic goes a long way.,Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+163,2027-04-02,Downtown & Small Joys,'Meet me at the Square' is a full set of directions in Mansfield.,Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+164,2027-04-03,Downtown & Small Joys,Mansfield's Carrousel District reminds us to enjoy the ride.,Positive quote,#MansfieldOhio #419Pride
+165,2027-04-04,Downtown & Small Joys,"If your week spins like Mansfield's carrousel, at least keep your head up.",Positive quote,#MansfieldOhio #419Pride
+166,2027-04-05,Downtown & Small Joys,Mansfield's carrousel turned craftsmanship into joy. That's a pretty good life goal.,Positive quote,#MansfieldOhio #419Pride
+167,2027-04-06,Downtown & Small Joys,Mansfield's North Main and West Fourth: where an old storefront can hold a brand-new dream.,Positive quote,#MansfieldOhio #419Pride
+168,2027-04-07,Downtown & Small Joys,Grab coffee in downtown Mansfield; sometimes opportunity begins with hello.,Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+169,2027-04-08,Downtown & Small Joys,"Mansfield's 'Relax, It's Just Coffee' has a name that's solid life advice.",Positive quote,#MansfieldOhio #419Pride
+170,2027-04-09,Downtown & Small Joys,"Mansfield's Central Park isn't New York's, but the memories are ours.",Positive quote,#MansfieldOhio #419Pride
+171,2027-04-10,Downtown & Small Joys,A stroll down Mansfield's North Main can remind you that local still matters.,Positive quote,#MansfieldOhio #419Pride
+172,2027-04-11,Downtown & Small Joys,Mansfield's best storefront sign is an OPEN powered by someone's dream.,Positive quote,#MansfieldOhio #419Pride
+173,2027-04-12,Downtown & Small Joys,Buy local in Mansfield when you can; every purchase backs a neighbor.,Positive quote,#MansfieldOhio #419Pride
+174,2027-04-13,Downtown & Small Joys,Mansfield's Square holds more stories than any one person can tell.,Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+175,2027-04-14,Downtown & Small Joys,Sometimes the biggest adventure is finally trying that spot in downtown Mansfield.,Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+176,2027-04-15,Downtown & Small Joys,The Mansfield Art Center reminds us creativity doesn't need a big-city address.,Positive quote,#MansfieldOhio #419Pride
+177,2027-04-16,Downtown & Small Joys,Mansfield's Renaissance Theatre proves a local night out can feel grand.,Positive quote,#MansfieldOhio #419Pride
+178,2027-04-17,Downtown & Small Joys,Mansfield has stages big and small. Give your talent one today.,Positive quote,#MansfieldOhio #419Pride
+179,2027-04-18,Downtown & Small Joys,"Mansfield's Kingwood gets the flowers, but every block deserves a little beauty.",Positive quote,#MansfieldOhio #419Pride
+180,2027-04-19,Downtown & Small Joys,"Mansfield pride is knowing the shop owner, not just the shop hours.",Positive quote,#MansfieldOhio #419Pride
+181,2027-04-20,Downtown & Small Joys,Downtown Mansfield's comeback is built by people who keep believing together.,Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+182,2027-04-21,Downtown & Small Joys,"Mansfield's skyline may be modest, but its sense of hometown pride is skyscraper-tall.",Positive quote,#MansfieldOhio #419Pride
+183,2027-04-22,Downtown & Small Joys,"In Mansfield, inspiration can live between a bakery window and a painted mural.",Positive quote,#MansfieldOhio #419Pride
+184,2027-04-23,Downtown & Small Joys,Some of Mansfield's best conversations start before the first sip of coffee.,Positive quote,#MansfieldOhio #419Pride
+185,2027-04-24,Downtown & Small Joys,Mansfield's hand-carved carrousel took patience. Worthwhile dreams do too.,Positive quote,#MansfieldOhio #419Pride
+186,2027-04-25,Downtown & Small Joys,Cheer for a new Mansfield shop owner as loudly as you cheer at Arlin Field.,Positive quote,#MansfieldOhio #419Pride
+187,2027-04-26,Downtown & Small Joys,Mansfield streets you've walked a hundred times still have new memories to offer.,Positive quote,#MansfieldOhio #419Pride
+188,2027-04-27,Downtown & Small Joys,One good neighbor can change the mood of an entire Mansfield block.,Positive quote,#MansfieldOhio #419Pride
+189,2027-04-28,Downtown & Small Joys,Let today's joy be as simple as a ride on Mansfield's carrousel.,Positive quote,#MansfieldOhio #419Pride
+190,2027-04-29,Downtown & Small Joys,Downtown Mansfield doesn't have to be perfect to be worth loving.,Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+191,2027-04-30,Downtown & Small Joys,Mansfield gets brighter every time somebody chooses to participate.,Positive quote,#MansfieldOhio #419Pride
+192,2027-05-01,"Gardens, Trails & Fresh Starts",Flowers at Mansfield's Kingwood don't bloom on command. Neither do people.,Positive quote,#MansfieldOhio #419Pride
+193,2027-05-02,"Gardens, Trails & Fresh Starts",Even the peacocks at Mansfield's Kingwood remind us it's okay to show your colors.,Positive quote,#MansfieldOhio #419Pride
+194,2027-05-03,"Gardens, Trails & Fresh Starts",A rough season can still lead to a beautiful Mansfield spring.,Positive quote,#MansfieldOhio #419Pride
+195,2027-05-04,"Gardens, Trails & Fresh Starts","In Mansfield, a garden and a good future need the same things: roots and care.",Positive quote,#MansfieldOhio #419Pride
+196,2027-05-05,"Gardens, Trails & Fresh Starts",The B&O Trail near Mansfield proves progress happens one mile at a time.,Positive quote,#MansfieldOhio #419Pride
+197,2027-05-06,"Gardens, Trails & Fresh Starts","Walk, bike, or catch your breath on Mansfield's trails. Forward still counts.",Positive quote,#MansfieldOhio #419Pride
+198,2027-05-07,"Gardens, Trails & Fresh Starts","Near Mansfield, the Ohio Bird Sanctuary reminds us that wings deserve time to heal.",Positive quote,#MansfieldOhio #419Pride
+199,2027-05-08,"Gardens, Trails & Fresh Starts",A little fresh air at Mansfield's Gorman Nature Center can reset a whole week.,Positive quote,#MansfieldOhio #419Pride
+200,2027-05-09,"Gardens, Trails & Fresh Starts",Mansfield has enough green spaces to remind you life is bigger than your inbox.,Positive quote,#MansfieldOhio #419Pride
+201,2027-05-10,"Gardens, Trails & Fresh Starts",Don't rush every season. Even Mansfield's Kingwood lets spring unfold.,Positive quote,#MansfieldOhio #419Pride
+202,2027-05-11,"Gardens, Trails & Fresh Starts",New leaves on old trees: that's Mansfield optimism in one picture.,Positive quote,#MansfieldOhio #419Pride
+203,2027-05-12,"Gardens, Trails & Fresh Starts",Mansfield gardeners know: tend your own flowers before comparing somebody else's.,Positive quote,#MansfieldOhio #419Pride
+204,2027-05-13,"Gardens, Trails & Fresh Starts",Mansfield's prettiest neighborhoods have one thing in common: people who care.,Positive quote,#MansfieldOhio #419Pride
+205,2027-05-14,"Gardens, Trails & Fresh Starts","A Mansfield community garden grows vegetables, friendships, and second chances.",Positive quote,#MansfieldOhio #419Pride
+206,2027-05-15,"Gardens, Trails & Fresh Starts","Mansfield's North Lake Park may not be a national park, but its memories are monumental.",Positive quote,#MansfieldOhio #419Pride
+207,2027-05-16,"Gardens, Trails & Fresh Starts",A short trip from Mansfield to Mohican can remind you how to breathe deeper.,Positive quote,#MansfieldOhio #419Pride
+208,2027-05-17,"Gardens, Trails & Fresh Starts",A drive from Mansfield to Malabar Farm can remind a busy mind to slow down.,Positive quote,#MansfieldOhio #419Pride
+209,2027-05-18,"Gardens, Trails & Fresh Starts","Louis Bromfield made stories near Mansfield. There's room for yours, too.",Positive quote,#MansfieldOhio #419Pride
+210,2027-05-19,"Gardens, Trails & Fresh Starts",Let Mansfield-area trails teach what GPS can't: enjoy the stretch you're on.,Positive quote,#MansfieldOhio #419Pride
+211,2027-05-20,"Gardens, Trails & Fresh Starts",You don't need the right Mansfield ZIP code to deserve a little peace outdoors.,Positive quote,#MansfieldOhio #419Pride
+212,2027-05-21,"Gardens, Trails & Fresh Starts","On the B&O near Mansfield, the next bend matters more than the last stumble.",Positive quote,#MansfieldOhio #419Pride
+213,2027-05-22,"Gardens, Trails & Fresh Starts",A sunny afternoon at South Park is one of Mansfield's simplest luxuries.,Positive quote,#MansfieldOhio #419Pride
+214,2027-05-23,"Gardens, Trails & Fresh Starts",Take a Mansfield neighbor outside who hasn't had an easy week.,Positive quote,#MansfieldOhio #419Pride
+215,2027-05-24,"Gardens, Trails & Fresh Starts","If a garden can change bare ground, imagine what love can do for a Mansfield block.",Positive quote,#MansfieldOhio #419Pride
+216,2027-05-25,"Gardens, Trails & Fresh Starts",Sunshine on Mansfield's Square is a reason to appreciate an ordinary Tuesday.,Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+217,2027-05-26,"Gardens, Trails & Fresh Starts",A wildflower can brighten a Mansfield corner without asking permission.,Positive quote,#MansfieldOhio #419Pride
+218,2027-05-27,"Gardens, Trails & Fresh Starts","Mansfield growth is often quieter than applause, but every bit as real.",Positive quote,#MansfieldOhio #419Pride
+219,2027-05-28,"Gardens, Trails & Fresh Starts",Mansfield has room for deep roots and brand-new branches.,Positive quote,#MansfieldOhio #419Pride
+220,2027-05-29,"Gardens, Trails & Fresh Starts",Plant something in Mansfield that a younger neighbor will enjoy someday.,Positive quote,#MansfieldOhio #419Pride
+221,2027-05-30,"Gardens, Trails & Fresh Starts",The best kind of Mansfield pride makes the place greener for everybody.,Positive quote,#MansfieldOhio #419Pride
+222,2027-05-31,"Gardens, Trails & Fresh Starts",Mansfield blooms brightest when nobody gets left out.,Positive quote,#MansfieldOhio #419Pride
+223,2027-06-01,"Food, Summer & Local Flavor",A Mansfield summer tastes a little like a Coney Island coney.,Positive quote,#MansfieldOhio #419Pride
+224,2027-06-02,"Food, Summer & Local Flavor","Big Mansfield dreams, small lunch counter, extra napkins.",Positive quote,#MansfieldOhio #419Pride
+225,2027-06-03,"Food, Summer & Local Flavor","If a Mansfield diner knows your order, you've found a hometown luxury.",Positive quote,#MansfieldOhio #419Pride
+226,2027-06-04,"Food, Summer & Local Flavor",Mansfield's Buckeye Bakery is a reminder that some good things are worth waking early for.,Positive quote,#MansfieldOhio #419Pride
+227,2027-06-05,"Food, Summer & Local Flavor",Mansfield meetings improve dramatically when somebody brings donuts.,Local humor,#MansfieldOhio #419Pride
+228,2027-06-06,"Food, Summer & Local Flavor",Mansfield's Uncle John's Place has history; so does every table of old friends.,Positive quote,#MansfieldOhio #419Pride
+229,2027-06-07,"Food, Summer & Local Flavor","In Mansfield, Leaning Tower of Pizza proves a familiar favorite never goes out of style.",Positive quote,#MansfieldOhio #419Pride
+230,2027-06-08,"Food, Summer & Local Flavor",Mansfield has solved plenty of life's problems over a pizza box.,Positive quote,#MansfieldOhio #419Pride
+231,2027-06-09,"Food, Summer & Local Flavor",Mansfield Family Restaurant: where breakfast doesn't have to respect your schedule.,Positive quote,#MansfieldOhio #419Pride
+232,2027-06-10,"Food, Summer & Local Flavor",A Mansfield coffee stop and a familiar face can straighten out a long week.,Positive quote,#MansfieldOhio #419Pride
+233,2027-06-11,"Food, Summer & Local Flavor",Best Mansfield fine dining? Sometimes it's a coney with your favorite people.,Positive quote,#MansfieldOhio #419Pride
+234,2027-06-12,"Food, Summer & Local Flavor",The best Mansfield food review starts with 'My people been going there.',Positive quote,#MansfieldOhio #419Pride
+235,2027-06-13,"Food, Summer & Local Flavor","Take the scenic way to lunch in Mansfield. We're making memories, not excuses.",Local humor,#MansfieldOhio #419Pride
+236,2027-06-14,"Food, Summer & Local Flavor",Summer evenings on Mansfield's Square are made for running into somebody you know.,Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+237,2027-06-15,"Food, Summer & Local Flavor",A Mansfield summer is better with fresh-cut fries and an old friend.,Positive quote,#MansfieldOhio #419Pride
+238,2027-06-16,"Food, Summer & Local Flavor","Support Mansfield's cooks, cashiers, bakers, and servers; they're part of our welcome.",Positive quote,#MansfieldOhio #419Pride
+239,2027-06-17,"Food, Summer & Local Flavor",Mansfield's most underrated landmark might be your family's favorite diner booth.,Positive quote,#MansfieldOhio #419Pride
+240,2027-06-18,"Food, Summer & Local Flavor",Some Mansfield recipes deserve a monument. Others just need to stay in the family.,Positive quote,#MansfieldOhio #419Pride
+241,2027-06-19,"Food, Summer & Local Flavor",Miss Ohio has graced Mansfield stages; there's room for your own spotlight too.,Positive quote,#MansfieldOhio #419Pride
+242,2027-06-20,"Food, Summer & Local Flavor","Big city appetite, Mansfield hospitality.",Positive quote,#MansfieldOhio #419Pride
+243,2027-06-21,"Food, Summer & Local Flavor",A Mansfield summer and the Richland County Fair smell like funnel cake and possibility.,Positive quote,#MansfieldOhio #419Pride
+244,2027-06-22,"Food, Summer & Local Flavor","Mansfield fair-season confidence: show up, have fun, and don't overthink the outfit.",Positive quote,#MansfieldOhio #419Pride
+245,2027-06-23,"Food, Summer & Local Flavor","From Mid-Ohio engines to Mansfield porches, summer has more than one soundtrack.",Positive quote,#MansfieldOhio #419Pride
+246,2027-06-24,"Food, Summer & Local Flavor","At a Mansfield cookout, there's always room to pull up another chair.",Local humor,#MansfieldOhio #419Pride
+247,2027-06-25,"Food, Summer & Local Flavor",Mansfield flavor is really Mansfield people doing what they love.,Positive quote,#MansfieldOhio #419Pride
+248,2027-06-26,"Food, Summer & Local Flavor","Mansfield summer rule: if the ice cream melts, enjoy it faster—not your life.",Positive quote,#MansfieldOhio #419Pride
+249,2027-06-27,"Food, Summer & Local Flavor",A Mansfield summer is too short for another 'we should get together' that never happens.,Positive quote,#MansfieldOhio #419Pride
+250,2027-06-28,"Food, Summer & Local Flavor",A good meal feeds you; a Mansfield table full of stories keeps you going.,Positive quote,#MansfieldOhio #419Pride
+251,2027-06-29,"Food, Summer & Local Flavor","At a Mansfield celebration, the first question is always 'Who all coming?'",Positive quote,#MansfieldOhio #419Pride
+252,2027-06-30,"Food, Summer & Local Flavor","Before chasing the next big thing, enjoy what's already good in Mansfield.",Positive quote,#MansfieldOhio #419Pride
+253,2027-07-01,419 Inside Jokes & Summer Pride,Tell me you're from Mansfield without telling me: you give directions using places that closed years ago.,Positive quote,#MansfieldOhio #419Pride
+254,2027-07-02,419 Inside Jokes & Summer Pride,"In Mansfield, 'right up the road' may require a second explanation.",Positive quote,#MansfieldOhio #419Pride
+255,2027-07-03,419 Inside Jokes & Summer Pride,Route 13 is a road; Mansfield is an identity.,Positive quote,#MansfieldOhio #419Pride
+256,2027-07-04,419 Inside Jokes & Summer Pride,You haven't truly left Mansfield if your auntie still knows everybody's business.,Local humor,#MansfieldOhio #419Pride
+257,2027-07-05,419 Inside Jokes & Summer Pride,Mansfield superpower: somebody's cousin has the answer before Google does.,Local humor,#MansfieldOhio #419Pride
+258,2027-07-06,419 Inside Jokes & Summer Pride,A Mansfield Fourth of July is better when the whole block celebrates safely together.,Positive quote,#MansfieldOhio #419Pride
+259,2027-07-07,419 Inside Jokes & Summer Pride,We can talk about leaving Mansfield all day and still defend it in every conversation.,Positive quote,#MansfieldOhio #419Pride
+260,2027-07-08,419 Inside Jokes & Summer Pride,The most Mansfield thing ever is recognizing somebody three cities away.,Positive quote,#MansfieldOhio #419Pride
+261,2027-07-09,419 Inside Jokes & Summer Pride,"In Mansfield, 'My grandma know your grandma' is an entire networking platform.",Local humor,#MansfieldOhio #419Pride
+262,2027-07-10,419 Inside Jokes & Summer Pride,"In Mansfield, a five-minute errand can turn into a half-hour reunion.",Positive quote,#MansfieldOhio #419Pride
+263,2027-07-11,419 Inside Jokes & Summer Pride,Some towns have six degrees of separation. Mansfield has about two cousins.,Local humor,#MansfieldOhio #419Pride
+264,2027-07-12,419 Inside Jokes & Summer Pride,"In Mansfield, if you don't know the person, you probably know their coach.",Positive quote,#MansfieldOhio #419Pride
+265,2027-07-13,419 Inside Jokes & Summer Pride,"A Mansfield introduction may include your school, your street, and your whole family tree.",Positive quote,#MansfieldOhio #419Pride
+266,2027-07-14,419 Inside Jokes & Summer Pride,"Mansfield's North End, South Side, and West Side have different stories but one shared future.",Positive quote,#MansfieldOhio #419Pride
+267,2027-07-15,419 Inside Jokes & Summer Pride,People move away and still ask who won the Mansfield Senior High game.,Positive quote,#MansfieldOhio #419Pride
+268,2027-07-16,419 Inside Jokes & Summer Pride,Even Inkcarceration couldn't make more noise than some Mansfield family reunions.,Positive quote,#MansfieldOhio #419Pride
+269,2027-07-17,419 Inside Jokes & Summer Pride,"In Mansfield, going shopping in Ontario isn't vacation, but it can feel like a field trip.",Positive quote,#MansfieldOhio #419Pride
+270,2027-07-18,419 Inside Jokes & Summer Pride,"In Mansfield, 'meet me at the Square' is all the direction you need.",Local humor,#MansfieldOhio #419Pride #DowntownMansfield
+271,2027-07-19,419 Inside Jokes & Summer Pride,Mansfield makes it easy to run into the one person you weren't dressed to see.,Positive quote,#MansfieldOhio #419Pride
+272,2027-07-20,419 Inside Jokes & Summer Pride,Mansfield has a way of turning strangers into 'You related to...?' conversations.,Positive quote,#MansfieldOhio #419Pride
+273,2027-07-21,419 Inside Jokes & Summer Pride,Keep your Mansfield dreams bigger than the gossip and your kindness louder than rumors.,Positive quote,#MansfieldOhio #419Pride
+274,2027-07-22,419 Inside Jokes & Summer Pride,"In Mansfield, everybody might know everybody—but you still get to reinvent yourself.",Positive quote,#MansfieldOhio #419Pride
+275,2027-07-23,419 Inside Jokes & Summer Pride,Mansfield's most valuable celebrity might be the neighbor who's always there.,Positive quote,#MansfieldOhio #419Pride
+276,2027-07-24,419 Inside Jokes & Summer Pride,"Only Mansfield makes prison tours, carrousel rides, and coney dogs feel like one itinerary.",Positive quote,#MansfieldOhio #419Pride
+277,2027-07-25,419 Inside Jokes & Summer Pride,Every Mansfield family has a story that begins 'Remember when downtown...?',Positive quote,#MansfieldOhio #419Pride #DowntownMansfield
+278,2027-07-26,419 Inside Jokes & Summer Pride,Mansfield's fiercest debate isn't politics. It's who has the best pizza.,Positive quote,#MansfieldOhio #419Pride
+279,2027-07-27,419 Inside Jokes & Summer Pride,"Mansfield loyalty: roast it at home, represent it everywhere else.",Positive quote,#MansfieldOhio #419Pride
+280,2027-07-28,419 Inside Jokes & Summer Pride,The best thing about a Mansfield summer is who ends up on the porch.,Positive quote,#MansfieldOhio #419Pride
+281,2027-07-29,419 Inside Jokes & Summer Pride,"You can't put Mansfield love on a map, but you can hear it in the stories.",Positive quote,#MansfieldOhio #419Pride
+282,2027-07-30,419 Inside Jokes & Summer Pride,Stay rooted in Mansfield without letting those roots tie down your feet.,Positive quote,#MansfieldOhio #419Pride
+283,2027-07-31,419 Inside Jokes & Summer Pride,Mansfield. Big personality. Plenty of room for a better tomorrow.,Positive quote,#MansfieldOhio #419Pride
+284,2027-08-01,"Schools, Sports & Young Dreams",Back-to-school season is a reminder: every Mansfield kid deserves a real shot.,Positive quote,#MansfieldOhio #419Pride
+285,2027-08-02,"Schools, Sports & Young Dreams",A fresh notebook in a Mansfield classroom might hold a plan that changes a family.,Positive quote,#MansfieldOhio #419Pride
+286,2027-08-03,"Schools, Sports & Young Dreams","Mansfield says T-Y for Tygers—and yes, we meant the Y.",Positive quote,#MansfieldOhio #419Pride #TygerPride
+287,2027-08-04,"Schools, Sports & Young Dreams",The dream isn't just to graduate from Mansfield Senior High; it's to open doors after it.,Positive quote,#MansfieldOhio #419Pride
+288,2027-08-05,"Schools, Sports & Young Dreams",Every Mansfield student deserves at least one adult who says 'You can.',Positive quote,#MansfieldOhio #419Pride
+289,2027-08-06,"Schools, Sports & Young Dreams",The lights at Mansfield's Arlin Field aren't brighter than the kids beneath them.,Positive quote,#MansfieldOhio #419Pride
+290,2027-08-07,"Schools, Sports & Young Dreams","At Mansfield's fields, football teaches plays; good coaches teach persistence.",Positive quote,#MansfieldOhio #419Pride
+291,2027-08-08,"Schools, Sports & Young Dreams","Mansfield pride means cheering for the band, artists, scholars, and athletes alike.",Positive quote,#MansfieldOhio #419Pride
+292,2027-08-09,"Schools, Sports & Young Dreams",Every classroom in Mansfield can become a launchpad.,Positive quote,#MansfieldOhio #419Pride
+293,2027-08-10,"Schools, Sports & Young Dreams",Malabar stories still belong in the fabric of Mansfield Senior High pride.,Positive quote,#MansfieldOhio #419Pride
+294,2027-08-11,"Schools, Sports & Young Dreams","When a Mansfield student asks a big question, make room for an even bigger answer.",Positive quote,#MansfieldOhio #419Pride
+295,2027-08-12,"Schools, Sports & Young Dreams","A Mansfield report card is a snapshot, never the whole picture of a child's potential.",Positive quote,#MansfieldOhio #419Pride
+296,2027-08-13,"Schools, Sports & Young Dreams",A real Mansfield hero shows up to watch the kids play.,Positive quote,#MansfieldOhio #419Pride
+297,2027-08-14,"Schools, Sports & Young Dreams",Don't count a Mansfield kid out because success doesn't look the way you imagined.,Positive quote,#MansfieldOhio #419Pride
+298,2027-08-15,"Schools, Sports & Young Dreams",Every practice at Mansfield's Arlin Field begins long before game night.,Positive quote,#MansfieldOhio #419Pride
+299,2027-08-16,"Schools, Sports & Young Dreams",A Mansfield orange-and-brown Friday can brighten the whole neighborhood.,Positive quote,#MansfieldOhio #419Pride
+300,2027-08-17,"Schools, Sports & Young Dreams",Biggest cheer at Mansfield's Arlin Field? The one for a student who almost gave up.,Positive quote,#MansfieldOhio #419Pride
+301,2027-08-18,"Schools, Sports & Young Dreams",There is room for a next-generation Elektro in a Mansfield science class.,Positive quote,#MansfieldOhio #419Pride
+302,2027-08-19,"Schools, Sports & Young Dreams","Give the Mansfield kid with the wild idea a laptop, a mentor, and a chance.",Positive quote,#MansfieldOhio #419Pride
+303,2027-08-20,"Schools, Sports & Young Dreams",The next Mansfield business owner could be sitting in today's school cafeteria.,Local humor,#MansfieldOhio #419Pride
+304,2027-08-21,"Schools, Sports & Young Dreams","From elementary classrooms to Mansfield Senior High, confidence is taught by example.",Positive quote,#MansfieldOhio #419Pride
+305,2027-08-22,"Schools, Sports & Young Dreams",A Mansfield Tyger learns that effort is something nobody can give for you.,Positive quote,#MansfieldOhio #419Pride #TygerPride
+306,2027-08-23,"Schools, Sports & Young Dreams",Let every student know that being from Mansfield is an asset.,Positive quote,#MansfieldOhio #419Pride
+307,2027-08-24,"Schools, Sports & Young Dreams",Mansfield schools teach history; the community can help students make it.,Positive quote,#MansfieldOhio #419Pride
+308,2027-08-25,"Schools, Sports & Young Dreams",A Mansfield team is strongest when the kid who almost quit decides to stay.,Positive quote,#MansfieldOhio #419Pride
+309,2027-08-26,"Schools, Sports & Young Dreams",Not every Mansfield dream needs a stadium; some need a quiet library.,Positive quote,#MansfieldOhio #419Pride
+310,2027-08-27,"Schools, Sports & Young Dreams",A Mansfield diploma opens doors; encouragement helps graduates walk through them.,Positive quote,#MansfieldOhio #419Pride
+311,2027-08-28,"Schools, Sports & Young Dreams",Mansfield wins big when alumni return and pull the next person forward.,Positive quote,#MansfieldOhio #419Pride
+312,2027-08-29,"Schools, Sports & Young Dreams",Mansfield students deserve opportunities as big as their imagination.,Positive quote,#MansfieldOhio #419Pride
+313,2027-08-30,"Schools, Sports & Young Dreams",Give Mansfield's next generation a hometown they'll be proud we helped shape.,Positive quote,#MansfieldOhio #419Pride
+314,2027-08-31,"Schools, Sports & Young Dreams",It's a new school year somewhere in Mansfield. Be somebody's good news.,Positive quote,#MansfieldOhio #419Pride
+315,2027-09-01,"Work, Opportunity & Comebacks",The Mansfield work ethic isn't a museum piece. It's alive in what we do next.,Positive quote,#MansfieldOhio #419Pride
+316,2027-09-02,"Work, Opportunity & Comebacks","From factory floors to computer screens, Mansfield knows how to learn new tools.",Positive quote,#MansfieldOhio #419Pride
+317,2027-09-03,"Work, Opportunity & Comebacks",Mansfield families can honor hard-working pasts without limiting their children's futures.,Positive quote,#MansfieldOhio #419Pride
+318,2027-09-04,"Work, Opportunity & Comebacks",Build something Mansfield hasn't seen yet.,Positive quote,#MansfieldOhio #419Pride
+319,2027-09-05,"Work, Opportunity & Comebacks",There's no shame in starting over; Mansfield has practice at reinvention.,Positive quote,#MansfieldOhio #419Pride
+320,2027-09-06,"Work, Opportunity & Comebacks",Mansfield's old industrial walls can't hold back a generation of inventors.,Positive quote,#MansfieldOhio #419Pride
+321,2027-09-07,"Work, Opportunity & Comebacks",What if Mansfield's next breakthrough came from the kid down your block?,Positive quote,#MansfieldOhio #419Pride
+322,2027-09-08,"Work, Opportunity & Comebacks",One good Mansfield mentor is worth a whole wall of motivational posters.,Positive quote,#MansfieldOhio #419Pride
+323,2027-09-09,"Work, Opportunity & Comebacks",Honor Mansfield's workers of yesterday by opening opportunities tomorrow.,Positive quote,#MansfieldOhio #419Pride
+324,2027-09-10,"Work, Opportunity & Comebacks",Mansfield gets better when we believe our neighbors have something to offer.,Positive quote,#MansfieldOhio #419Pride
+325,2027-09-11,"Work, Opportunity & Comebacks",Small Mansfield wins count even when they never make the paper.,Positive quote,#MansfieldOhio #419Pride
+326,2027-09-12,"Work, Opportunity & Comebacks",A Mansfield kitchen-table idea can change an entire neighborhood.,Positive quote,#MansfieldOhio #419Pride
+327,2027-09-13,"Work, Opportunity & Comebacks",The best Mansfield comeback stories involve more than one person winning.,Positive quote,#MansfieldOhio #419Pride
+328,2027-09-14,"Work, Opportunity & Comebacks",Our most overlooked resource isn't underground—it's Mansfield talent still waiting for a shot.,Positive quote,#MansfieldOhio #419Pride
+329,2027-09-15,"Work, Opportunity & Comebacks",Mansfield doesn't need permission to create its next chapter.,Positive quote,#MansfieldOhio #419Pride
+330,2027-09-16,"Work, Opportunity & Comebacks","If you learned Mansfield's back roads, you can learn a new career skill.",Positive quote,#MansfieldOhio #419Pride
+331,2027-09-17,"Work, Opportunity & Comebacks","Mansfield has builders, dreamers, artists, teachers, and future founders.",Positive quote,#MansfieldOhio #419Pride
+332,2027-09-18,"Work, Opportunity & Comebacks",Mansfield deserves jobs with paychecks—and the dignity of real opportunity.,Positive quote,#MansfieldOhio #419Pride
+333,2027-09-19,"Work, Opportunity & Comebacks",You don't have to choose between loving Mansfield and wanting more.,Positive quote,#MansfieldOhio #419Pride
+334,2027-09-20,"Work, Opportunity & Comebacks","Aim high, Mansfield; just keep the ladder down for whoever comes next.",Positive quote,#MansfieldOhio #419Pride
+335,2027-09-21,"Work, Opportunity & Comebacks",Mansfield's next generation-changing success might start with one brave job application.,Positive quote,#MansfieldOhio #419Pride
+336,2027-09-22,"Work, Opportunity & Comebacks",Let your work introduce Mansfield to rooms that haven't heard of us yet.,Positive quote,#MansfieldOhio #419Pride
+337,2027-09-23,"Work, Opportunity & Comebacks",Mansfield is more than what closed; we're also everything that can open.,Positive quote,#MansfieldOhio #419Pride
+338,2027-09-24,"Work, Opportunity & Comebacks","In Mansfield, an old building can find new purpose—and so can an old dream.",Positive quote,#MansfieldOhio #419Pride
+339,2027-09-25,"Work, Opportunity & Comebacks",Let your résumé travel the world without hiding your Mansfield roots.,Positive quote,#MansfieldOhio #419Pride
+340,2027-09-26,"Work, Opportunity & Comebacks",Mansfield grows faster when knowledge is shared instead of guarded.,Positive quote,#MansfieldOhio #419Pride
+341,2027-09-27,"Work, Opportunity & Comebacks",Mansfield success is sweeter when there's room for your people at the table.,Positive quote,#MansfieldOhio #419Pride
+342,2027-09-28,"Work, Opportunity & Comebacks",Mansfield doesn't have to wait for the next industry. We can help invent it.,Positive quote,#MansfieldOhio #419Pride
+343,2027-09-29,"Work, Opportunity & Comebacks",Somebody from Mansfield is already proof the impossible was exaggerated.,Positive quote,#MansfieldOhio #419Pride
+344,2027-09-30,"Work, Opportunity & Comebacks",Mansfield move of the day: make the next step bigger than the last excuse.,Positive quote,#MansfieldOhio #419Pride
+345,2027-10-01,"Shawshank, Spooky Season & Courage",The Shawshank Redemption filmed in Mansfield. We know a little about getting free.,Positive quote,#MansfieldOhio #419Pride #ShawshankTrail
+346,2027-10-02,"Shawshank, Spooky Season & Courage",A movie made our prison famous; the people make Mansfield worth knowing.,Positive quote,#MansfieldOhio #419Pride
+347,2027-10-03,"Shawshank, Spooky Season & Courage",Some people see spooky walls at Mansfield's Reformatory. I see a city with unforgettable stories.,Positive quote,#MansfieldOhio #419Pride #ShawshankTrail
+348,2027-10-04,"Shawshank, Spooky Season & Courage",Mansfield's Shawshank legacy reminds us hope is powerful—even on a Tuesday shift.,Positive quote,#MansfieldOhio #419Pride
+349,2027-10-05,"Shawshank, Spooky Season & Courage",Mansfield made it onto the big screen. Your story deserves a scene too.,Positive quote,#MansfieldOhio #419Pride
+350,2027-10-06,"Shawshank, Spooky Season & Courage",Mansfield can turn an old prison into a landmark. Don't let your mind become a prison.,Positive quote,#MansfieldOhio #419Pride
+351,2027-10-07,"Shawshank, Spooky Season & Courage",Mansfield's Shawshank Trail proves a local backdrop can reach the whole world.,Positive quote,#MansfieldOhio #419Pride #ShawshankTrail
+352,2027-10-08,"Shawshank, Spooky Season & Courage","If the Reformatory walls in Mansfield could talk, they'd need a very long podcast.",Positive quote,#MansfieldOhio #419Pride #ShawshankTrail
+353,2027-10-09,"Shawshank, Spooky Season & Courage",A good scare at Mansfield's OSR is fun. Living in fear isn't.,Positive quote,#MansfieldOhio #419Pride
+354,2027-10-10,"Shawshank, Spooky Season & Courage",The real Mansfield magic is turning an old place into a new experience.,Positive quote,#MansfieldOhio #419Pride
+355,2027-10-11,"Shawshank, Spooky Season & Courage",Enjoy a Mansfield haunted tour; just don't bring yesterday's ghosts home.,Positive quote,#MansfieldOhio #419Pride
+356,2027-10-12,"Shawshank, Spooky Season & Courage",The only thing scarier than a Mansfield ghost hunt? Checking your balance after the fair.,Local humor,#MansfieldOhio #419Pride
+357,2027-10-13,"Shawshank, Spooky Season & Courage",The only thing scarier than Mansfield's Reformatory is a Tyger forgetting the Y.,Positive quote,#MansfieldOhio #419Pride #TygerPride #ShawshankTrail
+358,2027-10-14,"Shawshank, Spooky Season & Courage",Mansfield's Blood Prison isn't the only way to get your heart racing—try a big goal.,Positive quote,#MansfieldOhio #419Pride
+359,2027-10-15,"Shawshank, Spooky Season & Courage","Only in Mansfield do the prison walls host movie fans, ghost hunters, and rock crowds.",Local humor,#MansfieldOhio #419Pride
+360,2027-10-16,"Shawshank, Spooky Season & Courage","Take the Mansfield Reformatory tour, hear the story, then write yourself a happier ending.",Positive quote,#MansfieldOhio #419Pride
+361,2027-10-17,"Shawshank, Spooky Season & Courage",Fans visit Mansfield for Shawshank hope. We get to practice that hope every day.,Positive quote,#MansfieldOhio #419Pride #ShawshankTrail
+362,2027-10-18,"Shawshank, Spooky Season & Courage",It's fine to feel scared in Mansfield. Just don't let fear cancel your dreams.,Positive quote,#MansfieldOhio #419Pride
+363,2027-10-19,"Shawshank, Spooky Season & Courage","There is more to Mansfield than a prison, and more to you than your past.",Positive quote,#MansfieldOhio #419Pride
+364,2027-10-20,"Shawshank, Spooky Season & Courage",The most important Mansfield escape is leaving behind whatever keeps you stuck.,Positive quote,#MansfieldOhio #419Pride
+365,2027-10-21,"Shawshank, Spooky Season & Courage",A little October chill can't freeze Mansfield ambition.,Positive quote,#MansfieldOhio #419Pride

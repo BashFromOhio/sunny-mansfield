@@ -215,42 +215,37 @@ def roundup_post(items, credit):
 
 
 def quote_post(quote, credit):
-    """Quote of the day: cream type on an orange sunburst, with the logo below."""
-    import math
-    im = stripes()
+    """Quote of the day in the logo's framed retro style, inverted: cream letters with a brown drop on orange."""
+    im = Image.new("RGB", (W, H), ORANGE)
     d = ImageDraw.Draw(im)
-    top, bottom = BORDER + 14, 1010
-    sun = Image.new("RGB", (W - 2 * top, bottom - top), ORANGE)
-    sd = ImageDraw.Draw(sun)
-    cx, cy = sun.width / 2, sun.height + 140
-    for i in range(0, 360, 14):
-        a1, a2 = math.radians(i), math.radians(i + 6)
-        sd.polygon([(cx, cy), (cx + 2000 * math.cos(a1), cy + 2000 * math.sin(a1)),
-                    (cx + 2000 * math.cos(a2), cy + 2000 * math.sin(a2))], fill=(226, 108, 50))
-    sd.ellipse((cx - 300, cy - 300, cx + 300, cy + 300), fill=(242, 163, 58))
-    im.paste(sun, (top, top))
-    d.rectangle((BORDER + 12, BORDER + 12, W - BORDER - 13, H - BORDER - 13), outline=BROWN, width=2)
-    d.line((BORDER + 14, bottom, W - BORDER - 14, bottom), fill=BROWN, width=4)
-    d.text((W / 2, 150), "Mansfield", font=font("Yellowtail", 76), fill=CREAM, anchor="mm")
-    spaced(d, (W / 2, 210), "Quote of the day", font("Josefin-700", 30), BROWN, track=0.2, anchor="m")
-    d.text((W / 2, 360), "\u201c", font=font("Caslon-700", 170), fill=(242, 163, 58), anchor="mm")
-    text = quote["text"].strip().strip('"\u201c\u201d')
-    for size in (76, 68, 60, 54, 48, 42, 38):
+    d.rectangle((44, 44, W - 45, H - 45), outline=BROWN, width=6)
+
+    def drop(xy, text, f, off, **kw):
+        d.text((xy[0] + off, xy[1] + off), text, font=f, fill=BROWN, **kw)
+        d.text(xy, text, font=f, fill=CREAM, **kw)
+
+    drop((W / 2, 200), "Mansfield", font("Yellowtail", 110), 4, anchor="mm")
+    spaced(d, (W / 2, 278), "Quote of the day", font("Josefin-700", 32), BROWN, track=0.24, anchor="m")
+    text = "\u201c" + quote["text"].strip().strip('"\u201c\u201d') + "\u201d"
+    box_top, box_h = 380, 640
+    for size in (84, 76, 68, 62, 56, 50, 44, 40):
         f = font("Caslon-700", size)
-        lines = wrap(d, text, f, W - 220, 8)
-        if lines and len(lines) * size * 1.22 <= 520:
+        lines = wrap(d, text, f, W - 220, 9)
+        if lines and len(lines) * size * 1.24 <= box_h:
             break
     else:
-        lines = (wrap(d, text, f, W - 220, 99) or [text])[:8]
+        lines = (wrap(d, text, f, W - 220, 99) or [text])[:9]
         lines[-1] = lines[-1].rstrip(".,;:") + "\u2026"
-    step = round(f.size * 1.22)
-    y = 400 + (520 - step * len(lines)) // 2
+    step = round(f.size * 1.24)
+    y = box_top + (box_h - step * len(lines)) // 2
     for line in lines:
-        d.text((W / 2, y), line, font=f, fill=CREAM, anchor="ma")
+        drop((W / 2, y), line, f, max(3, f.size // 16), anchor="ma")
         y += step
     if quote.get("author"):
-        spaced(d, (W / 2, min(y + 34, bottom - 70)), "\u2014 " + quote["author"], font("Josefin-700", 28), BROWN, anchor="m")
-    footer(im, d, credit, center=True)
+        spaced(d, (W / 2, y + 26), "\u2014 " + quote["author"], font("Josefin-700", 28), BROWN, anchor="m")
+    d.line((140, 1120, W - 140, 1120), fill=BROWN, width=5)
+    spaced(d, (W / 2, 1160), "sunnymansfield.com", font("Josefin-700", 46), BROWN, track=0.16, anchor="m")
+    spaced(d, (W / 2, 1238), "Good news for all seasons  \u00b7  " + credit, font("Josefin-700", 17), CREAM, anchor="m")
     return im
 
 
@@ -333,7 +328,8 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
     said = ""
     if quote:
         said = f"\n\n💬 Mansfield quote of the day:\n\u201c{quote['text'].strip().strip(chr(34))}\u201d" + (f"\n\u2014 {quote['author']}" if quote.get("author") else "")
-    caption = f"{theme} ☀️\n\n{text}\n\nRead more: {link}{said}\n\n{TAGS} {tag}"
+    extra = " ".join(x for x in (quote or {}).get("tags", "").split() if x.startswith("#") and x not in TAGS and x != tag)
+    caption = f"{theme} ☀️\n\n{text}\n\nRead more: {link}{said}\n\n{TAGS} {tag}{' ' + extra if extra else ''}"
     (Path(out) / "social.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])} daily post</title>
 <link>{e(site)}/</link><description>One ready-made post a day for Facebook and Instagram</description>
