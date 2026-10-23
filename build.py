@@ -845,6 +845,7 @@ footer .credit small{flex-basis:100%;font:400 12px/1.6 var(--sans);opacity:.7}
 footer .credit .legal{flex-basis:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;font:600 13px/1.6 var(--sans)}
 footer .credit .legal a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 .note.report{font-size:14px;opacity:.85;margin-bottom:32px}
+.vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .legaltext{max-width:760px;padding-block:8px 40px}.legaltext .hed{font-size:24px;margin:28px 0 6px}.legaltext p{font-size:17px;line-height:1.65;margin:0}
 
 /* sports: athlete cards and tournament brackets */
@@ -1107,15 +1108,41 @@ def logo(name="logo-horizontal.svg"):
     return (BRAND / name).read_text().replace('xmlns="http://www.w3.org/2000/svg" ', "")
 
 
-def head(cfg, title, desc, url, image=None):
+def jsonld(data):
+    """Structured data for search engines; "</" is escaped so text can't close the script tag."""
+    return ('<script type="application/ld+json">' + json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+            + "</script>")
+
+
+def publisher(cfg):
+    site = cfg["site_url"].rstrip("/")
+    org = {"@type": "NewsMediaOrganization", "@id": f"{site}/#org", "name": cfg["site_name"], "url": f"{site}/",
+           "logo": {"@type": "ImageObject", "url": f"{site}/brand/post-logo.png"},
+           "description": "Curated positive local news from Mansfield and Richland County, Ohio, written by the people who live here.",
+           "areaServed": [{"@type": "City", "name": "Mansfield, Ohio"}, {"@type": "AdministrativeArea", "name": "Richland County, Ohio"}],
+           "publishingPrinciples": f"{site}/rules.html#rules", "correctionsPolicy": f"{site}/terms.html",
+           "email": cfg["submit_email"], "parentOrganization": {"@type": "Organization", "name": "Ofgeneration LLC"}}
+    same = [u for u in (cfg.get("facebook_page"), cfg.get("instagram")) if u]
+    if same:
+        org["sameAs"] = same
+    return org
+
+
+def head(cfg, title, desc, url, image=None, kind="website", data=None, index=True):
+    """kind is the og:type; data is JSON-LD for the page; index=False keeps a page out of search results."""
     image = image or cfg["site_url"].rstrip("/") + "/og.png"
+    robots = "max-image-preview:large,max-snippet:-1" if index else "noindex,follow"
     return f"""<title>{e(title)}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="{e(desc)}">
-<meta property="og:type" content="article"><meta property="og:site_name" content="{e(cfg['site_name'])}">
+<meta name="robots" content="{robots}"><link rel="canonical" href="{e(url)}">
+<meta name="theme-color" content="#D9531E">
+<meta property="og:type" content="{kind}"><meta property="og:site_name" content="{e(cfg['site_name'])}"><meta property="og:locale" content="en_US">
 <meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}">
 <meta property="og:url" content="{e(url)}"><meta property="og:image" content="{e(image)}">
-<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{e(title)}">
+<meta name="twitter:description" content="{e(desc)}"><meta name="twitter:image" content="{e(image)}">
+{jsonld(data) if data else ""}
 <link rel="icon" type="image/svg+xml" href="/brand/mark.svg">
 <link rel="alternate" type="application/rss+xml" title="{e(cfg['site_name'])}" href="{e(cfg['site_url'].rstrip('/'))}/feed.xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1164,9 +1191,9 @@ def hed(s, tag="h3"):
     return f'<{tag} class="hed"><a href="{e(s["link"])}"{target(s)}>{e(s["title"])}</a></{tag}>'
 
 
-def lead(cfg, s, media=None):
+def lead(cfg, s, media=None, tag="h2"):
     dek = f'<p class="dek">{e(s["summary"])}</p>' if s["summary"] else ""
-    return f'<article class="lead">{media or photo(s)}{kicker(s)}{hed(s, "h2")}{dek}{meta(s)}{share(cfg, s, read=True)}</article>'
+    return f'<article class="lead">{media or photo(s)}{kicker(s)}{hed(s, tag)}{dek}{meta(s)}{share(cfg, s, read=True)}</article>'
 
 
 def brief(s):
@@ -1671,11 +1698,20 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
                   f'</div></section>') if funds else ""
     market = rail("Buy &amp; Sell", "".join(listing_card(x, cfg) for x in listings[:12]) + ad_card(cfg, sale_ads[0] if sale_ads else None, "A7"),
                   f'<a class="link" href="{e(site)}/market.html">See all</a>', kind="sales") if listings else ""
-    return f"""{head(cfg, cfg['site_name'], cfg['tagline'], site + '/')}
+    home = {"@context": "https://schema.org", "@graph": [
+        publisher(cfg),
+        {"@type": "WebSite", "@id": f"{site}/#site", "name": cfg["site_name"], "url": f"{site}/", "inLanguage": "en-US",
+         "publisher": {"@id": f"{site}/#org"}},
+        {"@type": "ItemList", "name": "Today's good news", "itemListElement": [
+            {"@type": "ListItem", "position": i, "url": page_url(cfg, s), "name": s["title"]}
+            for i, s in enumerate([s for s in news if s.get("community")][:10], 1)]}]}
+    return f"""{head(cfg, f"{cfg['site_name']}: Good News from Mansfield & Richland County, Ohio",
+                 "Positive local news from Mansfield, Ontario, Lexington, Shelby, Bellville and all of Richland County, Ohio: "
+                 "community wins, local business, high school sports, events and Celebrations of Life.", site + '/', data=home)}
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
 {masthead(cfg, site, stories, quote)}
 <nav class="sections" aria-label="Sections"><div class="wrap">{tabs}</div></nav>
-<main>{note}{front}
+<main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{front}
 {civic(cfg, businesses)}
 <div id="shelves">{shelf_order(rails, funds_rail, events)}</div>
 {market}
@@ -1692,14 +1728,14 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 {SCRIPT}"""
 
 
-def shell(cfg, title, desc, url, inner, stories, image=None, extra=""):
+def shell(cfg, title, desc, url, inner, stories, image=None, extra="", data=None, index=True):
     site = cfg["site_url"].rstrip("/")
     body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
 {inner}<div class="stripes" aria-hidden="true"></div></main>{footer(cfg)}</div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>"""
     return ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
             "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
-            f"{head(cfg, title, desc, url, image)}</head><body>{body}{SCRIPT}{extra}</body></html>")
+            f"{head(cfg, title, desc, url, image, data=data, index=index)}</head><body>{body}{SCRIPT}{extra}</body></html>")
 
 
 SB_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
@@ -2047,7 +2083,12 @@ def render_business(cfg, b, businesses, stories):
 <section class="wrap latest">{f'<h2 class="label">More local businesses</h2><div class="grid">{others}</div>' if others else ""}
 <div class="more-row"><a class="btn" href="{e(site)}/businesses.html">See all businesses</a></div></section>"""
     image = b["image"] if (b.get("image") or "").startswith("https://") else None
-    return shell(cfg, f"{b['name']} · {cfg['site_name']}", b["what"], biz_url(cfg, b), inner, stories, image)
+    place = {"@context": "https://schema.org", "@type": "LocalBusiness", "name": b["name"], "description": b["what"],
+             "url": b.get("link") or biz_url(cfg, b), "image": image or f"{site}/og.png",
+             "address": {"@type": "PostalAddress", "addressLocality": b.get("neighborhood") or "Mansfield",
+                         "addressRegion": "OH", "addressCountry": "US"}}
+    return shell(cfg, f"{b['name']} · {cfg['site_name']}", b["what"], biz_url(cfg, b), inner, stories, image,
+                 data=place, index=not b.get("sample"))
 
 
 def parse_bracket(text):
@@ -2263,7 +2304,7 @@ def render_admin(cfg, stories, headline=None):
     if not backend_on(cfg):
         inner = (page_title("Editors only", "Admin", "The review queue isn't connected yet. Follow BACKEND.md in the repository, "
                             "then send the project URL and anon key to whoever builds the site."))
-        return shell(cfg, f"Admin · {cfg['site_name']}", "Editors only.", f"{site}/admin.html", inner, stories)
+        return shell(cfg, f"Admin · {cfg['site_name']}", "Editors only.", f"{site}/admin.html", inner, stories, index=False)
     conf = json.dumps({"url": cfg["supabase_url"], "key": cfg["supabase_anon_key"]})
     news = [s for s in stories if s["section"] != "life"][:40]
 
@@ -2397,8 +2438,7 @@ $('v-add').onclick=async()=>{{const em=$('v-email').value.trim().toLowerCase();i
  const {{error}}=await sb.from('verified').upsert({{email:em,name:$('v-name').value.trim()||null}});if(error)say(error.message);else{{$('v-email').value='';$('v-name').value='';load()}}}};
 }})();
 </script>"""
-    page = shell(cfg, f"Admin · {cfg['site_name']}", "Editors only.", f"{site}/admin.html", inner, stories, extra=script)
-    return page.replace("<title>", '<meta name="robots" content="noindex,nofollow"><title>', 1)
+    return shell(cfg, f"Admin · {cfg['site_name']}", "Editors only.", f"{site}/admin.html", inner, stories, extra=script, index=False)
 
 
 def render_story_page(cfg, s, stories):
@@ -2418,7 +2458,7 @@ def render_story_page(cfg, s, stories):
         media = (f'<a class="photo" href="{e(src)}" target="_blank" rel="noopener" title="See the full photo">'
                  f'<img src="{e(src)}" alt="" referrerpolicy="no-referrer"></a>')  # the page is the story, so open the full photo
     body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
-<section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s, media)}</section>
+<section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s, media, "h1")}</section>
 {banner(cfg, "A4")}
 {f'<p class="wrap note postimg"><a class="link" href="{e(site)}/{s["post_image"]}" download>Download the framed image for Facebook or Instagram</a></p>' if s.get("post_image") else ""}
 <p class="wrap note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
@@ -2428,7 +2468,30 @@ def render_story_page(cfg, s, stories):
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>"""
     return ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
             "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
-            f"{head(cfg, s['title'], desc, page_url(cfg, s), image)}</head><body>{body}{SCRIPT}</body></html>")
+            f"{head(cfg, s['title'] + ' · ' + cfg['site_name'], desc, page_url(cfg, s), image, 'article', story_data(cfg, s, image), indexable(s))}"
+            f"</head><body>{body}{SCRIPT}</body></html>")
+
+
+def indexable(s):
+    """Only neighbors' own posts go to search engines. Pages that summarize another outlet's story stay out of the
+    index, so Google sees original reporting here and sends people to the outlet for theirs."""
+    return bool(s.get("community"))
+
+
+def story_data(cfg, s, image):
+    site = cfg["site_url"].rstrip("/")
+    by = (s.get("source") or "").strip()
+    art = {"@context": "https://schema.org", "@type": "NewsArticle", "headline": s["title"][:110],
+           "description": s["summary"] or s["title"], "url": page_url(cfg, s), "mainEntityOfPage": page_url(cfg, s),
+           "datePublished": s["date"].isoformat(), "dateModified": s["date"].isoformat(), "inLanguage": "en-US",
+           "articleSection": SECTION_NAMES.get(s["section"], "Good News"),
+           "contentLocation": {"@type": "Place", "name": "Richland County, Ohio"},
+           "publisher": publisher(cfg), "image": [image or f"{site}/og.png"]}
+    if s.get("community"):
+        art["author"] = {"@type": "Person", "name": by} if by and by != cfg["site_name"] else {"@id": f"{site}/#org"}
+    else:
+        art["isBasedOn"] = s.get("more") or s["link"]
+    return art
 
 
 def merge_community(cfg, stories, community):
@@ -2436,6 +2499,82 @@ def merge_community(cfg, stories, community):
         # A neighbor's post always opens its own page; any outside link becomes a "Read more" button there.
         s["more"], s["link"] = s["link"], page_url(cfg, s)
     return sorted(stories + community, key=lambda s: s["date"], reverse=True)
+
+
+PAGES = [("", "daily", "1.0"), ("sports.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
+         ("fundraisers.html", "daily", "0.7"), ("celebrations.html", "daily", "0.7"), ("market.html", "daily", "0.6"),
+         ("quote.html", "daily", "0.5"), ("submit.html", "monthly", "0.6"), ("rules.html", "monthly", "0.4"),
+         ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
+
+
+def write_search_files(cfg, stories, businesses, out):
+    """robots.txt, sitemap.xml, news-sitemap.xml and llms.txt: how search engines and AI assistants find the paper."""
+    site = cfg["site_url"].rstrip("/")
+    now = datetime.now(timezone.utc)
+    day = lambda d: d.strftime("%Y-%m-%d")
+    urls = [(f"{site}/{p}", day(now), f, pr) for p, f, pr in PAGES]
+    urls += [(page_url(cfg, s), day(s["date"]), "weekly", "0.7") for s in stories if indexable(s)]
+    urls += [(biz_url(cfg, b), day(now), "monthly", "0.6") for b in businesses if not b.get("sample")]
+    (out / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join(
+            f"<url><loc>{e(u)}</loc><lastmod>{m}</lastmod><changefreq>{f}</changefreq><priority>{p}</priority></url>\n"
+            for u, m, f, p in urls) + "</urlset>\n")
+    # Google News only wants articles from the last two days.
+    fresh = [s for s in stories if indexable(s) and s["date"] > now - timedelta(days=2)]
+    (out / "news-sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">\n'
+        + "".join(f"<url><loc>{e(page_url(cfg, s))}</loc><news:news><news:publication><news:name>{e(cfg['site_name'])}</news:name>"
+                  f"<news:language>en</news:language></news:publication><news:publication_date>{s['date'].isoformat()}"
+                  f"</news:publication_date><news:title>{e(s['title'])}</news:title></news:news></url>\n" for s in fresh)
+        + "</urlset>\n")
+    (out / "robots.txt").write_text(f"""# Everyone is welcome to read and index Sunny Mansfield, including AI assistants.
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /artifact.html
+
+Sitemap: {site}/sitemap.xml
+Sitemap: {site}/news-sitemap.xml
+""")
+    recent = [s for s in stories if indexable(s)][:15]
+    (out / "llms.txt").write_text(f"""# {cfg['site_name']}
+
+> Sunny Mansfield is a curated local media outlet for Mansfield and Richland County, Ohio, that only shares positive news:
+> community wins, local businesses, high school sports, events, fundraisers and Celebrations of Life. It is created for the
+> people and written by the people: neighbors, students, shop owners and mentors send stories, and editors review them.
+> It skips crime, crashes and political arguments. Published by Ofgeneration LLC in Mansfield, Ohio.
+
+Coverage area: Mansfield, Ontario, Lexington, Shelby, Bellville, Butler, Lucas, Plymouth and all of Richland County, Ohio.
+Updated every 15 minutes. Stories from other outlets (Richland Source, Mansfield News Journal and others) are summarized with a
+link to the original reporting; neighbors' own posts are original to Sunny Mansfield.
+
+## Sections
+
+- [Front page]({site}/): today's good news, the editor's headline, local business, causes, sports and events
+- [Sports]({site}/sports.html): athlete spotlights, tournament brackets and good sports news
+- [Business spotlights]({site}/businesses.html): free pages for Richland County businesses
+- [Fundraisers]({site}/fundraisers.html): local causes posted by neighbors (not run or verified by Sunny Mansfield)
+- [Celebrations of Life]({site}/celebrations.html): remembering Richland County neighbors
+- [Buy & Sell]({site}/market.html): neighbor listings, up for 30 days
+- [Quote of the day]({site}/quote.html): a new Mansfield quote every morning and evening
+
+## How to take part
+
+- [Submit good news]({site}/submit.html)
+- [Sunny rules and how verification works]({site}/rules.html)
+- [Advertise]({site}/advertise.html)
+- [Privacy policy]({site}/privacy.html) and [terms]({site}/terms.html)
+- Contact: {cfg['submit_email']}
+
+## Feeds
+
+- [All stories (RSS)]({site}/feed.xml)
+- [Neighbor posts (RSS)]({site}/community.xml)
+- [Sitemap]({site}/sitemap.xml)
+
+## Recent neighbor posts
+
+""" + "".join(f"- [{s['title']}]({page_url(cfg, s)}): {(s['summary'] or '')[:160]}\n" for s in recent))
 
 
 def main():
@@ -2514,6 +2653,7 @@ def main():
     (out / "market.html").write_text(rebase(render_market(cfg, listings, stories)))
     (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories)))
     (out / "admin.html").write_text(rebase(render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"]))))
+    write_search_files(cfg, stories, businesses, out)
     print(f"Built {len(stories)} stories -> {out}", file=sys.stderr)
 
 
