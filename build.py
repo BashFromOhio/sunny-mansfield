@@ -78,7 +78,8 @@ SECTION_RULES = [
               r"madison|lexington|ontario|bellville|shelby|butler|lucas|plymouth|shiloh|"
               r"crestline|mifflin|clear fork|lexington|street"),
 ]
-LIFE_HINTS = r"obituar|celebration of life|remember|in memory|life of|passed away|memorial"
+LIFE_HINTS = (r"obituar|celebration of life|in loving memory|in memory of|life of|passed away|memorial service|funeral|"
+              r"\(\d{4} ?[-\u2013] ?\d{4}\)")
 
 
 def rx(pattern):
@@ -629,6 +630,7 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 /* grid of default cards */
 .latest{padding-block:0 64px;scroll-margin-top:64px}
 .latest .label{margin-bottom:24px}
+.postimg{display:block;padding-block:4px 36px}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
 @media (max-width:960px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:600px){.grid{grid-template-columns:minmax(0,1fr)}}
@@ -2312,7 +2314,10 @@ def render_story_page(cfg, s, stories):
     site = cfg["site_url"].rstrip("/")
     desc = s["summary"] or f"Good news from {cfg['site_name']}"
     image = s["image"] if (s.get("image") or "").startswith("https://") else None
-    more = "".join(card(cfg, o) for o in [o for o in stories if o is not s][:3])
+    # Celebrations of Life only sit next to each other; every other story page shows other good news.
+    same = [o for o in stories if o is not s and (o["section"] == "life") == (s["section"] == "life")]
+    more = "".join(card(cfg, o) for o in same[:3])
+    life = s["section"] == "life"
     media = None
     if s.get("video"):
         media = (f'<div class="photo video"><iframe src="https://www.youtube-nocookie.com/embed/{e(s["video"])}" title="{e(s["title"])}" '
@@ -2325,8 +2330,8 @@ def render_story_page(cfg, s, stories):
 <section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s, media)}</section>
 {banner(cfg, "A4")}
 {f'<p class="wrap note postimg"><a class="link" href="{e(site)}/{s["post_image"]}" download>Download the framed image for Facebook or Instagram</a></p>' if s.get("post_image") else ""}
-<section class="wrap latest"><h2 class="label">More good news</h2><div class="grid">{more}</div>
-<div class="more-row"><a class="btn" href="{e(site)}/">See all stories</a></div></section>
+<section class="wrap latest"><h2 class="label">{"More Celebrations of Life" if life else "More good news"}</h2><div class="grid">{more}</div>
+<div class="more-row"><a class="btn" href="{e(site)}/{"celebrations.html" if life else ""}">{"See all Celebrations of Life" if life else "See all stories"}</a></div></section>
 {submit_band(cfg, site)}<div class="stripes" aria-hidden="true"></div></main>{footer(cfg)}</div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>"""
     return ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"

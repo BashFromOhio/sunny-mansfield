@@ -345,7 +345,7 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
         text = f"Neighbors helping neighbors: {f['title']}. {f.get('summary') or ''} Give if you can, share if you can't.".strip()
     if im is None:
         s = {0: pick(stories, "hoods", "good"), 3: pick(stories, "sports", athletes=True) or pick(stories, "sports"),
-             6: pick(stories, "good", "biz", "seniors")}.get(wd) or pick(stories, "good", "hoods", "biz", "seniors", "sports") or (stories or [None])[0]
+             6: pick(stories, "good", "biz", "seniors")}.get(wd) or pick(stories, "good", "hoods", "biz", "seniors", "sports") or next((x for x in stories if x["section"] != "life"), None)
         if s is None:
             note("Daily post: nothing to post")
             return
