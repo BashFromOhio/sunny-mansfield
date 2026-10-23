@@ -43,12 +43,23 @@ Supabase's free email only sends about 2 sign-in emails an hour, so editors and 
 3. For an editor, also add their email to the admins list (step 2). For a verified contributor, add them on the admin page under **Verified people**.
 4. Give them the password. After signing in, they can change it on the admin page with **Set password**.
 
+## 6. Lock down sign-ups
+
+Editors and verified contributors only ever get accounts that you create by hand in step 5, so nobody else needs to sign up.
+
+1. In Supabase, open **Authentication → Sign In / Providers**.
+2. Turn **off** "Allow new users to sign up".
+3. Make sure **Confirm email** is **on**.
+4. Under **Authentication → URL Configuration**, list only your site (like `https://sunnymansfield.com/**`) in Redirect URLs.
+
+Editor and verified powers only work for confirmed email addresses (`confirmed_email()` in `schema.sql`), so this is a second lock on the same door.
+
 ## How it works day to day
 
 - **Waiting**: new posts. Choose **Approve** or **Reject**. **Approve and verify sender** also adds the sender to the verified list.
 - **Team applications**: choose **Approve and verify** to make someone a verified contributor.
 - **Ad inquiries**: messages from businesses about advertising. Reply to them by email.
-- **Verified people**: add or remove people. A verified person who signs in on the submit page (with the "Email me a sign-in link" button) goes live without review.
+- **Verified people**: add or remove people. A verified person who signs in on the submit page (with the "Email me a sign-in link" button) goes live without review, except for fundraisers, which always wait for an editor.
 - **Approved**: everything on the site. Choose **Take down** to remove a post.
 
 Event flyers stay up until the day after the event. Buy & Sell listings stay up for 30 days.
