@@ -214,13 +214,66 @@ def roundup_post(items, credit):
     return im
 
 
+def quote_post(quote, credit):
+    """Quote of the day: cream type on an orange sunburst, with the logo below."""
+    import math
+    im = stripes()
+    d = ImageDraw.Draw(im)
+    top, bottom = BORDER + 14, 1010
+    sun = Image.new("RGB", (W - 2 * top, bottom - top), ORANGE)
+    sd = ImageDraw.Draw(sun)
+    cx, cy = sun.width / 2, sun.height + 140
+    for i in range(0, 360, 14):
+        a1, a2 = math.radians(i), math.radians(i + 6)
+        sd.polygon([(cx, cy), (cx + 2000 * math.cos(a1), cy + 2000 * math.sin(a1)),
+                    (cx + 2000 * math.cos(a2), cy + 2000 * math.sin(a2))], fill=(226, 108, 50))
+    sd.ellipse((cx - 300, cy - 300, cx + 300, cy + 300), fill=(242, 163, 58))
+    im.paste(sun, (top, top))
+    d.rectangle((BORDER + 12, BORDER + 12, W - BORDER - 13, H - BORDER - 13), outline=BROWN, width=2)
+    d.line((BORDER + 14, bottom, W - BORDER - 14, bottom), fill=BROWN, width=4)
+    d.text((W / 2, 150), "Mansfield", font=font("Yellowtail", 76), fill=CREAM, anchor="mm")
+    spaced(d, (W / 2, 210), "Quote of the day", font("Josefin-700", 30), BROWN, track=0.2, anchor="m")
+    d.text((W / 2, 360), "\u201c", font=font("Caslon-700", 170), fill=(242, 163, 58), anchor="mm")
+    text = quote["text"].strip().strip('"\u201c\u201d')
+    for size in (76, 68, 60, 54, 48, 42, 38):
+        f = font("Caslon-700", size)
+        lines = wrap(d, text, f, W - 220, 8)
+        if lines and len(lines) * size * 1.22 <= 520:
+            break
+    else:
+        lines = (wrap(d, text, f, W - 220, 99) or [text])[:8]
+        lines[-1] = lines[-1].rstrip(".,;:") + "\u2026"
+    step = round(f.size * 1.22)
+    y = 400 + (520 - step * len(lines)) // 2
+    for line in lines:
+        d.text((W / 2, y), line, font=f, fill=CREAM, anchor="ma")
+        y += step
+    if quote.get("author"):
+        spaced(d, (W / 2, min(y + 34, bottom - 70)), "\u2014 " + quote["author"], font("Josefin-700", 28), BROWN, anchor="m")
+    footer(im, d, credit, center=True)
+    return im
+
+
+def make_quote_image(quote, out, credit, note=print):
+    """site/quote.jpg: today's quote as a post image, for the site's Share button and the daily post."""
+    if not quote:
+        return None
+    try:
+        im = quote_post(quote, credit)
+    except Exception as exc:
+        note(f"Quote image: skipped ({exc})")
+        return None
+    im.save(Path(out) / "quote.jpg", quality=88, optimize=True, progressive=False)
+    return "quote.jpg"
+
+
 def pick(stories, *sections, athletes=False):
     pool = [s for s in stories if s["section"] in sections and (not athletes or s.get("athlete") is not None)]
     pool.sort(key=lambda s: (not s.get("community"), not s.get("image")))
     return pool[0] if pool else None
 
 
-def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, section_names, ua, credit, page_url, note=print):
+def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, section_names, ua, credit, page_url, note=print, quote=None):
     """Write site/social/<date>.jpg and social.xml with today's post. It switches over at 8 a.m. Eastern."""
     from datetime import datetime, timedelta
     from email.utils import format_datetime
@@ -277,7 +330,10 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
     name = f"{day:%Y-%m-%d}.jpg"
     im.save(folder / name, quality=86, optimize=True, progressive=False)
     image = f"{site}/social/{name}"
-    caption = f"{theme} ☀️\n\n{text}\n\nRead more: {link}\n\n{TAGS} {tag}"
+    said = ""
+    if quote:
+        said = f"\n\n💬 Mansfield quote of the day:\n\u201c{quote['text'].strip().strip(chr(34))}\u201d" + (f"\n\u2014 {quote['author']}" if quote.get("author") else "")
+    caption = f"{theme} ☀️\n\n{text}\n\nRead more: {link}{said}\n\n{TAGS} {tag}"
     (Path(out) / "social.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])} daily post</title>
 <link>{e(site)}/</link><description>One ready-made post a day for Facebook and Instagram</description>

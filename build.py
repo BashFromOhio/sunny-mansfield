@@ -42,7 +42,6 @@ SECTIONS = [
     ("sales", "Garage Sales"),
     ("seniors", "Seniors"),
     ("life", "Celebrations of Life"),
-    ("vote", "Voting"),
     ("research", "Cool Research"),
 ]
 SECTION_NAMES = dict(SECTIONS)
@@ -66,7 +65,6 @@ students|kids|library|cheer|smile|gift|joy|family|reunion|bloom|harvest|sanctuar
 # Section rules, checked in order. First match wins; "good" is the fallback.
 SECTION_RULES = [
     ("sales", r"garage sale|yard sale|rummage|flea market|estate sale|porch sale|swap meet"),
-    ("vote", r"\bvot(e|er|ers|ing)\b|ballot|election|polls?\b|candidate|levy|board of elections"),
     ("sports", r"\b(football|basketball|volleyball|soccer|baseball|softball|wrestl\w*|swim\w*|cross country|"
                r"track and field|golf|tennis|bowling|hockey|lacrosse|cheerlead\w*|athlet\w*|varsity|playoffs?|"
                r"ohsaa|state champion\w*|district champion\w*|regional champion\w*|tygers|quarterback|touchdown)\b"),
@@ -87,7 +85,10 @@ def rx(pattern):
     return re.compile(pattern.replace("\n", ""), re.I)
 
 
-NEG, POS, LIFE = rx(NEGATIVE), rx(POSITIVE), rx(LIFE_HINTS)
+# Elections and politics stay off the site.
+VOTING = r"\bvot(e|ed|er|ers|ing)\b|ballot|election|polls?\b|candidate|levy|board of elections|campaign"
+
+NEG, POS, LIFE, VOTE = rx(NEGATIVE), rx(POSITIVE), rx(LIFE_HINTS), rx(VOTING)
 RULES = [(key, rx(p)) for key, p in SECTION_RULES]
 
 
@@ -96,12 +97,12 @@ def classify(story, forced=None):
     text = f"{story['title']} {story['summary']}"
     if forced == "life" or (forced is None and LIFE.search(story["title"])):
         return "life"
-    if NEG.search(text):
+    if NEG.search(text) or VOTE.search(text):
         return None
     for key, pattern in RULES:
         if pattern.search(text):
-            # Voting and garage sales are useful even when they aren't "uplifting".
-            if key in ("vote", "sales") or POS.search(text):
+            # Garage sales are useful even when they aren't "uplifting".
+            if key == "sales" or POS.search(text):
                 return key
     return "good" if POS.search(text) else None
 
@@ -280,7 +281,8 @@ SUBMIT_COLS = ["when", "section", "title", "summary", "photo", "link", "name", "
                "event_date", "price", "contact"]
 SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "business spotlight": "spotlight",
                     "event flyer": "flyer", "buy & sell": "market", "buy and sell": "market",
-                    "athlete spotlight": "athlete", "bracket": "bracket", "fundraiser": "fund"}
+                    "athlete spotlight": "athlete", "bracket": "bracket", "fundraiser": "fund",
+                    "headline": "headline"}
 FUND_DAYS = 90  # fundraisers without an end date come down after this
 ATHLETE_FACTS = ("Sport", "School", "Class of")  # folded into the summary by the submit form
 # Buy & Sell categories, Craigslist style: (key, name, words that suggest it when a listing has no category).
@@ -357,7 +359,7 @@ def fetch_published(config):
 
 def load_submissions(config, sample):
     """Approved posts: from Supabase on the live site, from sample_submissions.csv in the preview."""
-    got = {"stories": [], "spotlights": [], "flyers": [], "listings": [], "brackets": [], "fundraisers": []}
+    got = {"stories": [], "spotlights": [], "flyers": [], "listings": [], "brackets": [], "fundraisers": [], "headlines": []}
     try:
         if sample:
             rows = list(csv.reader(io.StringIO((HERE / "sample_submissions.csv").read_text())))
@@ -418,6 +420,9 @@ def load_submissions(config, sample):
             got["fundraisers"].append({"id": sid, "title": row["title"], "summary": row["summary"], "image": image,
                                        "link": row["link"], "goal": row["price"], "cause": row["business"].strip(),
                                        "by": row["name"], "town": row["town"], "day": day, "date": date})
+            continue
+        if section == "headline":  # an editor pinned this story to the top of the front page
+            got["headlines"].append({"title": row["title"], "link": row["link"], "date": date})
             continue
         if section == "bracket":
             if all(b["title"] != row["title"] for b in got["brackets"]):  # newest version of each bracket wins
@@ -875,6 +880,30 @@ input[type=file]{font:400 14px/1.4 var(--sans)}
 .deskbar{display:grid;gap:8px;margin-bottom:16px}
 .qtabs{display:flex;flex-wrap:wrap;gap:0 8px}
 .queue{display:grid;gap:16px}
+.toprow{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:20px;align-items:stretch;padding-block:16px}
+.toprow .adrow{padding:0;display:flex;flex-direction:column}.toprow .adbanner{max-width:none;flex:1;box-sizing:border-box}
+.toprow .adbanner img{height:100%;object-fit:cover}
+@media (max-width:860px){.toprow{grid-template-columns:minmax(0,1fr)}}
+.qotd{position:relative;overflow:hidden;margin:0;display:grid;align-content:center;gap:2px;padding:18px 24px 16px;border:2px solid var(--border-strong);
+  background:radial-gradient(circle at 50% 150%,#f7b54a 0 22%,#e8762a 23% 46%,var(--secondary) 47% 70%,var(--secondary-dk));color:var(--tertiary);isolation:isolate}
+.qotd::before{content:"";position:absolute;left:50%;top:150%;width:1800px;height:1800px;margin:-900px 0 0 -900px;z-index:-1;
+  background:repeating-conic-gradient(rgba(251,246,236,.09) 0 5deg,transparent 5deg 13deg)}
+.qotd::after{content:"\u201c";position:absolute;right:10px;top:-22px;font:700 150px/1 var(--serif);color:rgba(251,246,236,.16);z-index:-1}
+.qotd .script{font-size:30px;color:var(--tertiary);margin:0;transform:rotate(-4deg);transform-origin:0 100%;text-shadow:0 2px 0 rgba(46,26,16,.25)}
+.qotd .qlabel{font-size:11px;letter-spacing:.2em;color:var(--primary);margin-bottom:6px}
+.qotd blockquote{margin:0;font:700 21px/1.3 var(--serif);text-wrap:balance}
+.qotd blockquote.mid{font-size:18px}.qotd blockquote.long{font-size:15.5px}
+.qotd figcaption{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;margin-top:10px}
+.qotd cite{font:700 11px/1.3 var(--caps);letter-spacing:.14em;text-transform:uppercase;font-style:normal;color:#ffe3b8}
+.qotd cite::before{content:"\u2014 "}
+.qshare{display:inline-flex;align-items:center;gap:6px;font:700 11px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--tertiary);
+  text-decoration:none;border:1.5px solid rgba(251,246,236,.7);padding:6px 10px}.qshare:hover{background:var(--tertiary);color:var(--secondary)}
+.qshare svg{width:12px;height:12px;fill:currentColor}
+.qotd.big{padding:40px clamp(20px,5vw,56px) 32px}.qotd.big .script{font-size:52px}.qotd.big .qlabel{font-size:14px}
+.qotd.big blockquote{font-size:clamp(26px,4vw,40px)}.qotd.big blockquote.mid{font-size:clamp(22px,3.4vw,32px)}.qotd.big blockquote.long{font-size:clamp(19px,2.8vw,26px)}
+.qotd.big cite{font-size:14px}
+.qitem.pick{grid-template-columns:120px minmax(0,1fr);padding:12px;align-items:center}.qitem.pick .hed{font-size:18px;margin:4px 0 8px}
+.qitem.pick.on{border-color:var(--secondary);background:var(--surface)}.qitem.pick .qphoto img{aspect-ratio:3/2;object-fit:cover;width:100%;display:block}
 .qitem{display:grid;grid-template-columns:200px minmax(0,1fr);gap:20px;background:var(--tertiary);border:2px solid var(--border-subtle);padding:20px}
 .qitem:not(:has(.qphoto)){grid-template-columns:minmax(0,1fr)}
 @media (max-width:700px){.qitem{grid-template-columns:minmax(0,1fr)}}
@@ -1102,9 +1131,10 @@ def share(cfg, s, read=False):
     url = page_url(cfg, s)
     out = (f'<a class="btn fb" href="{e(fb_share(url))}" target="_blank" rel="noopener">{FB_ICON}Share</a>'
            f'<button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button>')
-    if read and not (s.get("community") and "/s/" in s["link"]):
-        where = "Read more" if s.get("community") else f"Read at {e(s['source'])}"
-        out += f'<a class="textbtn" href="{e(s["link"])}" target="_blank" rel="noopener">{where}</a>'
+    if read and s.get("community") and s.get("more"):
+        out += f'<a class="textbtn" href="{e(s["more"])}" target="_blank" rel="noopener nofollow ugc">Read more</a>'
+    elif read and not s.get("community"):
+        out += f'<a class="textbtn" href="{e(s["link"])}" target="_blank" rel="noopener">Read at {e(s["source"])}</a>'
     return f'<div class="share">{out}</div>'
 
 
@@ -1132,7 +1162,15 @@ def card(cfg, s, front=False):
             f'{share(cfg, s)}</article>')
 
 
-def masthead(cfg, site, stories):
+def top_row(cfg, quote):
+    """The A1 banner, with the quote of the day beside it on the front page."""
+    if not quote:
+        return banner(cfg, "A1")
+    ad = banner(cfg, "A1").replace('class="wrap adrow"', 'class="adrow"', 1)
+    return f'<div class="wrap toprow">{ad}{quote_card(cfg, quote)}</div>'
+
+
+def masthead(cfg, site, stories, quote=None):
     today = datetime.now(timezone.utc).strftime("%A, %B %-d, %Y")
     return f"""<header>
 <div class="wrap plate">
@@ -1151,7 +1189,7 @@ def masthead(cfg, site, stories):
 <a href="{e(site)}/rules.html">Join the team</a><a href="{e(site)}/advertise.html">Advertise</a>
 <a class="navcta" href="{e(site)}/submit.html">Submit news</a></div></nav>
 </header>
-{banner(cfg, "A1")}
+{top_row(cfg, quote)}
 <aside class="about" id="about" role="dialog" aria-labelledby="about-h" hidden>
 <button class="close" type="button" data-about-close aria-label="Close">&times;</button>
 <span class="script">Welcome, neighbor!</span><h2 class="hed" id="about-h">Why Sunny Mansfield?</h2>
@@ -1186,19 +1224,10 @@ def biz_url(cfg, b):
 
 def civic(cfg, businesses):
     site = cfg["site_url"].rstrip("/")
-    shops = "".join(f"""<div class="shop"><span class="caps kicker">{e(b.get('neighborhood', ''))}</span><h3 class="hed"><a href="{e(biz_url(cfg, b))}">{e(b['name'])}</a></h3><p>{e(b['what'])}</p>
-<div class="share"><a class="btn fb" href="{e(fb_share(biz_url(cfg, b)))}" target="_blank" rel="noopener">{FB_ICON}Share</a>
-<a class="textbtn" href="{e(biz_url(cfg, b))}">See their page</a></div></div>""" for b in businesses[:3])
-    return f"""<section class="wrap civic">
-<div class="box" id="vote"><span class="caps kicker">Election Day · Tuesday, Nov. 3, 2026</span><h2 class="hed">Your vote, made easy</h2>
-<ol class="steps">
-<li><span class="n">1</span><span><a href="https://voteohio.gov/" target="_blank" rel="noopener">Check your registration and polling place</a> at VoteOhio.gov.</span></li>
-<li><span class="n">2</span><span>Vote early at the <a href="https://www.boe.ohio.gov/richland/" target="_blank" rel="noopener">Richland County Board of Elections</a>, or on Election Day from 6:30 a.m. to 7:30 p.m.</span></li>
-<li><span class="n">3</span><span>Bring a photo ID: an Ohio driver's license or state ID, a U.S. passport, or a military ID.</span></li>
-</ol></div>
-<div id="shops"><h2 class="label">Shop local</h2><div class="shoplist">{shops}</div>
-<p class="note">Free spotlights for Richland County businesses. <a class="link" href="{e(site)}/businesses.html">See all</a> · <a class="link" href="{e(site)}/submit.html#spotlight">Get yours</a></p></div>
-</section>"""
+    more = (f'<a class="slide flyer add" href="{e(site)}/submit.html#spotlight"><span class="flyer-img"><span class="plus">+</span></span>'
+            f'<span class="hed">Spotlight your business</span><span class="dek">Free for Richland County businesses</span></a>')
+    cards = "".join(biz_card(cfg, b).replace('<article class="card"', '<article class="card slide"', 1) for b in businesses[:12])
+    return rail("Shop local", cards + more, f'<a class="link" href="{e(site)}/businesses.html">See all</a>', rid="shops", kind="sec")
 
 
 def submit_band(cfg, site):
@@ -1242,7 +1271,16 @@ document.querySelectorAll('[data-show]').forEach(b=>b.addEventListener('click',(
 document.querySelectorAll('.railbox').forEach(box=>{const r=box.querySelector('.rail');const bs=box.querySelectorAll('.arrow');
  const upd=()=>{bs[0].disabled=r.scrollLeft<4;bs[1].disabled=r.scrollLeft+r.clientWidth>=r.scrollWidth-4};
  bs.forEach(b=>b.addEventListener('click',()=>r.scrollBy({left:+b.dataset.dir*r.clientWidth*.9,behavior:'smooth'})));
- r.addEventListener('scroll',upd,{passive:true});addEventListener('resize',upd);upd()});
+ r.addEventListener('scroll',upd,{passive:true});addEventListener('resize',upd);upd();
+ // Gentle auto-scroll: one card every few seconds while the shelf is on screen, paused while someone is using it.
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches||r.scrollWidth<=r.clientWidth+4)return;
+ let hold=false,seen=false,rest=0;const stop=()=>{rest=Date.now()+12000};
+ ['pointerenter','focusin','touchstart','wheel'].forEach(ev=>box.addEventListener(ev,()=>{hold=true;stop()},{passive:true}));
+ ['pointerleave','focusout'].forEach(ev=>box.addEventListener(ev,()=>{hold=false},{passive:true}));bs.forEach(b=>b.addEventListener('click',stop));
+ new IntersectionObserver(es=>{seen=es[0].isIntersecting},{threshold:.4}).observe(r);
+ setInterval(()=>{if(hold||!seen||Date.now()<rest||document.hidden)return;const c=r.firstElementChild;if(!c)return;
+  const step=c.getBoundingClientRect().width+parseFloat(getComputedStyle(r).columnGap||0);
+  r.scrollTo({left:r.scrollLeft+r.clientWidth>=r.scrollWidth-4?0:r.scrollLeft+step,behavior:'smooth'})},4500)});
 const h=decodeURIComponent(location.hash.slice(1));show(tabs.some(x=>x.dataset.sec===h)?h:'all',false);
 const about=document.getElementById('about');
 if(about){const seen=store('aboutSeen');if(!seen&&!/admin\.html/.test(location.pathname))setTimeout(()=>about.hidden=false,4000);
@@ -1467,11 +1505,76 @@ def slide(cfg, s):
     return card(cfg, s).replace('<article class="card"', '<article class="card slide"', 1)
 
 
-def render_index(cfg, stories, businesses, flyers, listings, funds=()):
+def quote_of_the_day(path=HERE / "quotes.csv"):
+    """Today's quote from quotes.csv. A row with today's date wins; otherwise the undated quotes take turns, one a day.
+    Columns can be named quote, author and date (any order), or just quote then author with no header row.
+    The day turns over at 8 a.m. Eastern, the same time as the daily Facebook post."""
+    from zoneinfo import ZoneInfo
+    if not path.exists():
+        return None
+    rows = [r for r in csv.reader(io.StringIO(path.read_text(encoding="utf-8-sig"))) if any(c.strip() for c in r)]
+    if not rows:
+        return None
+    names = [c.strip().lower() for c in rows[0]]
+    col = lambda *keys: next((i for i, n in enumerate(names) if n in keys), None)
+    qi, ai, di = col("quote", "text", "quotes"), col("author", "by", "who", "name", "said by"), col("date", "day")
+    if qi is None:
+        qi, ai, di = 0, 1 if len(rows[0]) > 1 else None, None
+    else:
+        rows = rows[1:]
+    get = lambda r, i: r[i].strip() if i is not None and i < len(r) else ""
+    quotes = [{"text": get(r, qi), "author": get(r, ai), "date": parse_day(get(r, di)) if di is not None and get(r, di) else None}
+              for r in rows if get(r, qi)]
+    if not quotes:
+        return None
+    today = (datetime.now(ZoneInfo("America/New_York")) - timedelta(hours=8)).date()
+    for q in quotes:
+        if q["date"] and q["date"].date() == today:
+            return q
+    pool = [q for q in quotes if not q["date"]] or quotes
+    return pool[today.toordinal() % len(pool)]
+
+
+def quote_card(cfg, quote, big=False):
+    if not quote:
+        return ""
+    site = cfg["site_url"].rstrip("/")
+    text = quote["text"].strip().strip('"\u201c\u201d')
+    size = "long" if len(text) > 150 else "mid" if len(text) > 80 else ""
+    who = f'<cite>{e(quote["author"])}</cite>' if quote.get("author") else ""
+    share = (f'<a class="qshare" href="{e(fb_share(site + "/quote.html"))}" target="_blank" rel="noopener">{FB_ICON}Share</a>')
+    return (f'<figure class="qotd{" big" if big else ""}"><span class="script">Mansfield</span><span class="caps qlabel">Quote of the day</span>'
+            f'<blockquote class="{size}">{e(text)}</blockquote><figcaption>{who}{share}</figcaption></figure>')
+
+
+def render_quote_page(cfg, quote, stories, has_image):
+    site = cfg["site_url"].rstrip("/")
+    text = quote["text"].strip() if quote else ""
+    img = f'<p class="wrap note postimg"><a class="link" href="{e(site)}/quote.jpg" download>Download today\'s quote as an image</a></p>' if has_image else ""
+    inner = (f'<section class="wrap" style="padding-block:32px;max-width:760px">{quote_card(cfg, quote, big=True)}</section>{img}' if quote else
+             f'<section class="wrap latest"><p class="empty">No quote today. Check back tomorrow.</p></section>')
+    desc = (f"\u201c{text}\u201d" + (f" \u2014 {quote['author']}" if quote.get("author") else "")) if quote else "Mansfield quote of the day"
+    return shell(cfg, f"Mansfield quote of the day · {cfg['site_name']}", desc, f"{site}/quote.html", inner, stories,
+                 image=f"{site}/quote.jpg" if has_image else None)
+
+
+def pinned(stories, headlines):
+    """The story an editor picked as the headline, if it's still on the site."""
+    for h in sorted(headlines, key=lambda h: h["date"], reverse=True)[:1]:
+        for s in stories:
+            if (h["link"] and h["link"] == s["link"]) or s["title"].strip().lower() == h["title"].strip().lower():
+                return s
+    return None
+
+
+def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None):
     site = cfg["site_url"].rstrip("/")
     stories = [s for s in stories if s["section"] != "life"]  # Celebrations of Life live on their own page
     # The front page leads with the newest stories that have a photo.
     news = sorted(stories, key=lambda s: not s.get("image"))
+    pick = pinned(news, headlines)
+    if pick:
+        news = [pick] + [s for s in news if s is not pick]
     top, also = (news[0], news[1:5]) if news else (None, [])
     front_ids = {s["id"] for s in ([top] if top else []) + also}
     counts = {k: sum(1 for s in stories if s["section"] == k) for k, _ in SECTIONS}
@@ -1517,10 +1620,10 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=()):
                   + f'<p class="give-note">{SHIELD}<span>{FUND_SHORT} <a class="link" href="{e(site)}/fundraisers.html#before-you-give">Read before you give</a></span></p>'
                   f'</div></section>') if funds else ""
     market = rail("Buy &amp; Sell", "".join(listing_card(x, cfg) for x in listings[:12]) + ad_card(cfg, sale_ads[0] if sale_ads else None, "A7"),
-                  f'<a class="link" href="{e(site)}/market.html">See all</a>', kind="shop") if listings else ""
+                  f'<a class="link" href="{e(site)}/market.html">See all</a>', kind="sales") if listings else ""
     return f"""{head(cfg, cfg['site_name'], cfg['tagline'], site + '/')}
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
-{masthead(cfg, site, stories)}
+{masthead(cfg, site, stories, quote)}
 <nav class="sections" aria-label="Sections"><div class="wrap">{tabs}</div></nav>
 <main>{note}{front}
 {funds_rail}
@@ -2030,13 +2133,31 @@ def render_advertise(cfg, stories):
                  f"{site}/advertise.html", inner, stories, extra=form_script(cfg))
 
 
-def render_admin(cfg, stories):
+def render_admin(cfg, stories, headline=None):
     site = cfg["site_url"].rstrip("/")
     if not backend_on(cfg):
         inner = (page_title("Editors only", "Admin", "The review queue isn't connected yet. Follow BACKEND.md in the repository, "
                             "then send the project URL and anon key to whoever builds the site."))
         return shell(cfg, f"Admin · {cfg['site_name']}", "Editors only.", f"{site}/admin.html", inner, stories)
     conf = json.dumps({"url": cfg["supabase_url"], "key": cfg["supabase_anon_key"]})
+    news = [s for s in stories if s["section"] != "life"][:40]
+
+    def pick_row(s):
+        src = s.get("image") or ""
+        src = src if src.startswith("https://") else ("/" + src if src else "")
+        img = f'<img src="{e(src)}" alt="" loading="lazy" referrerpolicy="no-referrer">' if src else ""
+        now = s is headline
+        btn = ('<span class="caps kicker">Headline now</span>' if now else
+               f'<button class="btn sm solid" type="button" data-head="{e(json.dumps({"title": s["title"], "link": s["link"]}))}">Make headline</button>')
+        return (f'<article class="qitem pick{" on" if now else ""}"><span class="qphoto">{img}</span><div class="qbody">'
+                f'<span class="caps kicker">{e(SECTION_NAMES[s["section"]])} · {e(s["source"])}</span><h3 class="hed">{e(s["title"])}</h3>'
+                f'<div class="share">{btn}</div></div></article>')
+    current = (f'Right now the headline is <b>{e(headline["title"])}</b>, picked by an editor.' if headline
+               else "Right now the site picks the headline on its own: the newest story with a photo.")
+    picker = f"""<div id="headline-ed" hidden><div class="box"><span class="caps kicker">Front page</span><h2 class="hed">Pick the headline</h2>
+<p class="hint">{current} Your pick stays at the top until you pick another one or the story leaves the site. Changes show within 15 minutes.</p>
+<div class="share"><button class="btn sm" type="button" id="head-auto">Go back to automatic</button></div></div>
+<div class="queue" style="margin-top:16px">{"".join(pick_row(s) for s in news)}</div></div>"""
     inner = f"""{page_title("Editors only", "Review queue", "Approve posts to put them on the site. Approved posts appear within 20 minutes.")}
 <section class="wrap admin">
 <div class="box" id="login"><span class="caps kicker">Sign in</span><h2 class="hed">Editor sign-in</h2>
@@ -2052,6 +2173,7 @@ def render_admin(cfg, stories):
 <button class="tab" type="button" data-q="apps">Team applications <span class="n"></span></button>
 <button class="tab" type="button" data-q="ads">Ad inquiries <span class="n"></span></button>
 <button class="tab" type="button" data-q="approved">Approved</button>
+<button class="tab" type="button" data-q="headline">Headline</button>
 <button class="tab" type="button" data-q="brackets">Brackets</button>
 <button class="tab" type="button" data-q="rejected">Rejected</button>
 <button class="tab" type="button" data-q="verified">Verified people</button></div></nav>
@@ -2067,12 +2189,12 @@ def render_admin(cfg, stories):
 <span class="hint">Type a round name on its own line, then one game per line with "vs" in the middle. Add scores after each team when they're in. The higher score wins, or put * after the winner's name.</span></label>
 <label class="fld wide"><span class="caps">Link for more</span><input id="b-link" inputmode="url" placeholder="Optional: OHSAA or school page"></label>
 <div class="wide submitrow"><button class="btn solid" type="submit">Publish bracket</button><button class="btn" type="button" id="b-new">Start a new one</button></div></form></div>
-<div id="list" class="queue"></div></div>
+{picker}<div id="list" class="queue"></div></div>
 <p class="formmsg" id="desk-msg"></p></section>"""
     script = f"""<script src="{SB_JS}"></script><script>
 (()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));
-const SPECIAL=['Join the team','Advertise'];const NOTQ='("Join the team","Advertise","Bracket")';let me=null,q='pending';
+const SPECIAL=['Join the team','Advertise'];const NOTQ='("Join the team","Advertise","Bracket","Headline")';let me=null,q='pending';
 const say=t=>{{$('desk-msg').textContent=t}};
 $('login-form').onsubmit=async ev=>{{ev.preventDefault();const em=$('login-email').value.trim(),pw=$('login-pass').value;
  if(!em||!pw){{$('login-msg').textContent='Type your email and password.';return}}$('login-btn').disabled=true;
@@ -2109,8 +2231,8 @@ function item(r){{const when=new Date(r.created_at).toLocaleString();
  ${{r.photo_url?`<a class="qphoto" href="${{esc(r.photo_url)}}" target="_blank" rel="noopener"><img src="${{esc(r.photo_url)}}" alt=""></a>`:''}}
  <div class="qbody"><span class="caps kicker">${{esc(r.section)}}</span><h3 class="hed">${{esc(r.title)}}</h3><p class="qtext">${{esc(r.summary||'')}}</p>
  <dl class="facts">${{facts.map(([k,v])=>`<dt>${{k}}</dt><dd>${{esc(v)}}</dd>`).join('')}}</dl>${{link}}<div class="share">${{acts}}</div></div></article>`}}
-async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';counts();
- const list=$('list');list.innerHTML='<p class="hint">Loading…</p>';
+async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';$('headline-ed').hidden=q!=='headline';counts();
+ const list=$('list');list.innerHTML=q==='headline'?'':'<p class="hint">Loading…</p>';if(q==='headline')return;
  if(q==='verified'){{const {{data,error}}=await sb.from('verified').select('*').order('added_at',{{ascending:false}});
   if(error){{list.innerHTML='';say(error.message);return}}
   list.innerHTML=data.length?data.map(v=>`<article class="qitem"><div class="qbody"><h3 class="hed">${{esc(v.name||v.email)}}</h3><p class="hint">${{esc(v.email)}} ${{v.role?'· '+esc(v.role):''}}</p>
@@ -2118,6 +2240,14 @@ async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAtt
  const {{data,error}}=await QUERIES[q]();if(error){{list.innerHTML='';say(error.message);return}}
  list.innerHTML=data.length?data.map(item).join(''):'<p class="hint">All caught up. Nothing waiting here.</p>'}}
 document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q]');if(t){{q=t.dataset.q;load();return}}
+ const h=ev.target.closest('[data-head]'),auto=ev.target.closest('#head-auto');
+ if(h||auto){{(h||auto).disabled=true;let {{error}}=await sb.from('submissions').delete().eq('section','Headline');let data;
+  if(!error&&h){{const p=JSON.parse(h.dataset.head);(({{data,error}}=await sb.from('submissions').insert({{section:'Headline',title:p.title,link:p.link,name:'Sunny Mansfield'}}).select('id')));
+   if(!error)(({{error}}=await sb.from('submissions').update({{status:'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',data[0].id)))}}
+  if(error){{say(error.message);(h||auto).disabled=false;return}}
+  document.querySelectorAll('.pick.on').forEach(x=>x.classList.remove('on'));
+  if(h){{h.closest('.pick').classList.add('on');h.outerHTML='<span class="caps kicker">Headline now</span>'}}
+  say(h?'Done. That story will lead the front page within 15 minutes.':'Back to automatic. The newest story with a photo will lead within 15 minutes.');return}}
  const u=ev.target.closest('[data-unverify]');if(u){{const {{error}}=await sb.from('verified').delete().eq('email',u.dataset.unverify);if(error)say(error.message);load();return}}
  const b=ev.target.closest('[data-act]');if(!b)return;const id=b.dataset.id,act=b.dataset.act;const row=JSON.parse(b.closest('.qitem').dataset.row||'{{}}');
  if(act==='edit-bracket'){{$('b-id').value=id;$('b-title').value=row.title||'';$('b-text').value=row.summary||'';$('b-link').value=row.link||'';
@@ -2174,8 +2304,8 @@ def render_story_page(cfg, s, stories):
 
 def merge_community(cfg, stories, community):
     for s in community:
-        if not s["link"]:
-            s["link"] = page_url(cfg, s)  # no outside article: the story page is the article
+        # A neighbor's post always opens its own page; any outside link becomes a "Read more" button there.
+        s["more"], s["link"] = s["link"], page_url(cfg, s)
     return sorted(stories + community, key=lambda s: s["date"], reverse=True)
 
 
@@ -2203,7 +2333,8 @@ def main():
         b.setdefault("slug", slug(b["name"]))
     out = Path(args.out)
     (out / "s").mkdir(parents=True, exist_ok=True)
-    page = render_index(cfg, stories, businesses, flyers, listings, got["fundraisers"])
+    quote = quote_of_the_day()
+    page = render_index(cfg, stories, businesses, flyers, listings, got["fundraisers"], got["headlines"], quote)
     (out / "index.html").write_text(rebase(
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
@@ -2219,17 +2350,19 @@ def main():
     preview = re.sub(r'(["(])/(assets/[\w./-]+\.jpg)', inline, page).replace('<link rel="icon" type="image/svg+xml" href="/brand/mark.svg">\n', "")
     (out / "artifact.html").write_text(preview)
     try:
-        from posts import make_community_feed, make_daily_post, make_post_images, make_top_story_feed
+        from posts import make_community_feed, make_daily_post, make_post_images, make_quote_image, make_top_story_feed
         credit = f"\u00a9 {datetime.now(timezone.utc).year} Ofgeneration LLC"
         make_post_images(stories, out, SECTION_NAMES, UA, credit, outlet_photos=cfg.get("frame_outlet_photos", False), note=note)
         make_daily_post(cfg, stories, businesses, flyers, got["fundraisers"], listings, out, SECTION_NAMES, UA, credit,
-                        lambda s: page_url(cfg, s), note=note)
+                        lambda s: page_url(cfg, s), note=note, quote=quote)
+        make_quote_image(quote, out, credit, note=note)
         make_top_story_feed(cfg, stories, out, lambda s: page_url(cfg, s), note=note)
         make_community_feed(cfg, stories, flyers, got["fundraisers"], businesses, out, lambda s: page_url(cfg, s), UA, credit, note=note)
     except ImportError as exc:
         note(f"Post images: skipped ({exc})")
     for s in stories:
         (out / "s" / f"{s['id']}.html").write_text(rebase(render_story_page(cfg, s, stories)))
+    (out / "quote.html").write_text(rebase(render_quote_page(cfg, quote, stories, (out / "quote.jpg").exists())))
     (out / "feed.xml").write_text(render_feed(cfg, stories))
     try:
         from posts import fill_enclosure_lengths
@@ -2247,7 +2380,7 @@ def main():
     (out / "sports.html").write_text(rebase(render_sports(cfg, stories, got["brackets"])))
     (out / "market.html").write_text(rebase(render_market(cfg, listings, stories)))
     (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories)))
-    (out / "admin.html").write_text(rebase(render_admin(cfg, stories)))
+    (out / "admin.html").write_text(rebase(render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"]))))
     print(f"Built {len(stories)} stories -> {out}", file=sys.stderr)
 
 

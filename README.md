@@ -66,3 +66,10 @@ People post from forms on the site itself: `submit.html` (stories, event flyers,
 `rules.html#apply` (join the team) and `advertise.html#ask` (ad inquiries). Everything lands in a free Supabase
 database in **review mode**. Editors approve it at `admin.html`, and the site publishes approved posts on its next
 refresh (every 15 minutes). Verified contributors who sign in skip the queue. Setup: [BACKEND.md](BACKEND.md).
+
+## Quote of the day
+
+`quotes.csv` feeds the "Mansfield quote of the day" box next to the top banner, the shareable `quote.html` page and
+`quote.jpg` image, and the caption of the daily Facebook post. Columns are `quote`, `author` and an optional `date`
+(like 2026-11-26). A quote with today's date wins; otherwise the undated quotes take turns, one a day, switching at
+8 a.m. Eastern.
