@@ -449,7 +449,8 @@ def load_submissions(config, sample):
             link = ""
         got["stories"].append({"athlete": facts if facts or row["section"].lower() == "athlete spotlight" else None,"id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
                         "link": link, "video": video, "source": byline,
-                        "role": row["role"], "image": image, "date": date, "section": section, "community": True})
+                        "role": row["role"], "image": image, "date": date, "section": section, "community": True,
+                        "town": row["town"]})
     got["flyers"].sort(key=lambda f: f["day"] or f["date"] + timedelta(days=LISTING_DAYS))
     got["listings"].sort(key=lambda x: x["date"], reverse=True)
     note("Community: " + ", ".join(f"{len(v)} {k}" for k, v in got.items()))
@@ -845,6 +846,8 @@ footer .credit small{flex-basis:100%;font:400 12px/1.6 var(--sans);opacity:.7}
 footer .credit .legal{flex-basis:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 18px;font:600 13px/1.6 var(--sans)}
 footer .credit .legal a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 .note.report{font-size:14px;opacity:.85;margin-bottom:32px}
+footer .credit .legal.towns{font-weight:400;opacity:.85}
+.note.towns{font-size:15px;margin-top:8px}
 .vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .legaltext{max-width:760px;padding-block:8px 40px}.legaltext .hed{font-size:24px;margin:28px 0 6px}.legaltext p{font-size:17px;line-height:1.65;margin:0}
 
@@ -1157,7 +1160,7 @@ def img_src(src):
 def photo(s):
     src = s.get("image") or ""
     src = src if src.startswith("https://") else "/" + src  # sample photos live under /assets
-    inner = (f'<img src="{e(src)}" alt="" loading="lazy" referrerpolicy="no-referrer">' if s.get("image")
+    inner = (f'<img src="{e(src)}" alt="{e(s["title"])}" loading="lazy" referrerpolicy="no-referrer">' if s.get("image")
              else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART[s["section"]]}</svg></span>')
     play = '<span class="play"></span>' if s.get("video") else ""
     return f'<a class="photo" href="{e(s["link"])}"{target(s)} tabindex="-1" aria-hidden="true">{inner}{play}</a>'
@@ -1299,6 +1302,7 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 <span class="caps">Updated {datetime.now(timezone.utc).strftime('%b %-d, %Y')}</span></div>
 {sponsor_strip(cfg)}
 <div class="wrap credit"><span class="script">Made in Mansfield</span> <span>by Ofgeneration LLC</span>
+<nav class="legal towns">Good news in {" ".join(f'<a href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS)}</nav>
 <nav class="legal"><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
 Stories from other outlets belong to their publishers.</small></div></footer>"""
@@ -2087,8 +2091,12 @@ def render_business(cfg, b, businesses, stories):
              "url": b.get("link") or biz_url(cfg, b), "image": image or f"{site}/og.png",
              "address": {"@type": "PostalAddress", "addressLocality": b.get("neighborhood") or "Mansfield",
                          "addressRegion": "OH", "addressCountry": "US"}}
-    return shell(cfg, f"{b['name']} · {cfg['site_name']}", b["what"], biz_url(cfg, b), inner, stories, image,
-                 data=place, index=not b.get("sample"))
+    town = b.get("neighborhood") or "Richland County"
+    crumbs = breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Business spotlights", f"{site}/businesses.html"),
+                          (b["name"], biz_url(cfg, b))])
+    return shell(cfg, f"{b['name']} in {town}, Ohio · Local business spotlight · {cfg['site_name']}",
+                 f"{b['name']}, a local business in {town}, Ohio. {b['what']}"[:300], biz_url(cfg, b), inner, stories, image,
+                 data=[place, crumbs], index=not b.get("sample"))
 
 
 def parse_bracket(text):
@@ -2210,6 +2218,37 @@ def render_celebrations(cfg, stories):
 <p class="note" style="text-align:center">Want to share a loved one's story? <a class="link" href="{e(site)}/submit.html">Send it in</a>, with the family's blessing.</p></section>"""
     return shell(cfg, f"Celebrations of Life · {cfg['site_name']}", "Remembering Mansfield and Richland County neighbors.",
                  f"{site}/celebrations.html", inner, stories)
+
+
+def town_items(name, stories, businesses, funds):
+    good = [s for s in stories if s["section"] != "life" and name in story_towns(s)]
+    shops = [b for b in businesses if not b.get("sample") and towns_of(b.get("neighborhood"), b["name"], b["what"])[:1] == [name]]
+    causes = [f for f in funds if name in towns_of(f.get("town"), f["title"], f["summary"])]
+    return good, shops, causes
+
+
+def render_town(cfg, name, about, stories, businesses, funds):
+    site = cfg["site_url"].rstrip("/")
+    good, shops, causes = town_items(name, stories, businesses, funds)
+    grid = "".join(card(cfg, s) for s in good) or f'<p class="empty">No {e(name)} stories this week yet. Know one? Send it in.</p>'
+    shop = (f'<section class="wrap latest"><h2 class="label">Shop local in {e(name)}</h2><div class="grid">'
+            + "".join(biz_card(cfg, b) for b in shops) + "</div></section>") if shops else ""
+    give = (f'<section class="wrap latest"><h2 class="label">{e(name)} causes</h2><div class="grid">'
+            + "".join(fund_card(cfg, f) for f in causes) + "</div></section>") if causes else ""
+    others = " · ".join(f'<a class="link" href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS if t != name)
+    desc = (f"Good news from {name}, Ohio, {about}: community wins, local businesses, high school sports and neighbors "
+            f"helping neighbors, updated all day by {cfg['site_name']}.")
+    inner = f"""{page_title("Good news in", f"{e(name)}, Ohio", f"The latest positive stories from {e(name)}, {e(about)}. Shared by neighbors and gathered from local news, updated all day.")}
+<section class="wrap latest"><h2 class="label">Good news from {e(name)}</h2><div class="grid">{grid}</div>
+<p class="note" style="text-align:center">Something good happening in {e(name)}? <a class="link" href="{e(site)}/submit.html">Share it with your neighbors</a>.</p></section>
+{shop}{give}
+<section class="wrap latest"><p class="note" style="text-align:center">More Richland County towns: {others}</p></section>"""
+    data = [{"@context": "https://schema.org", "@type": "CollectionPage", "name": f"Good news in {name}, Ohio",
+             "url": town_url(cfg, name), "about": {"@type": "Place", "name": f"{name}, Ohio"},
+             "isPartOf": {"@id": f"{site}/#site"}},
+            breadcrumbs([("Sunny Mansfield", f"{site}/"), (f"Good news in {name}", town_url(cfg, name))])]
+    return shell(cfg, f"Good News in {name}, Ohio · {cfg['site_name']}", desc, town_url(cfg, name), inner, stories,
+                 data=data, index=bool(good or shops or causes))
 
 
 def render_market(cfg, listings, stories):
@@ -2461,21 +2500,77 @@ def render_story_page(cfg, s, stories):
 <section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s, media, "h1")}</section>
 {banner(cfg, "A4")}
 {f'<p class="wrap note postimg"><a class="link" href="{e(site)}/{s["post_image"]}" download>Download the framed image for Facebook or Instagram</a></p>' if s.get("post_image") else ""}
-<p class="wrap note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
+{town_links(cfg, s)}<p class="wrap note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
 <section class="wrap latest"><h2 class="label">{"More Celebrations of Life" if life else "More good news"}</h2><div class="grid">{more}</div>
 <div class="more-row"><a class="btn" href="{e(site)}/{"celebrations.html" if life else ""}">{"See all Celebrations of Life" if life else "See all stories"}</a></div></section>
 {submit_band(cfg, site)}<div class="stripes" aria-hidden="true"></div></main>{footer(cfg)}</div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>"""
     return ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
             "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
-            f"{head(cfg, s['title'] + ' · ' + cfg['site_name'], desc, page_url(cfg, s), image, 'article', story_data(cfg, s, image), indexable(s))}"
+            f"{head(cfg, story_title(cfg, s), story_desc(cfg, s), page_url(cfg, s), image, 'article', story_data(cfg, s, image), indexable(s))}"
             f"</head><body>{body}{SCRIPT}</body></html>")
+
+
+# Richland County towns that get their own "good news in ..." page, with a short true description of each.
+TOWNS = [
+    ("Mansfield", "the county seat of Richland County"), ("Ontario", "a city just west of Mansfield"),
+    ("Shelby", "a city in northern Richland County"), ("Lexington", "a village south of Mansfield"),
+    ("Bellville", "a village in southern Richland County"), ("Butler", "a village in southeastern Richland County"),
+    ("Lucas", "a village southeast of Mansfield"), ("Plymouth", "a village on the Richland and Huron county line"),
+    ("Shiloh", "a village in northern Richland County"),
+]
+TOWN_SURE = {"Mansfield", "Ontario", "Lexington", "Bellville", "Shiloh"}  # the rest are also people's names
+
+
+def towns_of(*texts):
+    """Towns a story is about. Names that are also surnames (Shelby, Lucas, Butler, Plymouth) need a place-like context."""
+    text = " ".join(t or "" for t in texts)
+    found = []
+    for name, _ in TOWNS:
+        if name in TOWN_SURE:
+            hit = re.search(rf"\b{name}\b", text)
+        else:
+            hit = re.search(rf"\b(?:in|at|of|from|near|around) {name}\b|\b{name}(?:,? Ohio|,? OH\b| High| City| Schools?\b| Village| Middle| Elementary| Public Library)", text)
+        if hit:
+            found.append(name)
+    return found
+
+
+def town_url(cfg, name):
+    return f"{cfg['site_url'].rstrip('/')}/town/{slug(name)}.html"
+
+
+def story_towns(s):
+    picked = towns_of(s.get("town"), s["title"], s["summary"])
+    return [t for t in picked if t != "Mansfield"] + (["Mansfield"] if "Mansfield" in picked else [])
 
 
 def indexable(s):
     """Only neighbors' own posts go to search engines. Pages that summarize another outlet's story stay out of the
     index, so Google sees original reporting here and sends people to the outlet for theirs."""
     return bool(s.get("community"))
+
+
+def town_links(cfg, s):
+    names = story_towns(s) if s["section"] != "life" else []
+    if not names:
+        return ""
+    links = " · ".join(f'<a class="link" href="{e(town_url(cfg, t))}">More good news from {e(t)}</a>' for t in names[:3])
+    return f'<p class="wrap note towns">{links}</p>'
+
+
+def story_title(cfg, s):
+    """The browser and search title: headline, then where it happened, so local searches match."""
+    names = story_towns(s)
+    where = f" · {names[0]}, Ohio" if names and s.get("community") else ""
+    return f"{s['title']}{where} · {cfg['site_name']}"
+
+
+def story_desc(cfg, s):
+    a = s.get("athlete") or {}
+    facts = ", ".join(x for x in (a.get("School"), a.get("Sport"), f"Class of {a['Class of']}" if a.get("Class of") else "") if x)
+    text = s["summary"] or f"Good news from {cfg['site_name']}"
+    return (f"{facts}. {text}" if facts else text)[:300]
 
 
 def story_data(cfg, s, image):
@@ -2487,11 +2582,26 @@ def story_data(cfg, s, image):
            "articleSection": SECTION_NAMES.get(s["section"], "Good News"),
            "contentLocation": {"@type": "Place", "name": "Richland County, Ohio"},
            "publisher": publisher(cfg), "image": [image or f"{site}/og.png"]}
+    names = story_towns(s)
+    if names:
+        art["contentLocation"] = {"@type": "Place", "name": f"{names[0]}, Ohio"}
     if s.get("community"):
         art["author"] = {"@type": "Person", "name": by} if by and by != cfg["site_name"] else {"@id": f"{site}/#org"}
     else:
         art["isBasedOn"] = s.get("more") or s["link"]
-    return art
+    life = s["section"] == "life"
+    crumbs = [("Sunny Mansfield", f"{site}/")]
+    if life:
+        crumbs.append(("Celebrations of Life", f"{site}/celebrations.html"))
+    elif names:
+        crumbs.append((f"Good news in {names[0]}", town_url(cfg, names[0])))
+    crumbs.append((s["title"], page_url(cfg, s)))
+    return [art, breadcrumbs(crumbs)]
+
+
+def breadcrumbs(items):
+    return {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
+        {"@type": "ListItem", "position": i, "name": n, "item": u} for i, (n, u) in enumerate(items, 1)]}
 
 
 def merge_community(cfg, stories, community):
@@ -2507,7 +2617,7 @@ PAGES = [("", "daily", "1.0"), ("sports.html", "daily", "0.8"), ("businesses.htm
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
 
 
-def write_search_files(cfg, stories, businesses, out):
+def write_search_files(cfg, stories, businesses, out, towns=()):
     """robots.txt, sitemap.xml, news-sitemap.xml and llms.txt: how search engines and AI assistants find the paper."""
     site = cfg["site_url"].rstrip("/")
     now = datetime.now(timezone.utc)
@@ -2515,6 +2625,7 @@ def write_search_files(cfg, stories, businesses, out):
     urls = [(f"{site}/{p}", day(now), f, pr) for p, f, pr in PAGES]
     urls += [(page_url(cfg, s), day(s["date"]), "weekly", "0.7") for s in stories if indexable(s)]
     urls += [(biz_url(cfg, b), day(now), "monthly", "0.6") for b in businesses if not b.get("sample")]
+    urls += [(town_url(cfg, t), day(now), "daily", "0.8") for t in towns]
     (out / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join(
             f"<url><loc>{e(u)}</loc><lastmod>{m}</lastmod><changefreq>{f}</changefreq><priority>{p}</priority></url>\n"
@@ -2558,6 +2669,9 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 - [Buy & Sell]({site}/market.html): neighbor listings, up for 30 days
 - [Quote of the day]({site}/quote.html): a new Mansfield quote every morning and evening
 
+## Towns
+
+""" + "".join(f"- [Good news in {t}, Ohio]({town_url(cfg, t)})\n" for t in towns) + f"""
 ## How to take part
 
 - [Submit good news]({site}/submit.html)
@@ -2653,7 +2767,13 @@ def main():
     (out / "market.html").write_text(rebase(render_market(cfg, listings, stories)))
     (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories)))
     (out / "admin.html").write_text(rebase(render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"]))))
-    write_search_files(cfg, stories, businesses, out)
+    (out / "town").mkdir(exist_ok=True)
+    live_towns = []
+    for name, about in TOWNS:
+        (out / "town" / f"{slug(name)}.html").write_text(rebase(render_town(cfg, name, about, stories, businesses, got["fundraisers"])))
+        if any(town_items(name, stories, businesses, got["fundraisers"])):
+            live_towns.append(name)
+    write_search_files(cfg, stories, businesses, out, live_towns)
     print(f"Built {len(stories)} stories -> {out}", file=sys.stderr)
 
 
