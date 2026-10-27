@@ -130,6 +130,17 @@ def parse_date(value):
             return datetime.now(timezone.utc)
 
 
+VIDEO = re.compile(r"\.(mp4|m4v|mov|webm|m3u8|avi|mp3|wav|pdf)(\?|$)", re.I)
+
+
+def is_image(url, kind=None, medium=None):
+    """True unless the address or its declared type says it's a video, audio or document."""
+    kind, medium = (kind or "").lower(), (medium or "").lower()
+    if kind and not kind.startswith("image"):
+        return False
+    return medium in ("", "image") and not VIDEO.search(url.strip())
+
+
 def fetch_feed(feed):
     req = urllib.request.Request(feed["url"], headers={"User-Agent": UA})
     with urllib.request.urlopen(req, timeout=30) as resp:
@@ -150,8 +161,9 @@ def fetch_feed(feed):
         desc = get("description", "summary", "encoded")
         date = get("pubDate", "published", "updated")
         source = get("source", "Source")
-        media = get("content", "thumbnail", "enclosure", "Image")
-        image = media.get("url") or media.text if media is not None else None
+        # Feeds can list videos alongside photos (WordPress puts an .mp4 first); take the first real image.
+        media = [c for c in item for n in ("content", "thumbnail", "enclosure", "Image") if c.tag.split("}")[-1] == n]
+        image = next((u for c in media if (u := c.get("url") or c.text) and is_image(u, c.get("type"), c.get("medium"))), None)
         if image and image.startswith("http://www.bing.com/"):
             image = "https://" + image[len("http://"):]
         if not image and desc is not None and desc.text:
@@ -517,7 +529,7 @@ def add_photos(stories, limit=80):
             image = html.unescape(found.group(1))
             if image.startswith("//"):
                 image = "https:" + image
-            if image.startswith("https://"):
+            if image.startswith("https://") and is_image(image):
                 s["image"] = image
         except Exception as exc:
             if bing_photo(s):
@@ -1186,6 +1198,12 @@ def publisher(cfg):
     return org
 
 
+# Swap any story photo that fails to load for the sunny drawing. It sits in <head> so it's listening before images load.
+PHOTO_FALLBACK = ("""document.addEventListener('error',ev=>{const i=ev.target;if(i.tagName!=='IMG'||!i.closest('.photo'))return;
+ const a=document.createElement('span');a.className='art';a.innerHTML='<svg viewBox="0 0 100 100" aria-hidden="true">"""
+                  + ART["good"] + """</svg>';i.replaceWith(a)},true);""")
+
+
 def head(cfg, title, desc, url, image=None, kind="website", data=None, index=True):
     """kind is the og:type; data is JSON-LD for the page; index=False keeps a page out of search results."""
     image = image or cfg["site_url"].rstrip("/") + "/og.png"
@@ -1205,7 +1223,8 @@ def head(cfg, title, desc, url, image=None, kind="website", data=None, index=Tru
 <link rel="alternate" type="application/rss+xml" title="{e(cfg['site_name'])}" href="{e(cfg['site_url'].rstrip('/'))}/feed.xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="{FONTS}">
-<style>{CSS}</style>"""
+<style>{CSS}</style>
+<script>{PHOTO_FALLBACK}</script>"""
 
 
 def img_src(src):
@@ -1363,7 +1382,7 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 Stories from other outlets belong to their publishers.</small></div></footer>"""
 
 
-SCRIPT = """<script>
+SCRIPT = ("""<script>
 (()=>{const PAGE=9;const tabs=[...document.querySelectorAll('.sections .tab')];
 const cards=[...document.querySelectorAll('.grid .card')];const empty=document.querySelector('.grid .empty');
 const more=document.getElementById('more');const label=document.querySelector('#latest .label');
@@ -1411,7 +1430,7 @@ document.addEventListener('click',ev=>{
  const done=t=>{b.textContent=t;setTimeout(()=>b.textContent='Copy link',1800)};
  if(navigator.clipboard){navigator.clipboard.writeText(b.dataset.copy).then(()=>{done('Copied');say('Link copied. Paste it into a post, a text or a group chat.')},()=>done('Copy failed'))}});
 })();
-</script>"""
+</script>""")
 
 
 ARROWS = ('<div class="rail-nav"><button class="arrow" type="button" data-dir="-1" aria-label="Back">'
