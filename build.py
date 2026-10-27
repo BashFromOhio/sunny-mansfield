@@ -41,7 +41,6 @@ SECTIONS = [
     ("biz", "Local Business"),
     ("sales", "Garage Sales"),
     ("seniors", "Seniors"),
-    ("life", "Celebrations of Life"),
     ("research", "Cool Research"),
 ]
 SECTION_NAMES = dict(SECTIONS)
@@ -78,6 +77,7 @@ SECTION_RULES = [
               r"madison|lexington|ontario|bellville|shelby|butler|lucas|plymouth|shiloh|"
               r"crestline|mifflin|clear fork|lexington|street"),
 ]
+# Obituaries and memorials stay off the site.
 LIFE_HINTS = (r"obituar|celebration of life|in loving memory|in memory of|life of|passed away|memorial service|funeral|"
               r"\(\d{4} ?[-\u2013] ?\d{4}\)")
 
@@ -96,8 +96,8 @@ RULES = [(key, rx(p)) for key, p in SECTION_RULES]
 def classify(story, forced=None):
     """Return a section key, or None if the story should be skipped."""
     text = f"{story['title']} {story['summary']}"
-    if forced == "life" or (forced is None and LIFE.search(story["title"])):
-        return "life"
+    if forced == "life" or LIFE.search(story["title"]) or re.search(r"obituar|passed away|funeral|in loving memory", text, re.I):
+        return None
     if NEG.search(text) or VOTE.search(text):
         return None
     for key, pattern in RULES:
@@ -284,7 +284,7 @@ SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "business spotlight":
                     "event flyer": "flyer", "free stuff": "market", "buy & sell": "market", "buy and sell": "market",
                     "job": "job", "jobs": "job",
                     "athlete spotlight": "athlete", "bracket": "bracket", "fundraiser": "fund",
-                    "headline": "headline"}
+                    "headline": "headline", "link": "link"}
 FUND_DAYS = 90  # fundraisers without an end date come down after this
 ATHLETE_FACTS = ("Sport", "School", "Class of")  # folded into the summary by the submit form
 # Free Stuff categories: (key, name, words that suggest it when a listing has no category).
@@ -365,7 +365,7 @@ def fetch_published(config):
 def load_submissions(config, sample):
     """Approved posts: from Supabase on the live site, from sample_submissions.csv in the preview."""
     got = {"stories": [], "spotlights": [], "flyers": [], "listings": [], "jobs": [], "brackets": [], "fundraisers": [],
-           "headlines": []}
+           "headlines": [], "links": []}
     try:
         if sample:
             rows = list(csv.reader(io.StringIO((HERE / "sample_submissions.csv").read_text())))
@@ -443,6 +443,10 @@ def load_submissions(config, sample):
             got["fundraisers"].append({"id": sid, "title": row["title"], "summary": row["summary"], "image": image,
                                        "link": row["link"], "goal": row["price"], "cause": row["business"].strip(),
                                        "by": row["name"], "town": row["town"], "day": day, "date": date})
+            continue
+        if section == "link":  # an editor pasted an article link; it becomes a regular news story
+            got["links"].append({"link": row["link"], "title": row["title"], "summary": row["summary"],
+                                 "section": row["business"], "date": date})
             continue
         if section == "headline":  # an editor pinned this story to the top of the front page
             got["headlines"].append({"title": row["title"], "link": row["link"], "date": date})
@@ -1282,7 +1286,7 @@ def masthead(cfg, site, stories, quote=None):
 </div>
 <nav class="wrap strip caps" aria-label="Main">
 <div class="navgroup"><span class="navlabel">Read</span><a href="{e(site)}/">Front page</a><a href="{e(site)}/events.html">Events</a>
-<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/celebrations.html">Celebrations of Life</a><a href="{e(site)}/fundraisers.html">Fundraisers</a>
+<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/fundraisers.html">Fundraisers</a>
 <a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/businesses.html">Businesses</a></div>
 <div class="navgroup"><span class="navlabel">Take part</span><button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}
@@ -1522,10 +1526,6 @@ AD_SPOTS = [
      "size": "1080 x 1350 px (4:5), like a flyer", "price": "$50 to $100 a month"},
     {"spot": "A7", "name": "Free Stuff sponsor", "where": "On the Free Stuff page and its front page carousel", "kind": "card",
      "size": "1200 x 800 px photo, a name and one short line", "price": "$25 to $50 a month"},
-    {"spot": "A8", "name": "Celebrations of Life sponsor", "where": "Right above the Celebrations of Life photo carousel, on the Celebrations of Life page",
-     "kind": "banner", "size": "1456 x 180 px, plus 640 x 200 px for phones. Quiet and respectful: name, logo, phone",
-     "price": "$100 to $200 a month", "for": "Funeral homes, memorial and monument companies, florists, grief support",
-     "house": ("Honoring lives", "A quiet, respectful spot for funeral homes, florists and memorial services.")},
     {"spot": "S1", "name": "Sponsored social post", "where": "One post on our Facebook and Instagram, marked as a paid partnership", "kind": "social",
      "size": "1080 x 1350 px image or we design it from your photos", "price": "$25 to $75 a post"},
 ]
@@ -1536,7 +1536,6 @@ PROMO = {
     "A1": ("Hey neighbor!", "Got good news?", "Ribbon cuttings, birthdays, team wins. Neighbors post here.", "submit.html", "Submit good news"),
     "A4": ("Pass it on!", "Know a neighbor doing great things?", "Tell us in a few lines and add a photo.", "submit.html", "Submit good news"),
     "A5": ("Game on!", "Spotlight an athlete", "A big game, a personal best, a kid who never quits.", "submit.html#athlete", "Spotlight an athlete"),
-    "A8": ("With love", "Remember someone special", "Share a Celebration of Life for a Richland County neighbor.", "submit.html", "Share a remembrance"),
 }
 PROMO_CARDS = [
     ("Free to a good home", "Give away free stuff", "Neighbors message you privately.", "submit.html#free", "Give something away"),
@@ -1576,10 +1575,9 @@ AD_TIERS = [
               "Story page banner (A4)", "Two sponsored posts a month"]},
     {"name": "Presenting Partner", "price": "$499", "per": "a month", "best": "One business that wants to own the paper",
      "gets": ["Everything in Hometown Hero", "The top banner all to yourself", "\u201cFive good things, presented by\u201d on the weekly roundup post",
-              "Four sponsored posts a month", "First choice of the Sports or Celebrations of Life sponsorship"]},
+              "Four sponsored posts a month", "First choice of the Sports sponsorship"]},
 ]
 AD_SPECIALS = [
-    ("Celebrations of Life partner", "$149 a month", "The quiet banner right above the Celebrations of Life carousel (A8). One funeral home at a time, so it stays respectful."),
     ("Sports season sponsor", "$399 a season", "Top of the Sports page (A5) and \u201cBrackets presented by\u201d for one sports season."),
     ("Events sponsor", "$69 a month", "A flyer-sized card in the Local events carousel (A6)."),
     ("Sponsored social post", "$49 a post", "One post on Facebook and Instagram, marked as a paid partnership. We can design it for you (S1)."),
@@ -1861,7 +1859,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
             for i, s in enumerate([s for s in news if s.get("community")][:10], 1)]}]}
     return f"""{head(cfg, f"{cfg['site_name']}: Good News from Mansfield & Richland County, Ohio",
                  "Positive local news from Mansfield, Ontario, Lexington, Shelby, Bellville and all of Richland County, Ohio: "
-                 "community wins, local business, high school sports, events and Celebrations of Life.", site + '/', data=home)}
+                 "community wins, local business, high school sports, events, free stuff and local jobs.", site + '/', data=home)}
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
 {masthead(cfg, site, stories, quote)}
 <nav class="sections" aria-label="Sections"><div class="wrap">{tabs}</div></nav>
@@ -2092,8 +2090,6 @@ def render_submit(cfg, stories):
               hint="Needed if the athlete is under 18. Only editors see it."),
         field("guardian_ok", "Their parent or guardian said it's OK to share this post and photo.", "checkbox",
               show=["Athlete Spotlight"], consent="Parent or guardian OK"),
-        field("relation", "Your relationship to them", show=["Celebrations of Life"], consent="Relationship",
-              hint="Like daughter, friend, or pastor. Only editors see it."),
         field("link", "Link for more", "url", hint="Optional: a website, event page or Facebook post. For a fundraiser, the GoFundMe or donation page."),
         field("name", "Your name as it should appear", req=True),
         field("role", "You are a", "select", opts=["Neighbor", "Student reporter", "Business", "Mentor", "Organization"]),
@@ -2403,21 +2399,6 @@ def render_fundraisers(cfg, funds, stories):
 Each organizer is responsible for their own fundraiser, its claims and its use of funds.</p></section>"""
     return shell(cfg, f"Fundraisers · {cfg['site_name']}", "Fundraisers and special causes from Mansfield and Richland County neighbors.",
                  f"{site}/fundraisers.html", inner, stories)
-
-
-def render_celebrations(cfg, stories):
-    site = cfg["site_url"].rstrip("/")
-    lives = [s for s in stories if s["section"] == "life"]
-    with_photo = [s for s in lives if s.get("image")] or lives
-    carousel = rail("Remembering", "".join(slide(cfg, s) for s in with_photo[:16]), kind="sec life") if with_photo else ""
-    grid = "".join(card(cfg, s) for s in lives) or '<p class="empty">No celebrations of life posted this week.</p>'
-    inner = f"""{page_title("With love", "Celebrations of Life", "Remembering the neighbors who made Richland County home. Every life here links to the full obituary and service details.")}
-{banner(cfg, "A8")}
-{carousel}
-<section class="wrap latest"><h2 class="label">All celebrations of life</h2><div class="grid">{grid}</div>
-<p class="note" style="text-align:center">Want to share a loved one's story? <a class="link" href="{e(site)}/submit.html">Send it in</a>, with the family's blessing.</p></section>"""
-    return shell(cfg, f"Celebrations of Life · {cfg['site_name']}", "Remembering Mansfield and Richland County neighbors.",
-                 f"{site}/celebrations.html", inner, stories)
 
 
 def town_items(name, stories, businesses, funds):
@@ -2760,6 +2741,14 @@ def render_admin(cfg, stories, headline=None):
 <span class="hint">Type a round name on its own line, then one game per line with "vs" in the middle. Add scores after each team when they're in. The higher score wins, or put * after the winner's name.</span></label>
 <label class="fld wide"><span class="caps">Link for more</span><input id="b-link" inputmode="url" placeholder="Optional: OHSAA or school page"></label>
 <div class="wide submitrow"><button class="btn solid" type="submit">Publish bracket</button><button class="btn" type="button" id="b-new">Start a new one</button></div></form></div>
+<div id="link-ed" class="box"><span class="caps kicker">Add news</span><h2 class="hed">Post a news link</h2>
+<p class="hint">Found a good story the feeds missed? Paste its address. The site reads the headline, summary and photo from the article and posts it as news within 15 minutes, linking to the original. Some sites block that, so typing a headline and a line of summary always works.</p>
+<form class="sunny" id="l-form" novalidate>
+<label class="fld wide"><span class="caps">Article link *</span><input id="l-url" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="https://www.richlandsource.com/..." required></label>
+<label class="fld"><span class="caps">Section</span><select id="l-sec"><option value="">Pick for me</option>{"".join(f"<option>{e(n)}</option>" for _, n in SECTIONS)}</select></label>
+<label class="fld"><span class="caps">Headline</span><input id="l-title" maxlength="200" placeholder="Optional"></label>
+<label class="fld wide"><span class="caps">Summary</span><textarea id="l-sum" rows="3" maxlength="400" placeholder="Optional: leave blank to use the article's"></textarea></label>
+<div class="wide submitrow"><button class="btn solid" type="submit" id="l-btn">Post it</button><span class="formmsg" id="l-msg" role="status" aria-live="polite"></span></div></form></div>
 {picker}<div id="list" class="queue"></div></div>
 <p class="formmsg" id="desk-msg"></p></section>"""
     script = f"""<script src="{SB_JS}"></script><script>
@@ -2832,6 +2821,15 @@ document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q
  if(error){{say(error.message);b.disabled=false;return}}say(act==='reject'?'Done. It will not appear on the site.':act==='delete'?'Deleted.':'Approved. It will be on the site within 20 minutes.');load()}});
 function newBracket(){{$('b-form').reset();$('b-id').value='';$('b-head').textContent='New bracket'}}
 $('b-new').onclick=newBracket;
+$('l-form').onsubmit=async ev=>{{ev.preventDefault();const m=$('l-msg');let url=$('l-url').value.trim();
+ if(url&&!/^https?:\\/\\//i.test(url))url='https://'+url;
+ if(!/^https?:\\/\\/[^\\s/]+\\.[^\\s]+/i.test(url)){{m.textContent='Paste the full article link.';return}}
+ $('l-btn').disabled=true;m.textContent='Posting…';
+ let {{data,error}}=await sb.from('submissions').insert({{section:'Link',link:url,title:$('l-title').value.trim()||'{LINK_TITLE}',
+  summary:$('l-sum').value.trim()||null,business:$('l-sec').value||null,name:'Sunny Mansfield'}}).select('id');
+ if(!error)(({{error}}=await sb.from('submissions').update({{status:'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',data[0].id)));
+ $('l-btn').disabled=false;if(error){{m.textContent='Could not post it: '+error.message;return}}
+ $('l-form').reset();m.textContent='Posted. It will be on the front page within 15 minutes. To remove it, find it under Approved and choose Take down.'}};
 $('b-form').onsubmit=async ev=>{{ev.preventDefault();const title=$('b-title').value.trim(),text=$('b-text').value.trim();let link=$('b-link').value.trim();
  if(title.length<3||!/ vs /i.test(text)){{say('Give the bracket a name and at least one game with "vs" in it.');return}}
  if(link&&!/^https?:\\/\\//i.test(link))link='https://'+link;
@@ -2971,6 +2969,69 @@ def breadcrumbs(items):
         {"@type": "ListItem", "position": i, "name": n, "item": u} for i, (n, u) in enumerate(items, 1)]}
 
 
+LINK_TITLE = "(from link)"  # what the admin saves when the editor leaves the headline blank
+
+
+def page_meta(page, *names):
+    """The first filled-in <meta> tag among names (og:title, description...), from an article's HTML."""
+    tags = re.findall(r"<meta\b[^>]*>", page, re.I)
+    for n in names:
+        for tag in tags:
+            if re.search(rf"""(?:property|name)\s*=\s*["']{re.escape(n)}["']""", tag, re.I):
+                m = re.search(r'content\s*=\s*"([^"]*)"', tag) or re.search(r"content\s*=\s*'([^']*)'", tag)
+                if m and m.group(1).strip():
+                    return html.unescape(m.group(1)).strip()
+    return ""
+
+
+def add_links(cfg, stories, links, sample=False):
+    """Articles an editor pasted in the admin page. We read the headline, summary, photo and outlet from the
+    article itself (its share tags), unless the editor typed their own. They show like any feed story."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=cfg.get("max_age_days", 21))
+    seen = {re.sub(r"\W+", "", s["title"].lower())[:60] for s in stories} | {s["link"] for s in stories}
+    added = []
+    for row in links:
+        url = full_link(row["link"])
+        if not url or row["date"] < cutoff or url in seen:
+            continue
+        title = "" if row["title"] == LINK_TITLE else row["title"]
+        summary, image = row["summary"], None
+        source = urllib.parse.urlparse(url).netloc.removeprefix("www.")
+        if not sample:
+            try:
+                _, page = fetch(url, limit=1_500_000)
+                found = re.search(r"<title[^>]*>(.*?)</title>", page, re.I | re.S)
+                title = title or page_meta(page, "og:title", "twitter:title") or (clean(found.group(1)) if found else "")
+                summary = summary or page_meta(page, "og:description", "description", "twitter:description")
+                image = page_meta(page, "og:image", "og:image:secure_url", "twitter:image") or None
+                source = page_meta(page, "og:site_name") or source
+            except Exception as exc:
+                note(f"Pasted link {url}: couldn't read it ({exc})")
+        if not title:  # the site wouldn't let us read it; make a headline from the address, like "/new-park-opens/"
+            parts = urllib.parse.urlparse(url).path.split("/")
+            words = re.sub(r"\.\w+$", "", max(parts, key=lambda x: x.count("-")))  # the slug has the most dashes
+            words = re.sub(r"[-_]+", " ", re.sub(r"[-_]?\d{5,}$|^\d+[-_]", "", words)).strip()
+            title = words[:1].upper() + words[1:] if len(words) > 12 else ""
+        if not title:
+            note(f"Pasted link {url}: no headline found. Type one in the admin page.")
+            continue
+        s = {"title": clean(title, 200), "summary": clean(summary, 400), "link": url, "source": source,
+             "image": image if image and image.startswith("https://") else None, "photos": True, "date": row["date"],
+             "picked": True}
+        key = re.sub(r"\W+", "", s["title"].lower())[:60]
+        if key in seen:
+            continue
+        seen |= {key, url}
+        s["section"] = SECTION_BY_LABEL.get((row["section"] or "").lower()) or classify(s) or "good"
+        if s["section"] not in SECTION_NAMES:
+            s["section"] = "good"
+        s["id"] = hashlib.sha1((s["link"] + s["title"]).encode()).hexdigest()[:10]
+        added.append(s)
+    if added:
+        note(f"Pasted links: {len(added)} stories")
+    return sorted(stories + added, key=lambda s: s["date"], reverse=True)
+
+
 def merge_community(cfg, stories, community):
     for s in community:
         # A neighbor's post always opens its own page; any outside link becomes a "Read more" button there.
@@ -2979,7 +3040,7 @@ def merge_community(cfg, stories, community):
 
 
 PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
-         ("fundraisers.html", "daily", "0.7"), ("celebrations.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"),
+         ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"),
          ("quote.html", "daily", "0.5"), ("submit.html", "monthly", "0.6"), ("rules.html", "monthly", "0.4"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
 
@@ -3026,7 +3087,7 @@ Sitemap: {site}/news-sitemap.xml
     (out / "llms.txt").write_text(f"""# {cfg['site_name']}
 
 > Sunny Mansfield is a curated local media outlet for Mansfield and Richland County, Ohio, that only shares positive news:
-> community wins, local businesses, high school sports, events, fundraisers and Celebrations of Life. It is created for the
+> community wins, local businesses, high school sports, events, fundraisers, free stuff and local jobs. It is created for the
 > people and written by the people: neighbors, students, shop owners and mentors send stories, and editors review them.
 > It skips crime, crashes and political arguments. Published by Ofgeneration LLC in Mansfield, Ohio.
 
@@ -3041,7 +3102,6 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 - [Sports]({site}/sports.html): athlete spotlights, tournament brackets and good sports news
 - [Business spotlights]({site}/businesses.html): free pages for Richland County businesses
 - [Fundraisers]({site}/fundraisers.html): local causes posted by neighbors (not run or verified by Sunny Mansfield)
-- [Celebrations of Life]({site}/celebrations.html): remembering Richland County neighbors
 - [Free Stuff]({site}/free.html): things neighbors are giving away, free only
 - [Jobs]({site}/jobs.html): local jobs posted by Richland County employers
 - [Quote of the day]({site}/quote.html): a new Mansfield quote every morning and evening
@@ -3100,6 +3160,7 @@ def main():
     businesses = json.loads((HERE / "businesses.json").read_text())
     stories = collect(cfg, args.sample)
     got = load_submissions(cfg, args.sample)
+    stories = add_links(cfg, stories, got["links"], args.sample)
     stories = merge_community(cfg, stories, got["stories"])
     flyers, listings = got["flyers"], got["listings"]
     # Newest spotlights first; the example businesses only fill in until real ones arrive.
@@ -3156,7 +3217,7 @@ def main():
     for kind in LEGAL:
         (out / f"{kind}.html").write_text(rebase(render_legal(cfg, stories, kind)))
     (out / "fundraisers.html").write_text(rebase(render_fundraisers(cfg, got["fundraisers"], stories)))
-    (out / "celebrations.html").write_text(rebase(render_celebrations(cfg, stories)))
+    (out / "celebrations.html").write_text(rebase(render_moved(cfg, stories, "", "Good news")))  # page retired; old links go home
     (out / "sports.html").write_text(rebase(render_sports(cfg, stories, got["brackets"])))
     (out / "free.html").write_text(rebase(render_market(cfg, listings, stories)))
     (out / "market.html").write_text(rebase(render_moved(cfg, stories, "free.html", "Free Stuff")))

@@ -50,7 +50,7 @@ parts = [f"""<section class="cover"><div class="stripes"></div><div class="covin
 
 parts.append("""<section><h2>Why Sunny Mansfield</h2>
 <p class="big">Sunny Mansfield is a free online paper with only good news from Mansfield and Richland County, Ohio: neighbors helping
-neighbors, new shops, student and athlete wins, community events, Buy &amp; Sell, and celebrations of life.</p>
+neighbors, new shops, student and athlete wins, community events, free stuff and local jobs.</p>
 <h3>Why it works for local businesses</h3>
 <ul class="big">
 <li><b>Safe next to your brand.</b> No crime, crashes or arguing. Your ad never sits beside bad news.</li>

@@ -32,11 +32,11 @@ BIOS = [
      "Good news from Mansfield & Richland County, Ohio. Neighbors, shops, events and lives worth celebrating."),
     ("Facebook Page: About / description",
      "Sunny Mansfield is a free, uplifting local paper for Mansfield and Richland County, Ohio. We gather the good news in one "
-     "place: neighbors helping neighbors, new businesses, students winning, celebrations of life, community events, Buy & Sell, "
+     "place: neighbors helping neighbors, new businesses, students winning, community events, free stuff, local jobs, "
      "and plain civic info like how to vote. No crime, no crashes, no arguing. Read it, share it, shop local, and send in your own "
      "good news at SunnyMansfield.com."),
     ("Instagram bio (150 characters max)",
-     "☀️ Good news from Mansfield & Richland County, OH\n📰 Neighbors · Shops · Events · Celebrations\n👇 Read it free + send your news"),
+     "☀️ Good news from Mansfield & Richland County, OH\n📰 Neighbors · Shops · Events · Jobs\n👇 Read it free + send your news"),
     ("X bio (160 characters max)",
      "Good news for all seasons from Mansfield & Richland County, Ohio. Neighbors, local shops, events and lives worth celebrating. Send us your good news ☀️"),
     ("LinkedIn Page: Tagline (120 characters max)",
@@ -55,7 +55,7 @@ CAPTIONS = [
      "neighbors, new shops on Main, students winning, lives worth celebrating, and the events that bring Richland County together.\n\n"
      "Read it, share it, and send us your own good news. Link in bio.\n\n#SunnyMansfield #MansfieldOhio #RichlandCounty #GoodNews"),
     ("Launch post (X)", "x-launch-1600x900",
-     "Mansfield's good news finally has a home ☀️ Neighbors, local shops, events and celebrations from across Richland County, free "
+     "Mansfield's good news finally has a home ☀️ Neighbors, local shops, events and jobs from across Richland County, free "
      "at SunnyMansfield.com #SunnyMansfield #MansfieldOhio"),
     ("Launch post (LinkedIn)", "x-launch-1600x900",
      "Today we're launching Sunny Mansfield, a free digital magazine of good news for Mansfield and Richland County.\n\n"
@@ -77,9 +77,6 @@ CAPTIONS = [
     ("Friday roundup", "five-good-things",
      "5 good things this week in Richland County ☀️\n1. ...\n2. ...\n3. ...\n4. ...\n5. ...\n\nWhich one made you smile? Share this "
      "with someone who needs some good news today. #SunnyMansfield"),
-    ("Celebration of life (only with the family's OK)", "celebration-of-life",
-     "Celebrating the life of [Full Name], [years]. [Two warm sentences about who they were and what they loved.]\n\n[Service details.] "
-     "Our love to the family. 🕊️"),
     ("Share ask", "one-share",
      "One share can make someone's day. 💛 Every story on Sunny Mansfield has a Share button, so pass the good news along to "
      "someone who needs it. #SunnyMansfield"),
@@ -91,8 +88,8 @@ WEEK = [
     ("Wednesday", "What's happening", "Event flyers for the next 7 days, plus a story from the site."),
     ("Thursday", "Throwback Thursday", "A vintage Mansfield photo or postcard. These get the most shares."),
     ("Friday", "5 good things + weekend", "The roundup post, then weekend events in stories."),
-    ("Saturday", "Garage sales and Buy & Sell", "Best listings and garage sales, in stories."),
-    ("Sunday", "Celebrations and gratitude", "Birthdays, anniversaries, celebrations of life, a thank-you note."),
+    ("Saturday", "Garage sales and Free Stuff", "Best giveaways and garage sales, in stories."),
+    ("Sunday", "Celebrations and gratitude", "Birthdays, anniversaries, team wins, a thank-you note."),
 ]
 
 LAUNCH = [
@@ -205,7 +202,7 @@ parts.append('<section><h2>Post templates</h2><p>Each one is 1080×1350, which f
              '(checkered areas) go on top of your own photo in Canva or a phone editor. To have Claude make a ready-to-post version with real '
              'photos and text, just ask.</p><div class="g4">'
              + "".join(fig(n) for n in ["launch-announcement", "good-news-example", "good-news-frame-blank", "got-good-news",
-                                        "shop-local-spotlight", "event-this-weekend", "five-good-things", "celebration-of-life",
+                                        "shop-local-spotlight", "event-this-weekend", "five-good-things",
                                         "one-share", "x-launch-1600x900"]) + "</div></section>")
 parts.append('<section><h2>Stories and highlights</h2><div class="g4">'
              + "".join(fig(n) for n in ["story-got-good-news", "story-new-post-frame", "highlight-good", "highlight-events",

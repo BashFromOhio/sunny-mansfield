@@ -48,7 +48,7 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- New posts always start in review, unless the sender is signed in with a confirmed email on the verified list.
--- Team applications, ad inquiries, fundraisers, jobs, brackets and headline picks always wait for an admin.
+-- Team applications, ad inquiries, fundraisers, jobs, brackets, headline picks and pasted links always wait for an admin.
 create or replace function public.on_submit() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
@@ -61,7 +61,7 @@ begin
   new.created_at := now();
   if signed_in is not null then
     new.email := signed_in;  -- a signed-in sender can't claim someone else's address
-    if new.section not in ('Join the team', 'Advertise', 'Fundraiser', 'Job', 'Bracket', 'Headline')
+    if new.section not in ('Join the team', 'Advertise', 'Fundraiser', 'Job', 'Bracket', 'Headline', 'Link')
        and confirmed = signed_in
        and exists (select 1 from verified where lower(email) = confirmed) then
       new.status := 'approved';

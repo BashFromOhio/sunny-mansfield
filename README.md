@@ -17,7 +17,7 @@ Each story shows the photo from its feed item, or the share image (og:image) fro
 ## How the "positive only" filter works
 A story is dropped if it mentions crime, crashes, deaths, lawsuits, layoffs and similar words, and it
 needs at least one upbeat word (award, opens, volunteer, celebrates...). Voting and garage-sale items
-only need to be on topic. Obituaries feed into "Celebrations of Life". Tune the word lists at the top
+only need to be on topic. Obituaries and memorials are always left out. Tune the word lists at the top
 of `build.py`.
 
 ## Going live
