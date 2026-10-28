@@ -69,8 +69,10 @@ SECTION_RULES = [
                r"ohsaa|state champion\w*|district champion\w*|regional champion\w*|tygers|quarterback|touchdown)\b"),
     ("research", r"research|study|studies|scientist|discover|university|osu mansfield|ohio state|"
                  r"north central state|nc state|professor|nasa|experiment|data show"),
-    ("seniors", r"senior|retire|centenarian|100th birthday|\b(9\d|1\d\d)(th)? birthday|older adults|"
-                r"aging|grandparent|veteran|nursing home|assisted living"),
+    # Whole words only: a bare "aging" also matched "managing", "packaging" and "engaging".
+    ("seniors", r"\b(senior citizens?|senior centers?|senior living|seniors\b(?! night| day| class| game| prom)|"
+                r"retire(e|es|d|ment)?\b|centenarian|100th birthday|(9\d|1\d\d)(th)? birthday|older adults|"
+                r"aging\b|grandparents?\b|veterans?\b(?! (coach|chef|player|teacher|owner|journalist))|nursing homes?\b|assisted living)"),
     ("biz", r"business|grand opening|ribbon cutting|shop\b|store|restaurant|cafe|bakery|brewery|"
             r"owner|entrepreneur|downtown mansfield|chamber|hiring|expan|small business|boutique"),
     ("hoods", r"neighborhood|block party|residents|ocie hill|north end|woodland|springmill|"
