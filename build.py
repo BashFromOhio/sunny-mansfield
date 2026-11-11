@@ -3163,12 +3163,60 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
         (out / f"{cfg['indexnow_key']}.txt").write_text(cfg["indexnow_key"])
 
 
+STORAGE_RE = re.compile(r"https://[a-z0-9]+\.supabase\.co/storage/v1/object/public/[^\s\"'<>()\\]+")
+
+
+def localize_photos(cfg, out):
+    """Copy every Supabase photo the pages use into /photos/, so visitors only ever see our own domain."""
+    files = [f for f in out.rglob("*") if f.suffix in (".html", ".xml", ".json", ".txt") and f.is_file()]
+    found = set()
+    for f in files:
+        found.update(STORAGE_RE.findall(f.read_text(errors="ignore")))
+    if not found:
+        return
+    (out / "photos").mkdir(exist_ok=True)
+    site = cfg["site_url"].rstrip("/")
+    swap, failed = {}, 0
+    for url in sorted(found):
+        ext = Path(urllib.parse.urlparse(url).path).suffix.lower()
+        ext = ext if ext in (".jpg", ".jpeg", ".png", ".webp", ".gif") else ".jpg"
+        name = hashlib.sha1(url.encode()).hexdigest()[:16] + ext
+        try:
+            if not (out / "photos" / name).exists():
+                req = urllib.request.Request(url, headers={"User-Agent": UA})
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    (out / "photos" / name).write_bytes(resp.read(7_000_000))
+            swap[url] = f"{site}/photos/{name}"
+        except Exception:
+            failed += 1
+    for f in files:
+        text = f.read_text(errors="ignore")
+        new = STORAGE_RE.sub(lambda m: swap.get(m.group(0), m.group(0)), text)
+        if new != text:
+            f.write_text(new)
+    note(f"Photos: copied {len(swap)} community photos to /photos/" + (f" ({failed} failed, left as is)" if failed else ""))
+
+
+def render_404(cfg, stories):
+    """GitHub Pages shows this for any address that doesn't exist. Every link points at the real domain."""
+    home = cfg["home_url"].rstrip("/")
+    inner = f"""{page_title("Oops", "Page not found", "That page isn't here anymore, but there's plenty of good news.")}
+<section class="wrap" style="text-align:center"><p><a class="btn solid" href="{e(home)}/">Go to {e(cfg['site_name'])}</a></p></section>
+<script>(()=>{{const home={json.dumps(home)};const h=new URL(home).host;
+if(location.host!==h&&/github\.io$/.test(location.host)){{const base={json.dumps(urllib.parse.urlparse(cfg["site_url"]).path.rstrip("/"))};
+let p=location.pathname;if(base&&p.startsWith(base))p=p.slice(base.length);location.replace(home+(p||"/")+location.search+location.hash)}}}})()</script>"""
+    page = shell({**cfg, "site_url": home}, f"Page not found · {cfg['site_name']}", "That page isn't here.", f"{home}/404.html",
+                 inner, stories, index=False)
+    return re.sub(r'(["(])/(assets|brand)/', rf"\1{home}/\2/", page)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", action="store_true", help="use sample_stories.json instead of live feeds")
     ap.add_argument("--out", default=str(HERE / "site"))
     args = ap.parse_args()
     cfg = json.loads((HERE / "config.json").read_text())
+    cfg["home_url"] = cfg["site_url"]  # the real domain from config.json, even when building for github.io
     cfg["site_url"] = os.environ.get("SITE_URL") or cfg["site_url"]  # set by the GitHub workflow
     for key in ("supabase_url", "supabase_anon_key"):
         cfg[key] = os.environ.get(key.upper()) or cfg.get(key, "")
@@ -3252,7 +3300,9 @@ def main():
         if any(town_items(name, stories, businesses, got["fundraisers"])):
             live_towns.append(name)
     (out / "events.html").write_text(rebase(render_events(cfg, flyers, stories)))
+    (out / "404.html").write_text(render_404(cfg, stories))
     write_search_files(cfg, stories, businesses, out, live_towns, flyers, got["jobs"])
+    localize_photos(cfg, out)
     check_seo(out)
     if not args.sample and os.environ.get("GITHUB_ACTIONS") and datetime.now(timezone.utc).minute < 15:
         ping_indexnow(cfg, stories, flyers)  # once an hour on the live site
