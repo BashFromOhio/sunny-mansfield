@@ -1469,7 +1469,7 @@ def flyer_card(f):
     when = f["day"].strftime("%a, %b %-d") if f.get("day") else "Coming up"
     img = (f'<img src="{e(img_src(f["image"]))}" alt="Flyer: {e(f["title"])}" loading="lazy" referrerpolicy="no-referrer">'
            if f.get("image") else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["good"]}</svg></span>')
-    href = f["link"] or (img_src(f["image"]) if f.get("image") else "")
+    href = f["link"]  # never link the photo itself to its Supabase storage address
     open_ = f'<a class="flyer-img" href="{e(href)}" target="_blank" rel="noopener">{img}</a>' if href else f'<span class="flyer-img">{img}</span>'
     dek = f'<p class="dek">{e(f["summary"])}</p>' if f.get("summary") else ""
     return (f'<article class="slide flyer">{open_}<span class="caps kicker">{e(when)}{" · " + e(f["town"]) if f.get("town") else ""}</span>'
@@ -2856,7 +2856,7 @@ function item(r){{const when=new Date(r.created_at).toLocaleString();
  else if(r.status!=='approved')acts=btn('approve','Approve','solid')+btn('reject','Reject')+(r.email?btn('verify-approve','Approve and verify sender'):'');
  else acts=btn('reject','Take down');acts+=btn('delete','Delete','ghost');
  return `<article class="qitem" data-row='${{esc(JSON.stringify({{email:r.email,name:r.name,role:r.role,title:r.title,summary:r.summary,link:r.link,photo:r.photo_url}}))}}'>
- ${{r.photo_url?`<a class="qphoto" href="${{esc(r.photo_url)}}" target="_blank" rel="noopener"><img src="${{esc(r.photo_url)}}" alt=""></a>`:''}}
+ ${{r.photo_url?`<span class="qphoto"><img src="${{esc(r.photo_url)}}" alt=""></span>`:''}}
  <div class="qbody"><span class="caps kicker">${{esc(r.section)}}</span><h3 class="hed">${{esc(r.title)}}</h3><p class="qtext">${{esc(r.summary||'')}}</p>
  <dl class="facts">${{facts.map(([k,v])=>`<dt>${{k}}</dt><dd>${{esc(v)}}</dd>`).join('')}}</dl>${{link}}<div class="share">${{acts}}</div></div></article>`}}
 async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';$('headline-ed').hidden=q!=='headline';counts();
@@ -2927,8 +2927,7 @@ def render_story_page(cfg, s, stories):
                  f'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>')
     elif s.get("community") and "/s/" in s["link"] and s.get("image"):
         src = s["image"] if s["image"].startswith("https://") else "/" + s["image"]
-        media = (f'<a class="photo" href="{e(src)}" target="_blank" rel="noopener" title="See the full photo">'
-                 f'<img src="{e(src)}" alt="" referrerpolicy="no-referrer"></a>')  # the page is the story, so open the full photo
+        media = (f'<span class="photo"><img src="{e(src)}" alt="" referrerpolicy="no-referrer"></span>')  # plain photo, no link to its Supabase storage address
     body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
 <section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s, media, "h1")}</section>
 {banner(cfg, "A4")}
@@ -3213,6 +3212,40 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
         (out / f"{cfg['indexnow_key']}.txt").write_text(cfg["indexnow_key"])
 
 
+STORAGE_RE = re.compile(r"https://[a-z0-9]+\.supabase\.co/storage/v1/object/public/[^\s\"'<>()\\]+")
+
+
+def localize_photos(cfg, out):
+    """Copy every Supabase photo the pages use into /photos/, so visitors only ever see our own domain."""
+    files = [f for f in out.rglob("*") if f.suffix in (".html", ".xml", ".json", ".txt") and f.is_file()]
+    found = set()
+    for f in files:
+        found.update(STORAGE_RE.findall(f.read_text(errors="ignore")))
+    if not found:
+        return
+    (out / "photos").mkdir(exist_ok=True)
+    site = cfg["site_url"].rstrip("/")
+    swap, failed = {}, 0
+    for url in sorted(found):
+        ext = Path(urllib.parse.urlparse(url).path).suffix.lower()
+        ext = ext if ext in (".jpg", ".jpeg", ".png", ".webp", ".gif") else ".jpg"
+        name = hashlib.sha1(url.encode()).hexdigest()[:16] + ext
+        try:
+            if not (out / "photos" / name).exists():
+                req = urllib.request.Request(url, headers={"User-Agent": UA})
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    (out / "photos" / name).write_bytes(resp.read(7_000_000))
+            swap[url] = f"{site}/photos/{name}"
+        except Exception:
+            failed += 1
+    for f in files:
+        text = f.read_text(errors="ignore")
+        new = STORAGE_RE.sub(lambda m: swap.get(m.group(0), m.group(0)), text)
+        if new != text:
+            f.write_text(new)
+    note(f"Photos: copied {len(swap)} community photos to /photos/" + (f" ({failed} failed, left as is)" if failed else ""))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", action="store_true", help="use sample_stories.json instead of live feeds")
@@ -3303,6 +3336,7 @@ def main():
             live_towns.append(name)
     (out / "events.html").write_text(rebase(render_events(cfg, flyers, stories)))
     write_search_files(cfg, stories, businesses, out, live_towns, flyers, got["jobs"])
+    localize_photos(cfg, out)
     check_seo(out)
     if not args.sample and os.environ.get("GITHUB_ACTIONS") and datetime.now(timezone.utc).minute < 15:
         ping_indexnow(cfg, stories, flyers)  # once an hour on the live site
