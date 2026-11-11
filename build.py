@@ -121,6 +121,12 @@ def clean(text, limit=220):
     return text
 
 
+def paragraphs(text):
+    # The full submitted text for the story page, split on line breaks into paragraphs.
+    parts = [clean(p, 10**6) for p in re.split(r"\r?\n\s*\n|\r?\n", text or "")]
+    return [p for p in parts if p]
+
+
 def parse_date(value):
     try:
         dt = email.utils.parsedate_to_datetime(value)
@@ -487,7 +493,7 @@ def load_submissions(config, sample):
             image = image or f"https://img.youtube.com/vi/{video}/hqdefault.jpg"
             link = ""
         got["stories"].append({"athlete": facts if facts or row["section"].lower() == "athlete spotlight" else None,"id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
-                        "link": link, "video": video, "source": byline,
+                        "body": paragraphs(row["summary"]), "link": link, "video": video, "source": byline,
                         "role": row["role"], "image": image, "date": date, "section": section, "community": True,
                         "town": row["town"]})
     got["flyers"].sort(key=lambda f: f["day"] or f["date"] + timedelta(days=LISTING_DAYS))
@@ -660,6 +666,8 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .lead{display:grid;gap:16px;align-content:start;min-width:0;background:var(--tertiary);padding:0 0 24px;border-bottom:3px solid var(--secondary);padding-bottom:24px}
 .lead .hed{font-size:clamp(34px,4.6vw,56px);line-height:1.05;letter-spacing:-.02em}
 .lead .dek{font-size:20px;line-height:1.65;max-width:60ch}
+.readfull{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;margin:20px 0 4px;font-size:15px;color:var(--text-2)}
+.lead .dek.body p{margin:0 0 1em}.lead .dek.body p:last-child{margin-bottom:0}
 .also{display:grid;align-content:start;min-width:0;background:var(--tertiary);padding:16px;align-self:start}
 .label{font:700 11px/1.4 var(--caps);letter-spacing:.12em;text-transform:uppercase;margin:0;padding-bottom:8px;border-bottom:2px solid var(--border-strong)}
 .brief{display:grid;grid-template-columns:minmax(0,1fr) 88px;gap:16px;padding:14px 8px;margin-inline:-8px;border-bottom:1px solid var(--border-subtle)}
@@ -1286,8 +1294,15 @@ def hed(s, tag="h3"):
     return f'<{tag} class="hed"><a href="{e(s["link"])}"{target(s)}>{e(s["title"])}</a></{tag}>'
 
 
-def lead(cfg, s, media=None, tag="h2"):
+def lead(cfg, s, media=None, tag="h2", full=False):
     dek = f'<p class="dek">{e(s["summary"])}</p>' if s["summary"] else ""
+    if full and s.get("body"):  # story page: show the whole submitted article, not the 400-character teaser
+        dek = '<div class="dek body">' + "".join(f"<p>{e(p)}</p>" for p in s["body"]) + "</div>"
+    elif full and not s.get("community") and s.get("link"):
+        # Outside news: the feed only gives us a short excerpt, and we can't republish the whole article,
+        # so send readers to the original with a clear button instead of a dead-end "…".
+        dek += (f'<p class="readfull"><span>This is a short preview from {e(s["source"])}.</span>'
+                f'<a class="btn" href="{e(s["link"])}" target="_blank" rel="noopener">Read the full story at {e(s["source"])} &rarr;</a></p>')
     return f'<article class="lead">{media or photo(s)}{kicker(s)}{hed(s, tag)}{dek}{meta(s)}{share(cfg, s, read=True)}</article>'
 
 
@@ -2929,7 +2944,7 @@ def render_story_page(cfg, s, stories):
         src = s["image"] if s["image"].startswith("https://") else "/" + s["image"]
         media = (f'<span class="photo"><img src="{e(src)}" alt="" referrerpolicy="no-referrer"></span>')  # plain photo, no link to its Supabase storage address
     body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
-<section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s, media, "h1")}</section>
+<section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s, media, "h1", full=True)}</section>
 {banner(cfg, "A4")}
 {f'<p class="wrap note postimg"><a class="link" href="{e(site)}/{s["post_image"]}" download>Download the framed image for Facebook or Instagram</a></p>' if s.get("post_image") else ""}
 {town_links(cfg, s)}<p class="wrap note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
