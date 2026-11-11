@@ -664,6 +664,7 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .lead{display:grid;gap:16px;align-content:start;min-width:0;background:var(--tertiary);padding:0 0 24px;border-bottom:3px solid var(--secondary);padding-bottom:24px}
 .lead .hed{font-size:clamp(34px,4.6vw,56px);line-height:1.05;letter-spacing:-.02em}
 .lead .dek{font-size:20px;line-height:1.65;max-width:60ch}
+.readfull{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;margin:20px 0 4px;font-size:15px;color:var(--text-2)}
 .lead .dek.body p{margin:0 0 1em}.lead .dek.body p:last-child{margin-bottom:0}
 .also{display:grid;align-content:start;min-width:0;background:var(--tertiary);padding:16px;align-self:start}
 .label{font:700 11px/1.4 var(--caps);letter-spacing:.12em;text-transform:uppercase;margin:0;padding-bottom:8px;border-bottom:2px solid var(--border-strong)}
@@ -1279,6 +1280,11 @@ def lead(cfg, s, media=None, tag="h2", full=False):
     dek = f'<p class="dek">{e(s["summary"])}</p>' if s["summary"] else ""
     if full and s.get("body"):  # story page: show the whole submitted article, not the 400-character teaser
         dek = '<div class="dek body">' + "".join(f"<p>{e(p)}</p>" for p in s["body"]) + "</div>"
+    elif full and not s.get("community") and s.get("link"):
+        # Outside news: the feed only gives us a short excerpt, and we can't republish the whole article,
+        # so send readers to the original with a clear button instead of a dead-end "…".
+        dek += (f'<p class="readfull"><span>This is a short preview from {e(s["source"])}.</span>'
+                f'<a class="btn" href="{e(s["link"])}" target="_blank" rel="noopener">Read the full story at {e(s["source"])} &rarr;</a></p>')
     return f'<article class="lead">{media or photo(s)}{kicker(s)}{hed(s, tag)}{dek}{meta(s)}{share(cfg, s, read=True)}</article>'
 
 
