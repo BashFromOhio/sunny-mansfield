@@ -2579,6 +2579,33 @@ def render_moved(cfg, stories, path, name):
     return shell(cfg, f"{name} · {cfg['site_name']}", f"{name} has moved.", f"{site}/{path}", inner, stories, index=False)
 
 
+def render_not_found(cfg, stories):
+    """404.html. GitHub Pages shows it for any address that doesn't exist, at that same address, so it stays on
+    sunnymansfield.com. Every link points at the paper's own domain, and anyone who lands on the github.io copy is
+    sent over to the same page on sunnymansfield.com."""
+    site = cfg["site_url"].rstrip("/")
+    home = (cfg.get("canonical_url") or site).rstrip("/")
+    base = urllib.parse.urlparse(site).path.rstrip("/")
+    grid = "".join(card(cfg, s) for s in stories[:3])
+    latest = (f'<section class="wrap latest"><h2 class="label">The latest good news</h2><div class="grid">{grid}</div></section>'
+              if grid else "")
+    inner = f"""{page_title("Oops!", "We couldn't find that page", "The link may be old, or the story may have rolled off the front page. There's plenty of good news waiting for you.")}
+<section class="wrap" style="text-align:center"><p><a class="btn solid" href="{e(home)}/">Go to the front page</a>
+<a class="btn" href="{e(home)}/submit.html">Share your news</a></p>
+<p class="note">Looking for something special? Try <a class="link" href="{e(home)}/sports.html">sports</a>,
+<a class="link" href="{e(home)}/events.html">events</a>, <a class="link" href="{e(home)}/businesses.html">local businesses</a>
+or <a class="link" href="{e(home)}/jobs.html">jobs</a>.</p></section>
+{latest}"""
+    bounce = ""
+    if urllib.parse.urlparse(home).hostname and not urllib.parse.urlparse(home).hostname.endswith("github.io"):
+        # A visitor on user.github.io/sunny-mansfield/... goes to the same page on the custom domain.
+        bounce = (f"<script>if(/\\.github\\.io$/.test(location.hostname)){{var p=location.pathname;"
+                  f"var b={json.dumps(base)};if(b&&p.indexOf(b)===0)p=p.slice(b.length);"
+                  f"location.replace({json.dumps(home)}+(p||'/')+location.search+location.hash)}}</script>")
+    return shell(cfg, f"Page not found · {cfg['site_name']}", "We couldn't find that page on Sunny Mansfield.",
+                 f"{home}/404.html", inner, stories, extra=bounce, index=False)
+
+
 def job_data(cfg, j):
     """JobPosting structured data, so the job can show up in Google's job search."""
     site = cfg["site_url"].rstrip("/")
@@ -3170,6 +3197,7 @@ def main():
     ap.add_argument("--out", default=str(HERE / "site"))
     args = ap.parse_args()
     cfg = json.loads((HERE / "config.json").read_text())
+    cfg["canonical_url"] = cfg["site_url"]  # the paper's own domain, from config.json
     cfg["site_url"] = os.environ.get("SITE_URL") or cfg["site_url"]  # set by the GitHub workflow
     for key in ("supabase_url", "supabase_anon_key"):
         cfg[key] = os.environ.get(key.upper()) or cfg.get(key, "")
@@ -3244,6 +3272,7 @@ def main():
     (out / "jobs").mkdir(exist_ok=True)
     for j in got["jobs"]:
         (out / "jobs" / f"{j['id']}.html").write_text(rebase(render_job_page(cfg, j, stories)))
+    (out / "404.html").write_text(rebase(render_not_found(cfg, stories)))
     (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories) if ads_open(cfg) else render_ads_soon(cfg, stories)))
     (out / "admin.html").write_text(rebase(render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"]))))
     (out / "town").mkdir(exist_ok=True)
