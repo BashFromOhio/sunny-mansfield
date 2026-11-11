@@ -3197,26 +3197,12 @@ def localize_photos(cfg, out):
     note(f"Photos: copied {len(swap)} community photos to /photos/" + (f" ({failed} failed, left as is)" if failed else ""))
 
 
-def render_404(cfg, stories):
-    """GitHub Pages shows this for any address that doesn't exist. Every link points at the real domain."""
-    home = cfg["home_url"].rstrip("/")
-    inner = f"""{page_title("Oops", "Page not found", "That page isn't here anymore, but there's plenty of good news.")}
-<section class="wrap" style="text-align:center"><p><a class="btn solid" href="{e(home)}/">Go to {e(cfg['site_name'])}</a></p></section>
-<script>(()=>{{const home={json.dumps(home)};const h=new URL(home).host;
-if(location.host!==h&&/github\.io$/.test(location.host)){{const base={json.dumps(urllib.parse.urlparse(cfg["site_url"]).path.rstrip("/"))};
-let p=location.pathname;if(base&&p.startsWith(base))p=p.slice(base.length);location.replace(home+(p||"/")+location.search+location.hash)}}}})()</script>"""
-    page = shell({**cfg, "site_url": home}, f"Page not found · {cfg['site_name']}", "That page isn't here.", f"{home}/404.html",
-                 inner, stories, index=False)
-    return re.sub(r'(["(])/(assets|brand)/', rf"\1{home}/\2/", page)
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample", action="store_true", help="use sample_stories.json instead of live feeds")
     ap.add_argument("--out", default=str(HERE / "site"))
     args = ap.parse_args()
     cfg = json.loads((HERE / "config.json").read_text())
-    cfg["home_url"] = cfg["site_url"]  # the real domain from config.json, even when building for github.io
     cfg["site_url"] = os.environ.get("SITE_URL") or cfg["site_url"]  # set by the GitHub workflow
     for key in ("supabase_url", "supabase_anon_key"):
         cfg[key] = os.environ.get(key.upper()) or cfg.get(key, "")
@@ -3300,7 +3286,6 @@ def main():
         if any(town_items(name, stories, businesses, got["fundraisers"])):
             live_towns.append(name)
     (out / "events.html").write_text(rebase(render_events(cfg, flyers, stories)))
-    (out / "404.html").write_text(render_404(cfg, stories))
     write_search_files(cfg, stories, businesses, out, live_towns, flyers, got["jobs"])
     localize_photos(cfg, out)
     check_seo(out)
