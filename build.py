@@ -1451,7 +1451,7 @@ def flyer_card(f):
     when = f["day"].strftime("%a, %b %-d") if f.get("day") else "Coming up"
     img = (f'<img src="{e(img_src(f["image"]))}" alt="Flyer: {e(f["title"])}" loading="lazy" referrerpolicy="no-referrer">'
            if f.get("image") else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["good"]}</svg></span>')
-    href = f["link"] or (img_src(f["image"]) if f.get("image") else "")
+    href = f["link"]  # never link the photo itself to its Supabase storage address
     open_ = f'<a class="flyer-img" href="{e(href)}" target="_blank" rel="noopener">{img}</a>' if href else f'<span class="flyer-img">{img}</span>'
     dek = f'<p class="dek">{e(f["summary"])}</p>' if f.get("summary") else ""
     return (f'<article class="slide flyer">{open_}<span class="caps kicker">{e(when)}{" · " + e(f["town"]) if f.get("town") else ""}</span>'
@@ -2807,7 +2807,7 @@ function item(r){{const when=new Date(r.created_at).toLocaleString();
  else if(r.status!=='approved')acts=btn('approve','Approve','solid')+btn('reject','Reject')+(r.email?btn('verify-approve','Approve and verify sender'):'');
  else acts=btn('reject','Take down');acts+=btn('delete','Delete','ghost');
  return `<article class="qitem" data-row='${{esc(JSON.stringify({{email:r.email,name:r.name,role:r.role,title:r.title,summary:r.summary,link:r.link,photo:r.photo_url}}))}}'>
- ${{r.photo_url?`<a class="qphoto" href="${{esc(r.photo_url)}}" target="_blank" rel="noopener"><img src="${{esc(r.photo_url)}}" alt=""></a>`:''}}
+ ${{r.photo_url?`<span class="qphoto"><img src="${{esc(r.photo_url)}}" alt=""></span>`:''}}
  <div class="qbody"><span class="caps kicker">${{esc(r.section)}}</span><h3 class="hed">${{esc(r.title)}}</h3><p class="qtext">${{esc(r.summary||'')}}</p>
  <dl class="facts">${{facts.map(([k,v])=>`<dt>${{k}}</dt><dd>${{esc(v)}}</dd>`).join('')}}</dl>${{link}}<div class="share">${{acts}}</div></div></article>`}}
 async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';$('headline-ed').hidden=q!=='headline';counts();
@@ -2878,8 +2878,7 @@ def render_story_page(cfg, s, stories):
                  f'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>')
     elif s.get("community") and "/s/" in s["link"] and s.get("image"):
         src = s["image"] if s["image"].startswith("https://") else "/" + s["image"]
-        media = (f'<a class="photo" href="{e(src)}" target="_blank" rel="noopener" title="See the full photo">'
-                 f'<img src="{e(src)}" alt="" referrerpolicy="no-referrer"></a>')  # the page is the story, so open the full photo
+        media = (f'<span class="photo"><img src="{e(src)}" alt="" referrerpolicy="no-referrer"></span>')  # plain photo, no link to its Supabase storage address
     body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
 <section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s, media, "h1")}</section>
 {banner(cfg, "A4")}
