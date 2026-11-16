@@ -1057,7 +1057,7 @@ footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
 .station{scroll-margin-top:56px;background:var(--tertiary);padding-block:16px 64px}
 @media (max-width:860px){.station{padding-block:8px 48px}}
 .station-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px 24px;margin-bottom:24px}
-.station-head .label{grid-column:1/-1}
+.station-head .mag-head{grid-column:1/-1;margin-bottom:12px}
 .station-name{display:grid;justify-items:start}.station-name .script{margin-bottom:2px;position:relative;z-index:1}
 @media (max-width:600px){.station-head{grid-template-columns:minmax(0,1fr)}.station-head .btn{justify-self:start}}
 .station-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:48px;align-items:start}
@@ -1139,6 +1139,45 @@ footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
 .radio-feet{padding-inline:10%}.radio-feet i{height:14px}
 @media (max-width:860px){.radio{max-width:none}}
 @media (max-width:600px){.radio-body{padding:12px}.radio-grille{min-height:72px}}
+
+/* magazine front: ticker, lead + stack, sidebar, labelled rules with "Explore all" */
+.ticker{background:var(--primary);color:var(--tertiary)}
+.ticker-in{display:flex;align-items:stretch;gap:0;overflow:hidden}
+.tick-label{flex:none;display:flex;align-items:center;gap:8px;padding:12px 18px 10px 0;margin-right:16px;border-right:2px solid var(--secondary);
+  font:700 12px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--tertiary);white-space:nowrap}
+.tick-label::before{content:"";width:10px;height:10px;background:var(--secondary)}
+.tick-viewport{flex:1;min-width:0;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent)}
+.tick-track{display:flex;width:max-content;animation:tick 70s linear infinite}
+.tick-dup{display:flex}
+.ticker:hover .tick-track,.ticker:focus-within .tick-track{animation-play-state:paused}
+.tick-track a{display:flex;align-items:center;gap:10px;padding:10px 28px 10px 0;color:var(--tertiary);text-decoration:none;font:600 14px/1.3 var(--sans);white-space:nowrap}
+.tick-track a:hover{color:#f3b38f}
+.tick-tag{background:var(--secondary);color:var(--tertiary);font:700 10px/1 var(--caps);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px 3px}
+@keyframes tick{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.tick-track{animation:none}.tick-dup{display:none}.tick-viewport{overflow-x:auto;mask-image:none}}
+@media (max-width:600px){.tick-label{font-size:0;gap:0;padding-right:12px;margin-right:12px}.tick-label::before{width:12px;height:12px}}
+.mag-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid var(--primary);margin-bottom:20px}
+.mag-label{margin:0;background:var(--primary);color:var(--tertiary);font:700 12px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;padding:9px 12px 7px}
+.explore{font:700 11px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);text-decoration:none;padding:8px 0}
+.explore:hover{color:var(--secondary)}
+.mag{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1fr);gap:40px;padding-block:32px 56px}
+.mag-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start}
+.mag .lead{border-bottom:3px solid var(--secondary)}
+.mag .lead .hed{font-size:clamp(30px,3vw,40px)}
+.mag .lead .dek{font-size:17px;line-height:1.6}
+.mag-stack{display:grid;gap:20px}
+.midcard{display:grid;gap:8px;align-content:start;padding-bottom:20px;border-bottom:1px solid var(--border-subtle)}
+.midcard:last-child{border-bottom:0;padding-bottom:0}
+.midcard .photo{margin-bottom:4px}
+.midcard .hed{font-size:20px;line-height:1.22;letter-spacing:-.01em;margin:0}
+.mag-side{min-width:0}
+.mag-side .brief{grid-template-columns:84px minmax(0,1fr)}
+.mag-side .brief .photo{grid-column:1;grid-row:1}
+.mag-side .brief > div{grid-column:2;grid-row:1}
+@media (max-width:1100px){.mag{grid-template-columns:minmax(0,1fr);gap:32px}.mag-side .brief{padding-inline:8px}}
+@media (min-width:601px) and (max-width:1100px){.mag-side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px}.mag-side .mag-head{grid-column:1/-1}}
+@media (max-width:760px){.mag-grid{grid-template-columns:minmax(0,1fr)}.mag-stack{grid-template-columns:repeat(2,minmax(0,1fr))}.midcard{border-bottom:0;padding-bottom:0}}
+@media (max-width:600px){.mag{padding-block:20px 40px}.mag-stack{grid-template-columns:minmax(0,1fr)}.midcard{border-bottom:1px solid var(--border-subtle);padding-bottom:20px}}
 
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,440px);
   background:var(--primary);color:var(--tertiary);padding:8px 16px;border-radius:0;font:600 14px/1.5 var(--sans);text-align:center}
@@ -2074,8 +2113,8 @@ def station_section(cfg, station):
     tv_kind, tv_html = tv_set(tv)
     radio_kind, radio_html = radio_set(radio)
     return f"""<section class="wrap station" id="station" aria-labelledby="station-h">
-<div class="station-head"><h2 class="label" id="station-h">Station 419 &middot; Local shows &amp; podcasts</h2><div class="station-name" aria-hidden="true"><span class="script">Now playing on</span><span class="retro sm">Station 419</span></div>
-<a class="btn solid" href="{e(site)}/submit.html">Pitch your show</a></div>
+<div class="station-head">{section_head("Station 419 &middot; Local shows &amp; podcasts", f'<a class="explore" href="{e(site)}/submit.html">Pitch your show <span aria-hidden="true">&rsaquo;</span></a>', hid="station-h")}<div class="station-name" aria-hidden="true"><span class="script">Now playing on</span><span class="retro sm">Station 419</span></div>
+</div>
 <div class="station-grid"><div class="station-tv"><span class="caps kicker">Watch</span>{tv_html}{station_caption(tv, tv_kind, "Watch")}</div>
 <div class="station-radio"><span class="caps kicker">Listen</span>{radio_html}{station_caption(radio, radio_kind, "Listen")}</div></div>
 </section>
@@ -2083,6 +2122,35 @@ def station_section(cfg, station):
 document.querySelectorAll('[data-tv],[data-radio]').forEach(b=>b.addEventListener('click',()=>{{const f=document.createElement('iframe');
 f.src=b.dataset.tv||b.dataset.radio;f.title=b.getAttribute('aria-label').replace('Play ','');f.allow='autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen';
 f.allowFullscreen=true;b.parentNode.replaceChildren(f)}}))</script>"""
+
+
+def section_head(title, link="", tag="h2", hid=""):
+    """A section label with an 'Explore all' style link on the right, like a magazine rule."""
+    ident = f' id="{hid}"' if hid else ""
+    return f'<div class="mag-head"><{tag} class="mag-label"{ident}>{title}</{tag}>{link}</div>'
+
+
+def ticker(stories):
+    """The 'Good news now' strip: newest headlines scrolling under the section tabs (pauses on hover and for reduced motion)."""
+    if not stories:
+        return ""
+    items = "".join(f'<a href="{e(s["link"])}"{target(s)}><span class="tick-tag">{e(SECTION_NAMES[s["section"]])}</span>{e(s["title"])}</a>'
+                    for s in stories)
+    return (f'<div class="ticker" role="region" aria-label="Good news now"><div class="wrap ticker-in"><span class="tick-label">Good news now</span>'
+            f'<div class="tick-viewport"><div class="tick-track">{items}<span class="tick-dup" aria-hidden="true">{items}</span></div></div></div></div>')
+
+
+def mid_card(s):
+    return f'<article class="midcard">{photo(s)}{kicker(s)}{hed(s)}{meta(s)}</article>'
+
+
+def magazine(cfg, top, also):
+    """Front page top: big lead story, a stack of two stories, and an 'Also today' sidebar."""
+    stack, side = also[:2], also[2:7]
+    explore = '<a class="explore" href="#shelves">Explore all <span aria-hidden="true">&rsaquo;</span></a>'
+    return (f'<section class="wrap mag"><div class="mag-main">{section_head("Top stories", explore)}'
+            f'<div class="mag-grid">{lead(cfg, top)}<div class="mag-stack">{"".join(mid_card(s) for s in stack)}</div></div></div>'
+            f'<aside class="mag-side">{section_head("Also today", explore)}{"".join(brief(s) for s in side)}</aside></section>')
 
 
 def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=()):
@@ -2102,8 +2170,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     note = ""
     front = ""
     if top:
-        front = (f'<section class="wrap front">{lead(cfg, top)}<aside class="also"><h2 class="label">Also today</h2>'
-                 f'{"".join(brief(s) for s in also)}</aside></section>')
+        front = magazine(cfg, top, also)
     grid = "".join(card(cfg, s, front=s["id"] in front_ids) for s in stories)
     ads = ads_for(cfg, "A2")
     ad_at = lambda i: ad_card(cfg, ads[i % len(ads)] if ads else None, i=i // 3)
@@ -2155,7 +2222,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
 {masthead(cfg, site, stories, quote)}
 <nav class="sections" aria-label="Sections"><div class="wrap">{tabs}</div></nav>
-<main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{front}
+<main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{ticker(news[:10])}{front}
 {station_section(cfg, cfg.get("station") or {})}
 {civic(cfg, businesses)}
 <div id="shelves">{shelf_order(rails, funds_rail, events)}</div>
