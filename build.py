@@ -1053,6 +1053,93 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;align-ite
 footer .logo{width:220px;line-height:0}footer .logo svg{width:100%;height:auto}
 footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
 
+/* Station 419 (station.json): a retro TV for one local video and a radio for one local podcast */
+.station{scroll-margin-top:56px;background:var(--tertiary);padding-block:16px 64px}
+@media (max-width:860px){.station{padding-block:8px 48px}}
+.station-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px 24px;margin-bottom:24px}
+.station-head .label{grid-column:1/-1}
+.station-name{display:grid;justify-items:start}.station-name .script{margin-bottom:2px;position:relative;z-index:1}
+@media (max-width:600px){.station-head{grid-template-columns:minmax(0,1fr)}.station-head .btn{justify-self:start}}
+.station-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:48px;align-items:start}
+@media (max-width:860px){.station-grid{grid-template-columns:minmax(0,1fr);gap:40px}}
+.station .kicker{display:block;color:var(--secondary-dk);margin-bottom:8px}
+.station .cap{margin-top:16px}
+.station .cap h3.hed{font:700 clamp(20px,2.2vw,24px)/1.2 var(--serif);letter-spacing:-.01em;margin:0 0 4px}
+.station .cap .host{font:700 11px/1.4 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);margin:0 0 8px}
+.station .cap p{margin:0;color:var(--text-2);font-size:14px;line-height:1.6}
+.tvset{position:relative;padding-top:64px;width:100%}
+.tv-ears{position:absolute;top:0;left:50%;width:220px;height:72px;transform:translateX(-50%)}
+.tv-ears i{position:absolute;bottom:4px;left:50%;width:4px;height:84px;background:var(--primary);transform-origin:bottom center}
+.tv-ears i:nth-child(1){transform:translateX(-50%) rotate(-38deg)}.tv-ears i:nth-child(2){transform:translateX(-50%) rotate(34deg)}
+.tv-ears i::after{content:"";position:absolute;top:-6px;left:-4px;width:12px;height:12px;background:var(--secondary)}
+.tv-ears b{position:absolute;bottom:0;left:50%;width:72px;height:16px;transform:translateX(-50%);background:var(--primary)}
+.tv-body{display:grid;grid-template-columns:minmax(0,1fr) 108px;gap:20px;padding:22px;background:var(--secondary);border:4px solid var(--primary);
+  background-image:repeating-linear-gradient(90deg,rgba(46,26,16,.07) 0 2px,transparent 2px 9px)}
+.tv-bezel{background:var(--primary);padding:14px}
+.tv-screen{position:relative;aspect-ratio:16/9;background:#1b0f09;overflow:hidden;border:3px solid var(--tertiary)}
+.tv-screen iframe,.tv-screen img,.tv-screen .tv-play{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.tv-screen img{object-fit:cover}
+.tv-play{background:none;padding:0;cursor:pointer;display:grid;place-items:center}
+.tv-play span{width:76px;height:76px;background:var(--tertiary);border:4px solid var(--primary);display:grid;place-items:center}
+.tv-play span::after{content:"";margin-left:6px;border-style:solid;border-width:14px 0 14px 24px;border-color:transparent transparent transparent var(--primary)}
+.tv-play:hover span,.tv-play:focus-visible span{background:var(--secondary)}
+.tv-bars{position:absolute;inset:0;display:grid;grid-template-rows:68% 10% 22%}
+.tv-bars .top{display:grid;grid-template-columns:repeat(7,1fr)}
+.tv-bars .mid{display:grid;grid-template-columns:repeat(7,1fr)}
+.tv-bars .low{display:grid;grid-template-columns:2fr 1fr 2fr 2fr;}
+.tv-bars .tv-card{position:absolute;inset:auto 12% 30% 12%;background:var(--tertiary);border:3px solid var(--primary);padding:10px 14px;text-align:center}
+.tv-bars .tv-card b{display:block;font:700 clamp(14px,2.4vw,22px)/1.1 var(--caps);letter-spacing:.08em;text-transform:uppercase;color:var(--primary)}
+.tv-bars .tv-card span{font:500 12px/1.4 var(--sans);color:var(--text-2)}
+.tv-side{display:grid;align-content:space-between;justify-items:center;gap:14px;padding:6px 0}
+.tv-dial{width:72px;height:72px;border-radius:50%;background:var(--tertiary);border:4px solid var(--primary);position:relative;display:grid;place-items:center;
+  font:700 18px/1 var(--caps);color:var(--primary)}
+.tv-dial::before{content:"";position:absolute;top:4px;left:50%;width:4px;height:14px;background:var(--secondary);transform:translateX(-50%)}
+.tv-dial.sm{width:48px;height:48px;font-size:10px}
+.tv-grille{width:100%;height:58px;background:repeating-linear-gradient(0deg,var(--primary) 0 3px,transparent 3px 8px)}
+.tv-brand{font:400 22px/1 "Yellowtail","Brush Script MT",cursive;color:var(--tertiary);transform:rotate(-5deg)}
+.tv-legs{display:flex;justify-content:space-between;padding-inline:13%}
+.tv-legs i{width:16px;height:30px;background:var(--primary)}
+.tv-legs i:first-child{transform:skewX(14deg)}.tv-legs i:last-child{transform:skewX(-14deg)}
+@media (max-width:600px){.tvset{padding-top:52px}.tv-ears{transform:translateX(-50%) scale(.8);transform-origin:bottom}
+ .tv-body{grid-template-columns:minmax(0,1fr);padding:12px;gap:10px}.tv-bezel{padding:8px}
+ .tv-side{grid-template-columns:auto 1fr auto auto;align-items:center;padding:0}.tv-grille{height:30px}
+ .tv-dial{width:44px;height:44px;font-size:12px}.tv-dial.sm{width:34px;height:34px;font-size:8px}.tv-brand{font-size:18px;order:-1}
+ .tv-dial::before{height:9px;top:2px}}
+
+/* the radio: a cream tabletop set with a tuning dial */
+.radio{position:relative;padding-top:34px;width:100%;max-width:460px}
+.radio-handle{position:absolute;top:0;left:22%;right:22%;height:44px;border:6px solid var(--primary);border-bottom:0}
+.radio-body{position:relative;background:var(--surface);border:4px solid var(--primary);padding:18px;display:grid;gap:14px}
+.radio-top{display:grid;grid-template-columns:38% minmax(0,1fr);gap:14px}
+.radio-grille{min-height:96px;background:var(--secondary);border:3px solid var(--primary);
+  background-image:repeating-linear-gradient(0deg,var(--primary) 0 3px,transparent 3px 9px)}
+.radio-dial{position:relative;background:var(--tertiary);border:3px solid var(--primary);padding:10px 12px;display:grid;align-content:space-between;gap:10px}
+.radio-scale{display:flex;justify-content:space-between;border-bottom:2px solid var(--primary);padding-bottom:4px}
+.radio-scale i{font:700 10px/1 var(--caps);font-style:normal;color:var(--text-2);position:relative}
+.radio-scale i::after{content:"";position:absolute;left:50%;bottom:-8px;width:2px;height:6px;background:var(--primary)}
+.radio-needle{position:absolute;top:6px;bottom:32px;left:58%;width:3px;background:var(--secondary)}
+.radio-name{font:700 13px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--primary);text-align:center}
+.radio-player{background:var(--primary);border:3px solid var(--primary)}
+.radio-player.frame{min-height:var(--h);display:grid}
+.radio-player.frame iframe{display:block;width:100%;height:var(--h);border:0;background:var(--tertiary)}
+.radio-tune{display:grid;grid-template-columns:56px minmax(0,1fr);gap:14px;align-items:center;text-align:left;background:none;border:0;padding:14px;cursor:pointer;width:100%}
+.radio-playbtn{width:56px;height:56px;background:var(--tertiary);border:3px solid var(--secondary);display:grid;place-items:center}
+.radio-playbtn::after{content:"";margin-left:4px;border-style:solid;border-width:10px 0 10px 17px;border-color:transparent transparent transparent var(--primary)}
+.radio-tune:hover .radio-playbtn,.radio-tune:focus-visible .radio-playbtn{background:var(--secondary)}
+.radio-player.own{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:center;padding:12px;color:var(--tertiary)}
+.radio-player.own audio{grid-column:1/-1;width:100%;height:40px}
+.radio-art{position:relative;aspect-ratio:1;background:var(--secondary);display:grid;place-items:center;overflow:hidden}
+.radio-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.radio-art .script{color:var(--tertiary);font-size:26px;margin:0}
+.radio-onair{display:block;font:700 10px/1.4 var(--caps);letter-spacing:.14em;text-transform:uppercase;color:var(--secondary)}
+.radio-title{display:block;font:700 16px/1.3 var(--serif);color:var(--tertiary)}
+.radio-player.soon{padding:22px 16px;text-align:center}
+.radio-knobs{display:flex;justify-content:space-between;align-items:center}
+.radio-knobs .tv-brand{color:var(--primary)}
+.radio-feet{padding-inline:10%}.radio-feet i{height:14px}
+@media (max-width:860px){.radio{max-width:none}}
+@media (max-width:600px){.radio-body{padding:12px}.radio-grille{min-height:72px}}
+
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,440px);
   background:var(--primary);color:var(--tertiary);padding:8px 16px;border-radius:0;font:600 14px/1.5 var(--sans);text-align:center}
 """
@@ -1337,7 +1424,7 @@ def masthead(cfg, site, stories, quote=None):
 <span class="caps motto mobile">Good news for all seasons · Mansfield &amp; Richland County, Ohio</span>
 </div>
 <nav class="wrap strip caps" aria-label="Main">
-<div class="navgroup"><span class="navlabel">Read</span><a href="{e(site)}/">Front page</a><a href="{e(site)}/events.html">Events</a>
+<div class="navgroup"><span class="navlabel">Read</span><a href="{e(site)}/">Front page</a><a href="{e(site)}/events.html">Events</a><a href="{e(site)}/#station">Station 419</a>
 <a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/fundraisers.html">Fundraisers</a>
 <a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/businesses.html">Businesses</a></div>
 <div class="navgroup"><span class="navlabel">Take part</span><button class="navbtn" type="button" data-about>About</button>
@@ -1845,6 +1932,159 @@ def shelf_order(rails, funds, events):
     return "".join(out) + funds + events  # if a section is empty today, its neighbor still shows, just lower down
 
 
+def tv_latest_episode(feed_url):
+    """Read a podcast RSS feed and return the newest episode's (audio URL, title, artwork)."""
+    try:
+        _, xml = fetch(feed_url, limit=3_000_000)
+    except Exception as exc:
+        note(f"TV: could not read podcast feed ({exc})")
+        return "", "", ""
+    item = re.search(r"<item[\s>].*?</item>", xml, re.S)
+    if not item:
+        return "", "", ""
+    item = item.group(0)
+    audio = re.search(r'<enclosure[^>]+url="([^"]+)"', item)
+    title = re.search(r"<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>", item, re.S)
+    art = re.search(r'<itunes:image[^>]+href="([^"]+)"', item) or re.search(r'<itunes:image[^>]+href="([^"]+)"', xml)
+    return (html.unescape(audio.group(1)) if audio else "", html.unescape(title.group(1).strip()) if title else "",
+            html.unescape(art.group(1)) if art else "")
+
+
+def tv_embed(url):
+    """Turn a podcast or video link into (kind, source URL, thumbnail, player height in px).
+    kind is "youtube" (16:9 video), "frame" (an audio player from the host), "audio" (a plain audio file) or ""."""
+    url = (url or "").strip()
+    m = re.search(r'<iframe[^>]+src="([^"]+)"', url)  # a pasted embed code from any host
+    if m:
+        h = re.search(r'height="(\d+)', url)
+        src = html.unescape(m.group(1))
+        kind, _, thumb, _ = tv_embed(src)
+        if kind in ("youtube", "video"):
+            return kind, tv_embed(src)[1], thumb, 0
+        if kind:
+            return kind, tv_embed(src)[1], thumb, int(h.group(1)) if h else tv_embed(src)[3]
+        w = re.search(r'width="(\d+)', url)
+        video = h and w and int(h.group(1)) >= 200 and int(w.group(1)) > int(h.group(1))  # wide and tall: a video player
+        return ("video" if video else "frame"), src, "", int(h.group(1)) if h else 200
+    m = re.search(r"(?:youtube(?:-nocookie)?\.com/(?:watch\?(?:.*&)?v=|embed/|shorts/|live/)|youtu\.be/)([\w-]{11})", url)
+    if m:
+        vid = m.group(1)
+        return "youtube", f"https://www.youtube-nocookie.com/embed/{vid}?autoplay=1&rel=0", f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg", 0
+    m = re.search(r"vimeo\.com/(?:video/)?(\d+)", url)
+    if m:
+        return "video", f"https://player.vimeo.com/video/{m.group(1)}", "", 0
+    if re.search(r"facebook\.com/.+/videos/|fb\.watch/", url):
+        return "video", "https://www.facebook.com/plugins/video.php?show_text=false&href=" + urllib.parse.quote(url, safe=""), "", 0
+    m = re.search(r"open\.spotify\.com/(?:embed/)?(episode|show)/(\w+)", url)
+    if m:
+        return "frame", f"https://open.spotify.com/embed/{m.group(1)}/{m.group(2)}", "", 232
+    m = re.search(r"(?:anchor\.fm|creators\.spotify\.com/pod/show|podcasters\.spotify\.com/pod/show)/([\w-]+)/episodes/([\w-]+)", url)
+    if m:
+        return "frame", f"https://anchor.fm/{m.group(1)}/embed/episodes/{m.group(2)}", "", 161
+    m = re.search(r"podcasts\.apple\.com(/[^?#]+)(\?[^#]*)?", url)
+    if m:
+        ep = "i=" in (m.group(2) or "")
+        return "frame", f"https://embed.podcasts.apple.com{m.group(1)}{m.group(2) or ''}", "", 175 if ep else 450
+    if re.search(r"(?:^|//)(?:www\.|m\.)?soundcloud\.com/", url):
+        return "frame", "https://w.soundcloud.com/player/?visual=true&url=" + urllib.parse.quote(url.split("?")[0], safe=""), "", 300
+    m = re.search(r"buzzsprout\.com/(\d+)/(?:episodes/)?(\d+)", url)
+    if m:
+        return "frame", f"https://www.buzzsprout.com/{m.group(1)}/{m.group(2)}?client_source=small_player&iframe=true", "", 200
+    m = re.search(r"podbean\.com/(?:ew|e|player-v2/\?i=)/?(pb-[\w-]+|[\w-]+-pb)", url)
+    if m:
+        pid = m.group(1)
+        pid = pid if pid.endswith("-pb") else pid[3:] + "-pb"
+        return "frame", f"https://www.podbean.com/player-v2/?i={pid}&share=1&download=1&skin=1&btn-skin=7", "", 150
+    if re.search(r"\.(mp3|m4a|aac|ogg|oga|opus|wav)(\?|$)", url, re.I):
+        return "audio", url, "", 0
+    return "", "", "", 0
+
+
+def color_bars(line1, line2):
+    top = "".join(f'<i style="background:{c}"></i>' for c in ("#fbf6ec", "#f3d36b", "#7fb8b0", "#3f7d3a", "#d9531e", "#b8431a", "#2e1a10"))
+    mid = "".join(f'<i style="background:{c}"></i>' for c in ("#2e1a10", "#d9531e", "#3f7d3a", "#f3d36b", "#7fb8b0", "#fbf6ec", "#6f5443"))
+    low = "".join(f'<i style="background:{c}"></i>' for c in ("#2e1a10", "#fbf6ec", "#6f5443", "#1b0f09"))
+    return (f'<div class="tv-bars" aria-hidden="true"><div class="top">{top}</div><div class="mid">{mid}</div>'
+            f'<div class="low">{low}</div><div class="tv-card"><b>{line1}</b><span>{line2}</span></div></div>')
+
+
+def station_caption(entry, kind, verb):
+    link = entry.get("link") or (entry.get("url", "").strip() if entry.get("url", "").strip().startswith("http") else "")
+    more = (f'<a class="textbtn" href="{e(link)}" target="_blank" rel="noopener">{verb} at the source</a>' if kind and link else "")
+    return (f'<div class="cap"><h3 class="hed">{e(entry.get("title") or "Coming soon")}</h3>'
+            f'<p class="host">{e(entry.get("host", ""))}</p><p>{e(entry.get("about", ""))}</p>{more}</div>')
+
+
+def tv_set(entry):
+    """The TV: plays exactly the one video in station.json > tv."""
+    kind, src, thumb, _ = tv_embed(entry.get("url", ""))
+    title = e(entry.get("title") or "Local video")
+    if kind == "youtube":
+        screen = (f'<div class="tv-screen"><img src="{e(thumb)}" alt="" loading="lazy" onerror="this.remove()">'
+                  f'<button class="tv-play" type="button" data-tv="{e(src)}" aria-label="Play {title}"><span></span></button></div>')
+    elif kind == "video":
+        screen = (f'<div class="tv-screen"><button class="tv-play" type="button" data-tv="{e(src)}" aria-label="Play {title}"><span></span></button></div>')
+    else:
+        kind = ""
+        screen = f'<div class="tv-screen">{color_bars("Coming soon", "A Mansfield show airs here")}</div>'
+    return kind, f"""<div class="tvset"><div class="tv-ears" aria-hidden="true"><i></i><i></i><b></b></div>
+<div class="tv-body"><div class="tv-bezel">{screen}</div>
+<div class="tv-side" aria-hidden="true"><span class="tv-brand">Sunny</span><span class="tv-dial">419</span><span class="tv-dial sm">VOL</span><span class="tv-grille"></span></div></div>
+<div class="tv-legs" aria-hidden="true"><i></i><i></i></div></div>"""
+
+
+def radio_set(entry):
+    """The radio: plays exactly the one audio link in station.json > radio (a podcast RSS feed plays its newest episode)."""
+    entry = dict(entry)
+    url = (entry.get("url") or "").strip()
+    art = entry.get("image", "")
+    kind, src, _, height = tv_embed(url)
+    if url.startswith("http") and not kind:  # anything else is treated as a podcast RSS feed
+        audio, ep_title, ep_art = tv_latest_episode(url)
+        if audio:
+            kind, src, art = "audio", audio, art or ep_art
+            entry["title"] = entry.get("title") or ep_title
+    title = e(entry.get("title") or "Local podcast")
+    if kind == "frame":
+        player = (f'<div class="radio-player frame" style="--h:{height}px"><button class="radio-tune" type="button" data-radio="{e(src)}" '
+                  f'aria-label="Play {title}"><span class="radio-playbtn"></span><span><span class="radio-onair">Tap to tune in</span>'
+                  f'<b class="radio-title">{title}</b></span></button></div>')
+    elif kind == "audio":
+        pic = f'<img src="{e(art)}" alt="" loading="lazy" onerror="this.remove()">' if art else '<span class="script">419</span>'
+        player = (f'<div class="radio-player own"><div class="radio-art">{pic}</div>'
+                  f'<div><span class="radio-onair">On the air</span><b class="radio-title">{title}</b></div>'
+                  f'<audio controls preload="none" src="{e(src)}" aria-label="{title}"></audio></div>')
+    else:
+        kind = ""
+        player = ('<div class="radio-player soon"><span class="radio-onair">Coming soon</span>'
+                  '<b class="radio-title">A Mansfield podcast airs here</b></div>')
+    ticks = "".join(f"<i>{n}</i>" for n in ("54", "70", "90", "110", "130", "160"))
+    return kind, f"""<div class="radio"><div class="radio-handle" aria-hidden="true"></div>
+<div class="radio-body"><div class="radio-top"><div class="radio-grille" aria-hidden="true"></div>
+<div class="radio-dial" aria-hidden="true"><div class="radio-scale">{ticks}</div><span class="radio-needle"></span><span class="radio-name">Station 419</span></div></div>
+{player}
+<div class="radio-knobs" aria-hidden="true"><span class="tv-dial sm">VOL</span><span class="tv-brand">Sunny</span><span class="tv-dial sm">TUNE</span></div></div>
+<div class="tv-legs radio-feet" aria-hidden="true"><i></i><i></i></div></div>"""
+
+
+def station_section(cfg, station):
+    """Station 419: one featured video on the TV and one featured audio show on the radio (station.json)."""
+    site = cfg["site_url"].rstrip("/")
+    tv, radio = station.get("tv") or {}, station.get("radio") or {}
+    tv_kind, tv_html = tv_set(tv)
+    radio_kind, radio_html = radio_set(radio)
+    return f"""<section class="wrap station" id="station" aria-labelledby="station-h">
+<div class="station-head"><h2 class="label" id="station-h">Station 419 &middot; Local shows &amp; podcasts</h2><div class="station-name" aria-hidden="true"><span class="script">Now playing on</span><span class="retro sm">Station 419</span></div>
+<a class="btn solid" href="{e(site)}/submit.html">Pitch your show</a></div>
+<div class="station-grid"><div class="station-tv"><span class="caps kicker">Watch</span>{tv_html}{station_caption(tv, tv_kind, "Watch")}</div>
+<div class="station-radio"><span class="caps kicker">Listen</span>{radio_html}{station_caption(radio, radio_kind, "Listen")}</div></div>
+</section>
+<script>/* players load only when tapped, so the front page stays fast */
+document.querySelectorAll('[data-tv],[data-radio]').forEach(b=>b.addEventListener('click',()=>{{const f=document.createElement('iframe');
+f.src=b.dataset.tv||b.dataset.radio;f.title=b.getAttribute('aria-label').replace('Play ','');f.allow='autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen';
+f.allowFullscreen=true;b.parentNode.replaceChildren(f)}}))</script>"""
+
+
 def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=()):
     site = cfg["site_url"].rstrip("/")
     stories = [s for s in stories if s["section"] != "life"]  # Celebrations of Life live on their own page
@@ -1916,6 +2156,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 {masthead(cfg, site, stories, quote)}
 <nav class="sections" aria-label="Sections"><div class="wrap">{tabs}</div></nav>
 <main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{front}
+{station_section(cfg, cfg.get("station") or {})}
 {civic(cfg, businesses)}
 <div id="shelves">{shelf_order(rails, funds_rail, events)}</div>
 {market}
@@ -3296,6 +3537,8 @@ def main():
     cfg = json.loads((HERE / "config.json").read_text())
     cfg["canonical_url"] = cfg["site_url"]  # the paper's own domain, from config.json
     cfg["site_url"] = os.environ.get("SITE_URL") or cfg["site_url"]  # set by the GitHub workflow
+    if (HERE / "station.json").exists():
+        cfg["station"] = json.loads((HERE / "station.json").read_text())
     for key in ("supabase_url", "supabase_anon_key"):
         cfg[key] = os.environ.get(key.upper()) or cfg.get(key, "")
     # Sites served from a sub-folder (like user.github.io/sunny-mansfield) need it on local file paths.
