@@ -1054,19 +1054,15 @@ footer .logo{width:220px;line-height:0}footer .logo svg{width:100%;height:auto}
 footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
 
 /* Station 419 (station.json): a retro TV for one local video and a radio for one local podcast */
-.station{scroll-margin-top:56px;background:var(--tertiary);padding-block:16px 64px}
-@media (max-width:860px){.station{padding-block:8px 48px}}
-.station-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px 24px;margin-bottom:24px}
-.station-head .mag-head{grid-column:1/-1;margin-bottom:12px}
-.station-name{display:grid;justify-items:start}.station-name .script{margin-bottom:2px;position:relative;z-index:1}
-@media (max-width:600px){.station-head{grid-template-columns:minmax(0,1fr)}.station-head .btn{justify-self:start}}
-.station-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:48px;align-items:start}
-@media (max-width:860px){.station-grid{grid-template-columns:minmax(0,1fr);gap:40px}}
-.station .kicker{display:block;color:var(--secondary-dk);margin-bottom:8px}
-.station .cap{margin-top:16px}
-.station .cap h3.hed{font:700 clamp(20px,2.2vw,24px)/1.2 var(--serif);letter-spacing:-.01em;margin:0 0 4px}
-.station .cap .host{font:700 11px/1.4 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);margin:0 0 8px}
-.station .cap p{margin:0;color:var(--text-2);font-size:14px;line-height:1.6}
+.station{scroll-margin-top:56px;margin-top:32px}
+.station-grid{display:grid;gap:16px}
+.station .kicker{display:block;color:var(--secondary-dk);margin-bottom:6px}
+.station .cap{margin-top:10px;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 12px}
+.station .cap h3.hed{flex-basis:100%;font:700 16px/1.25 var(--serif);margin:0 0 2px}
+.station .cap .host{font:700 10px/1.4 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);margin:0}
+.station .cap .textbtn{padding:4px 0 0;font-size:11px}
+@media (min-width:601px) and (max-width:1100px){.mag-side .station{grid-column:1/-1}.station-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}}
+.side-briefs{display:contents}
 .tvset{position:relative;padding-top:64px;width:100%}
 .tv-ears{position:absolute;top:0;left:50%;width:220px;height:72px;transform:translateX(-50%)}
 .tv-ears i{position:absolute;bottom:4px;left:50%;width:4px;height:84px;background:var(--primary);transform-origin:bottom center}
@@ -1160,7 +1156,7 @@ footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
 .mag-label{margin:0;background:var(--primary);color:var(--tertiary);font:700 12px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;padding:9px 12px 7px}
 .explore{font:700 11px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);text-decoration:none;padding:8px 0}
 .explore:hover{color:var(--secondary)}
-.mag{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1fr);gap:40px;padding-block:32px 56px}
+.mag{background:var(--tertiary);display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1fr);gap:40px;padding-block:32px 56px}
 .mag-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start}
 .mag .lead{border-bottom:3px solid var(--secondary)}
 .mag .lead .hed{font-size:clamp(30px,3vw,40px)}
@@ -1179,6 +1175,35 @@ footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
 @media (max-width:760px){.mag-grid{grid-template-columns:minmax(0,1fr)}.mag-stack{grid-template-columns:repeat(2,minmax(0,1fr))}.midcard{border-bottom:0;padding-bottom:0}}
 @media (max-width:600px){.mag{padding-block:20px 40px}.mag-stack{grid-template-columns:minmax(0,1fr)}.midcard{border-bottom:1px solid var(--border-subtle);padding-bottom:20px}}
 
+/* compact Station 419 sets for the sidebar */
+.station .tvset{padding-top:40px}
+.station .tv-ears{width:140px;height:46px}.station .tv-ears i{height:54px;width:3px}.station .tv-ears i::after{width:9px;height:9px;top:-4px;left:-3px}
+.station .tv-ears b{width:48px;height:10px}
+.station .tv-body{grid-template-columns:minmax(0,1fr) 54px;gap:10px;padding:10px;border-width:3px}
+.station .tv-bezel{padding:6px}.station .tv-screen{border-width:2px}
+.station .tv-side{gap:6px;padding:0}.station .tv-dial{width:40px;height:40px;font-size:11px;border-width:3px}
+.station .tv-dial::before{height:7px;top:2px;width:3px}.station .tv-dial.sm{width:30px;height:30px;font-size:7px}
+.station .tv-grille{height:24px;background:repeating-linear-gradient(0deg,var(--primary) 0 2px,transparent 2px 6px)}.station .tv-brand{font-size:14px}
+.station .tv-legs i{width:10px;height:14px}
+.station .tv-play span{width:48px;height:48px;border-width:3px}.station .tv-play span::after{border-width:9px 0 9px 15px;margin-left:4px}
+.station .tv-bars .tv-card{inset:auto 8% 28% 8%;padding:6px 8px;border-width:2px}.station .tv-bars .tv-card b{font-size:13px}.station .tv-bars .tv-card span{font-size:10px}
+.station .radio{padding-top:22px;max-width:none}
+.station .radio-handle{height:28px;border-width:4px}
+.station .radio-body{padding:10px;gap:8px;border-width:3px}
+.station .radio-top{grid-template-columns:30% minmax(0,1fr);gap:8px}
+.station .radio-grille{min-height:48px;border-width:2px;background-image:repeating-linear-gradient(0deg,var(--primary) 0 2px,transparent 2px 6px)}
+.station .radio-dial{padding:6px 8px;gap:6px;border-width:2px}.station .radio-scale i{font-size:8px}.station .radio-name{font-size:10px}
+.station .radio-needle{bottom:24px}
+.station .radio-player{border-width:2px}
+.station .radio-player.frame{min-height:0}.station .radio-player.frame.on{min-height:var(--h)}
+.station .radio-tune{grid-template-columns:40px minmax(0,1fr);gap:10px;padding:10px}
+.station .radio-playbtn{width:40px;height:40px;border-width:2px}.station .radio-playbtn::after{border-width:7px 0 7px 12px;margin-left:3px}
+.station .radio-player.own{grid-template-columns:48px minmax(0,1fr);gap:8px;padding:8px}.station .radio-player.soon{padding:12px}
+.station .radio-title{font-size:14px}.station .radio-art .script{font-size:18px}
+.station .radio-knobs .tv-dial.sm{width:28px;height:28px;font-size:7px}.station .radio-knobs .tv-brand{font-size:14px}
+.station .radio-feet i{height:10px;width:10px}
+@media (max-width:600px){.station .tv-body{grid-template-columns:minmax(0,1fr) 54px}.station .tv-side{display:grid;grid-template-columns:none;align-items:initial}
+ .station .tv-brand{order:0}.station .tv-ears{transform:translateX(-50%)}}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,440px);
   background:var(--primary);color:var(--tertiary);padding:8px 16px;border-radius:0;font:600 14px/1.5 var(--sans);text-align:center}
 """
@@ -2051,7 +2076,7 @@ def station_caption(entry, kind, verb):
     link = entry.get("link") or (entry.get("url", "").strip() if entry.get("url", "").strip().startswith("http") else "")
     more = (f'<a class="textbtn" href="{e(link)}" target="_blank" rel="noopener">{verb} at the source</a>' if kind and link else "")
     return (f'<div class="cap"><h3 class="hed">{e(entry.get("title") or "Coming soon")}</h3>'
-            f'<p class="host">{e(entry.get("host", ""))}</p><p>{e(entry.get("about", ""))}</p>{more}</div>')
+            f'<p class="host">{e(entry.get("host", ""))}</p>{more}</div>')
 
 
 def tv_set(entry):
@@ -2107,21 +2132,20 @@ def radio_set(entry):
 
 
 def station_section(cfg, station):
-    """Station 419: one featured video on the TV and one featured audio show on the radio (station.json)."""
+    """Station 419 sidebar widget: one featured video on a small TV and one podcast on a small radio (station.json)."""
     site = cfg["site_url"].rstrip("/")
     tv, radio = station.get("tv") or {}, station.get("radio") or {}
     tv_kind, tv_html = tv_set(tv)
     radio_kind, radio_html = radio_set(radio)
-    return f"""<section class="wrap station" id="station" aria-labelledby="station-h">
-<div class="station-head">{section_head("Station 419 &middot; Local shows &amp; podcasts", f'<a class="explore" href="{e(site)}/submit.html">Pitch your show <span aria-hidden="true">&rsaquo;</span></a>', hid="station-h")}<div class="station-name" aria-hidden="true"><span class="script">Now playing on</span><span class="retro sm">Station 419</span></div>
-</div>
+    pitch = f'<a class="explore" href="{e(site)}/submit.html">Pitch your show <span aria-hidden="true">&rsaquo;</span></a>'
+    return f"""<section class="station" id="station" aria-labelledby="station-h">{section_head("Station 419", pitch, hid="station-h")}
 <div class="station-grid"><div class="station-tv"><span class="caps kicker">Watch</span>{tv_html}{station_caption(tv, tv_kind, "Watch")}</div>
 <div class="station-radio"><span class="caps kicker">Listen</span>{radio_html}{station_caption(radio, radio_kind, "Listen")}</div></div>
 </section>
 <script>/* players load only when tapped, so the front page stays fast */
 document.querySelectorAll('[data-tv],[data-radio]').forEach(b=>b.addEventListener('click',()=>{{const f=document.createElement('iframe');
 f.src=b.dataset.tv||b.dataset.radio;f.title=b.getAttribute('aria-label').replace('Play ','');f.allow='autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen';
-f.allowFullscreen=true;b.parentNode.replaceChildren(f)}}))</script>"""
+f.allowFullscreen=true;const box=b.parentNode;box.classList.add('on');box.replaceChildren(f)}}))</script>"""
 
 
 def section_head(title, link="", tag="h2", hid=""):
@@ -2144,13 +2168,13 @@ def mid_card(s):
     return f'<article class="midcard">{photo(s)}{kicker(s)}{hed(s)}{meta(s)}</article>'
 
 
-def magazine(cfg, top, also):
+def magazine(cfg, top, also, station=""):
     """Front page top: big lead story, a stack of two stories, and an 'Also today' sidebar."""
-    stack, side = also[:2], also[2:7]
+    stack, side = also[:3], also[3:6]
     explore = '<a class="explore" href="#shelves">Explore all <span aria-hidden="true">&rsaquo;</span></a>'
     return (f'<section class="wrap mag"><div class="mag-main">{section_head("Top stories", explore)}'
             f'<div class="mag-grid">{lead(cfg, top)}<div class="mag-stack">{"".join(mid_card(s) for s in stack)}</div></div></div>'
-            f'<aside class="mag-side">{section_head("Also today", explore)}{"".join(brief(s) for s in side)}</aside></section>')
+            f'<aside class="mag-side">{section_head("Also today", explore)}<div class="side-briefs">{"".join(brief(s) for s in side)}</div>{station}</aside></section>')
 
 
 def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=()):
@@ -2170,7 +2194,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     note = ""
     front = ""
     if top:
-        front = magazine(cfg, top, also)
+        front = magazine(cfg, top, also, station_section(cfg, cfg.get("station") or {}))
     grid = "".join(card(cfg, s, front=s["id"] in front_ids) for s in stories)
     ads = ads_for(cfg, "A2")
     ad_at = lambda i: ad_card(cfg, ads[i % len(ads)] if ads else None, i=i // 3)
@@ -2223,7 +2247,6 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 {masthead(cfg, site, stories, quote)}
 <nav class="sections" aria-label="Sections"><div class="wrap">{tabs}</div></nav>
 <main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{ticker(news[:10])}{front}
-{station_section(cfg, cfg.get("station") or {})}
 {civic(cfg, businesses)}
 <div id="shelves">{shelf_order(rails, funds_rail, events)}</div>
 {market}
