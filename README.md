@@ -75,12 +75,12 @@ refresh (every 15 minutes). Verified contributors who sign in skip the queue. Se
 walking down the list in date order (file order if there are no dates), and starts over at the end.
 
 ## Station 419 (local shows and podcasts)
-Right under the lead story the front page has Station 419: a retro TV that plays one local video and a retro
-radio that plays one local podcast. Edit `station.json`, which has a `tv` entry and a `radio` entry, each with
-`url`, `title`, `host` and `about`. Each one shows exactly the link you put there.
-- `tv.url`: a YouTube (watch, youtu.be, shorts, live), Vimeo or Facebook video link, or a pasted `<iframe>` video embed code.
-- `radio.url`: a Spotify, Apple Podcasts, SoundCloud, Buzzsprout, Podbean or Anchor / Spotify for Creators link,
-  a pasted `<iframe>` embed code from any other host (Libsyn, Transistor, Captivate...), a direct `.mp3`/`.m4a`
-  file, or a podcast RSS feed (plays the newest episode and updates on every refresh). `image` adds cover art for .mp3 and RSS.
-- An empty `url` shows a "Coming soon" screen. Optional `link` sets where the "at the source" button goes.
-Players load only when a reader taps Play, so the page stays fast, and YouTube uses its privacy-friendly player.
+Station 419 has two parts on the front page, both set in `station.json`:
+- **TV (sidebar, next to the top stories):** a carousel of local videos. `tv` is a list; each entry has `url`, `title`
+  (shown as its headline) and `host`. Readers flip channels with the arrows or the 419 dial. Links: YouTube (watch,
+  youtu.be, shorts, live), Vimeo, Facebook video, or a pasted `<iframe>` video embed code.
+- **Radio (thin bar under the top stories):** one podcast. `radio.url` can be a Spotify, Apple Podcasts, SoundCloud,
+  Buzzsprout, Podbean or Anchor / Spotify for Creators link, a pasted `<iframe>` embed code from any other host, a
+  direct `.mp3`/`.m4a` file, or a podcast RSS feed (plays the newest episode, updated on every refresh). `image` adds cover art.
+Empty urls show "Coming soon". Optional `link` sets where the "at the source" button goes. Players load only when a
+reader taps Play, so the page stays fast, and YouTube uses its privacy-friendly player.

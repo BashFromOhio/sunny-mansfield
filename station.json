@@ -1,17 +1,17 @@
 {
-  "_how_to": "Station 419 on the front page. 'tv' plays ONE video: a YouTube, Vimeo or Facebook video link, or a pasted <iframe> video embed code. 'radio' plays ONE audio show: a Spotify, Apple Podcasts, SoundCloud, Buzzsprout, Podbean or Anchor episode link, a pasted <iframe> embed code from any podcast host, an .mp3 file, or a podcast RSS feed (always plays the newest episode). Leave a 'url' empty for the 'coming soon' screen. Optional: 'link' (where the 'at the source' button goes) and, for the radio, 'image' (cover art for .mp3 or RSS).",
-  "tv": {
-    "url": "",
-    "title": "Your Mansfield show here",
-    "host": "Hosted by a Mansfield neighbor",
-    "about": "One local video show on the Station 419 TV. Send us yours.",
-    "link": ""
-  },
+  "_how_to": "Station 419 on the front page. 'tv' is a list of videos shown as a carousel on the sidebar TV (add as many as you like; each needs a url and a title, which is its headline). Video links: YouTube, Vimeo, Facebook, or a pasted <iframe> embed code. 'radio' is ONE podcast in the thin player bar under the top stories: a Spotify, Apple Podcasts, SoundCloud, Buzzsprout, Podbean or Anchor link, a pasted <iframe> embed code, an .mp3 file, or a podcast RSS feed (plays the newest episode). Empty url = 'coming soon'. Optional: 'link' (where 'at the source' goes) and, for the radio, 'image' (cover art).",
+  "tv": [
+    {
+      "url": "",
+      "title": "Your Mansfield show here",
+      "host": "Hosted by a Mansfield neighbor",
+      "link": ""
+    }
+  ],
   "radio": {
     "url": "",
     "title": "Your Mansfield podcast here",
     "host": "Hosted by a Mansfield neighbor",
-    "about": "One local podcast on the Station 419 radio. Send us yours.",
     "image": "",
     "link": ""
   }

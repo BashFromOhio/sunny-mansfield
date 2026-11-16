@@ -1053,12 +1053,12 @@ footer .wrap{display:flex;flex-wrap:wrap;justify-content:space-between;align-ite
 footer .logo{width:220px;line-height:0}footer .logo svg{width:100%;height:auto}
 footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
 
-/* Station 419 (station.json): a retro TV for one local video and a radio for one local podcast */
+/* Station 419 (station.json): the retro TV set */
 .station{scroll-margin-top:56px;margin-top:32px}
 .station-grid{display:grid;gap:16px}
 .station .kicker{display:block;color:var(--secondary-dk);margin-bottom:6px}
 .station .cap{margin-top:10px;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 12px}
-.station .cap h3.hed{flex-basis:100%;font:700 16px/1.25 var(--serif);margin:0 0 2px}
+.station .cap h3.hed{flex-basis:100%;font:700 19px/1.2 var(--serif);letter-spacing:-.01em;margin:0 0 4px}
 .station .cap .host{font:700 10px/1.4 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);margin:0}
 .station .cap .textbtn{padding:4px 0 0;font-size:11px}
 @media (min-width:601px) and (max-width:1100px){.mag-side .station{grid-column:1/-1}.station-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}}
@@ -1102,39 +1102,9 @@ footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
  .tv-dial{width:44px;height:44px;font-size:12px}.tv-dial.sm{width:34px;height:34px;font-size:8px}.tv-brand{font-size:18px;order:-1}
  .tv-dial::before{height:9px;top:2px}}
 
-/* the radio: a cream tabletop set with a tuning dial */
-.radio{position:relative;padding-top:34px;width:100%;max-width:460px}
-.radio-handle{position:absolute;top:0;left:22%;right:22%;height:44px;border:6px solid var(--primary);border-bottom:0}
-.radio-body{position:relative;background:var(--surface);border:4px solid var(--primary);padding:18px;display:grid;gap:14px}
-.radio-top{display:grid;grid-template-columns:38% minmax(0,1fr);gap:14px}
-.radio-grille{min-height:96px;background:var(--secondary);border:3px solid var(--primary);
-  background-image:repeating-linear-gradient(0deg,var(--primary) 0 3px,transparent 3px 9px)}
-.radio-dial{position:relative;background:var(--tertiary);border:3px solid var(--primary);padding:10px 12px;display:grid;align-content:space-between;gap:10px}
-.radio-scale{display:flex;justify-content:space-between;border-bottom:2px solid var(--primary);padding-bottom:4px}
-.radio-scale i{font:700 10px/1 var(--caps);font-style:normal;color:var(--text-2);position:relative}
-.radio-scale i::after{content:"";position:absolute;left:50%;bottom:-8px;width:2px;height:6px;background:var(--primary)}
-.radio-needle{position:absolute;top:6px;bottom:32px;left:58%;width:3px;background:var(--secondary)}
-.radio-name{font:700 13px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--primary);text-align:center}
-.radio-player{background:var(--primary);border:3px solid var(--primary)}
-.radio-player.frame{min-height:var(--h);display:grid}
-.radio-player.frame iframe{display:block;width:100%;height:var(--h);border:0;background:var(--tertiary)}
-.radio-tune{display:grid;grid-template-columns:56px minmax(0,1fr);gap:14px;align-items:center;text-align:left;background:none;border:0;padding:14px;cursor:pointer;width:100%}
+/* shared play button */
 .radio-playbtn{width:56px;height:56px;background:var(--tertiary);border:3px solid var(--secondary);display:grid;place-items:center}
 .radio-playbtn::after{content:"";margin-left:4px;border-style:solid;border-width:10px 0 10px 17px;border-color:transparent transparent transparent var(--primary)}
-.radio-tune:hover .radio-playbtn,.radio-tune:focus-visible .radio-playbtn{background:var(--secondary)}
-.radio-player.own{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:center;padding:12px;color:var(--tertiary)}
-.radio-player.own audio{grid-column:1/-1;width:100%;height:40px}
-.radio-art{position:relative;aspect-ratio:1;background:var(--secondary);display:grid;place-items:center;overflow:hidden}
-.radio-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.radio-art .script{color:var(--tertiary);font-size:26px;margin:0}
-.radio-onair{display:block;font:700 10px/1.4 var(--caps);letter-spacing:.14em;text-transform:uppercase;color:var(--secondary)}
-.radio-title{display:block;font:700 16px/1.3 var(--serif);color:var(--tertiary)}
-.radio-player.soon{padding:22px 16px;text-align:center}
-.radio-knobs{display:flex;justify-content:space-between;align-items:center}
-.radio-knobs .tv-brand{color:var(--primary)}
-.radio-feet{padding-inline:10%}.radio-feet i{height:14px}
-@media (max-width:860px){.radio{max-width:none}}
-@media (max-width:600px){.radio-body{padding:12px}.radio-grille{min-height:72px}}
 
 /* magazine front: ticker, lead + stack, sidebar, labelled rules with "Explore all" */
 .ticker{background:var(--primary);color:var(--tertiary)}
@@ -1187,23 +1157,40 @@ footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
 .station .tv-legs i{width:10px;height:14px}
 .station .tv-play span{width:48px;height:48px;border-width:3px}.station .tv-play span::after{border-width:9px 0 9px 15px;margin-left:4px}
 .station .tv-bars .tv-card{inset:auto 8% 28% 8%;padding:6px 8px;border-width:2px}.station .tv-bars .tv-card b{font-size:13px}.station .tv-bars .tv-card span{font-size:10px}
-.station .radio{padding-top:22px;max-width:none}
-.station .radio-handle{height:28px;border-width:4px}
-.station .radio-body{padding:10px;gap:8px;border-width:3px}
-.station .radio-top{grid-template-columns:30% minmax(0,1fr);gap:8px}
-.station .radio-grille{min-height:48px;border-width:2px;background-image:repeating-linear-gradient(0deg,var(--primary) 0 2px,transparent 2px 6px)}
-.station .radio-dial{padding:6px 8px;gap:6px;border-width:2px}.station .radio-scale i{font-size:8px}.station .radio-name{font-size:10px}
-.station .radio-needle{bottom:24px}
-.station .radio-player{border-width:2px}
-.station .radio-player.frame{min-height:0}.station .radio-player.frame.on{min-height:var(--h)}
-.station .radio-tune{grid-template-columns:40px minmax(0,1fr);gap:10px;padding:10px}
-.station .radio-playbtn{width:40px;height:40px;border-width:2px}.station .radio-playbtn::after{border-width:7px 0 7px 12px;margin-left:3px}
-.station .radio-player.own{grid-template-columns:48px minmax(0,1fr);gap:8px;padding:8px}.station .radio-player.soon{padding:12px}
-.station .radio-title{font-size:14px}.station .radio-art .script{font-size:18px}
-.station .radio-knobs .tv-dial.sm{width:28px;height:28px;font-size:7px}.station .radio-knobs .tv-brand{font-size:14px}
-.station .radio-feet i{height:10px;width:10px}
 @media (max-width:600px){.station .tv-body{grid-template-columns:minmax(0,1fr) 54px}.station .tv-side{display:grid;grid-template-columns:none;align-items:initial}
  .station .tv-brand{order:0}.station .tv-ears{transform:translateX(-50%)}}
+/* Station 419 video carousel and the thin radio bar */
+.tv-slide{position:absolute;inset:0}.tv-slide[hidden]{display:none}
+button.tv-dial{cursor:pointer;padding:0}button.tv-dial:hover,button.tv-dial:focus-visible{background:var(--secondary);color:var(--tertiary)}
+.tv-caprow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start;margin-top:10px}
+.tv-caprow .cap[hidden]{display:none}
+.tv-nav{display:flex;align-items:center;gap:6px;grid-column:2;grid-row:1}
+.tv-arrow{width:34px;height:34px;border:2px solid var(--primary);background:var(--tertiary);color:var(--primary);font:700 20px/1 var(--serif);cursor:pointer;padding:0 0 3px}
+.tv-arrow:hover,.tv-arrow:focus-visible{background:var(--primary);color:var(--tertiary)}
+.tv-count{font:700 11px/1 var(--caps);letter-spacing:.1em;color:var(--text-2);min-width:34px;text-align:center}
+.radiobar{background:var(--tertiary);padding-block:0 40px;margin-top:-24px}
+.rb-in{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:4px 16px;align-items:center;border:2px solid var(--primary);border-left:8px solid var(--secondary);padding:8px 14px 8px 10px;background:var(--surface)}
+.rb-icon{position:relative;width:44px;height:36px;background:var(--tertiary);border:2px solid var(--primary);overflow:hidden;
+  background-image:repeating-linear-gradient(0deg,var(--secondary) 0 2px,transparent 2px 5px);background-size:45% 100%;background-repeat:no-repeat;background-position:3px 50%}
+.rb-icon i{position:absolute;right:4px;top:6px;bottom:6px;width:40%;border:2px solid var(--primary)}
+.rb-icon img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
+.rb-text{display:grid;gap:2px;min-width:0}
+.rb-label{font:700 10px/1.3 var(--caps);letter-spacing:.14em;text-transform:uppercase;color:var(--text)}
+.rb-label b{color:var(--secondary-dk);margin-left:8px}
+.rb-title{font:700 16px/1.3 var(--serif);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rb-host{font:500 13px var(--sans);color:var(--text-2);margin-left:6px}
+.rb-player audio{display:block;width:300px;height:36px}
+.rb-play{display:flex;align-items:center;gap:10px;background:var(--primary);color:var(--tertiary);border:0;padding:4px 16px 4px 4px;cursor:pointer;
+  font:700 12px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase}
+.rb-play .radio-playbtn{width:32px;height:32px;border-width:2px}.rb-play .radio-playbtn::after{border-width:6px 0 6px 10px;margin-left:3px}
+.rb-play:hover{background:var(--secondary)}
+.rb-player.on{grid-column:1/-1;grid-row:2;width:100%}
+.rb-player.on iframe{display:block;width:100%;height:var(--h);border:0}
+.rb-in .textbtn{padding:8px 0;font-size:11px}
+@media (max-width:760px){.rb-in{grid-template-columns:40px minmax(0,1fr) auto}.rb-in>.textbtn{display:none}.rb-player audio{width:200px}}
+@media (max-width:600px){.radiobar{margin-top:-16px;padding-block:0 32px}.rb-in{grid-template-columns:36px minmax(0,1fr);row-gap:8px}.rb-icon{width:36px}
+ .rb-player{grid-column:1/-1}.rb-player audio{width:100%}.rb-play{width:100%;justify-content:center}.rb-title{white-space:normal}.rb-host{display:block;margin:0}}
+
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,440px);
   background:var(--primary);color:var(--tertiary);padding:8px 16px;border-radius:0;font:600 14px/1.5 var(--sans);text-align:center}
 """
@@ -2072,33 +2059,50 @@ def color_bars(line1, line2):
             f'<div class="low">{low}</div><div class="tv-card"><b>{line1}</b><span>{line2}</span></div></div>')
 
 
-def station_caption(entry, kind, verb):
-    link = entry.get("link") or (entry.get("url", "").strip() if entry.get("url", "").strip().startswith("http") else "")
-    more = (f'<a class="textbtn" href="{e(link)}" target="_blank" rel="noopener">{verb} at the source</a>' if kind and link else "")
-    return (f'<div class="cap"><h3 class="hed">{e(entry.get("title") or "Coming soon")}</h3>'
-            f'<p class="host">{e(entry.get("host", ""))}</p>{more}</div>')
+def station_link(entry, kind, verb):
+    url = (entry.get("url") or "").strip()
+    link = entry.get("link") or (url if url.startswith("http") else "")
+    return f'<a class="textbtn" href="{e(link)}" target="_blank" rel="noopener">{verb} at the source</a>' if kind and link else ""
 
 
-def tv_set(entry):
-    """The TV: plays exactly the one video in station.json > tv."""
+def tv_screen(entry):
     kind, src, thumb, _ = tv_embed(entry.get("url", ""))
     title = e(entry.get("title") or "Local video")
     if kind == "youtube":
-        screen = (f'<div class="tv-screen"><img src="{e(thumb)}" alt="" loading="lazy" onerror="this.remove()">'
-                  f'<button class="tv-play" type="button" data-tv="{e(src)}" aria-label="Play {title}"><span></span></button></div>')
-    elif kind == "video":
-        screen = (f'<div class="tv-screen"><button class="tv-play" type="button" data-tv="{e(src)}" aria-label="Play {title}"><span></span></button></div>')
-    else:
-        kind = ""
-        screen = f'<div class="tv-screen">{color_bars("Coming soon", "A Mansfield show airs here")}</div>'
-    return kind, f"""<div class="tvset"><div class="tv-ears" aria-hidden="true"><i></i><i></i><b></b></div>
-<div class="tv-body"><div class="tv-bezel">{screen}</div>
-<div class="tv-side" aria-hidden="true"><span class="tv-brand">Sunny</span><span class="tv-dial">419</span><span class="tv-dial sm">VOL</span><span class="tv-grille"></span></div></div>
-<div class="tv-legs" aria-hidden="true"><i></i><i></i></div></div>"""
+        return kind, (f'<img src="{e(thumb)}" alt="" loading="lazy" onerror="this.remove()">'
+                      f'<button class="tv-play" type="button" data-tv="{e(src)}" aria-label="Play {title}"><span></span></button>')
+    if kind == "video":
+        return kind, f'<button class="tv-play" type="button" data-tv="{e(src)}" aria-label="Play {title}"><span></span></button>'
+    return "", color_bars("Coming soon", "A Mansfield show airs here")
 
 
-def radio_set(entry):
-    """The radio: plays exactly the one audio link in station.json > radio (a podcast RSS feed plays its newest episode)."""
+def tv_set(entries):
+    """The TV: a carousel of local videos (station.json > tv), one headline per channel."""
+    entries = [x for x in entries if (x.get("url") or "").strip()] or entries[:1] or [{}]
+    slides, caps = [], []
+    for i, x in enumerate(entries):
+        kind, screen = tv_screen(x)
+        hide = "" if i == 0 else " hidden"
+        slides.append(f'<div class="tv-slide" data-ch="{i}"{hide}>{screen}</div>')
+        caps.append(f'<div class="cap" data-ch="{i}"{hide}><h3 class="hed">{e(x.get("title") or "Your Mansfield show here")}</h3>'
+                    f'<p class="host">{e(x.get("host", "Hosted by a Mansfield neighbor"))}</p>{station_link(x, kind, "Watch")}</div>')
+    n = len(entries)
+    nav = (f'<div class="tv-nav"><button class="tv-arrow" type="button" data-step="-1" aria-label="Previous video">&lsaquo;</button>'
+           f'<span class="tv-count" aria-live="polite">1 / {n}</span>'
+           f'<button class="tv-arrow" type="button" data-step="1" aria-label="Next video">&rsaquo;</button></div>') if n > 1 else ""
+    dial = (f'<button class="tv-dial" type="button" data-step="1" aria-label="Change channel">419</button>' if n > 1
+            else '<span class="tv-dial">419</span>')
+    return f"""<div class="tvcarousel" role="region" aria-roledescription="carousel" aria-label="Station 419 videos">
+<div class="tvset"><div class="tv-ears" aria-hidden="true"><i></i><i></i><b></b></div>
+<div class="tv-body"><div class="tv-bezel"><div class="tv-screen">{"".join(slides)}</div></div>
+<div class="tv-side"><span class="tv-brand" aria-hidden="true">Sunny</span>{dial}<span class="tv-dial sm" aria-hidden="true">VOL</span><span class="tv-grille" aria-hidden="true"></span></div></div>
+<div class="tv-legs" aria-hidden="true"><i></i><i></i></div></div>
+<div class="tv-caprow">{"".join(caps)}{nav}</div></div>"""
+
+
+def radio_bar(cfg, entry):
+    """Station 419 radio: a thin full-width player bar for one local podcast (station.json > radio)."""
+    site = cfg["site_url"].rstrip("/")
     entry = dict(entry)
     url = (entry.get("url") or "").strip()
     art = entry.get("image", "")
@@ -2108,44 +2112,51 @@ def radio_set(entry):
         if audio:
             kind, src, art = "audio", audio, art or ep_art
             entry["title"] = entry.get("title") or ep_title
-    title = e(entry.get("title") or "Local podcast")
+    if "open.spotify.com/embed" in src:
+        height = 80  # Spotify's slim player
+    elif "w.soundcloud.com" in src:
+        src, height = src.replace("visual=true", "visual=false"), 120
+    title = e(entry.get("title") or "Your Mansfield podcast here")
+    host = e(entry.get("host") or "")
     if kind == "frame":
-        player = (f'<div class="radio-player frame" style="--h:{height}px"><button class="radio-tune" type="button" data-radio="{e(src)}" '
-                  f'aria-label="Play {title}"><span class="radio-playbtn"></span><span><span class="radio-onair">Tap to tune in</span>'
-                  f'<b class="radio-title">{title}</b></span></button></div>')
+        player = (f'<div class="rb-player" style="--h:{height}px"><button class="rb-play" type="button" data-radio="{e(src)}" aria-label="Play {title}">'
+                  f'<span class="radio-playbtn"></span><span>Listen</span></button></div>')
     elif kind == "audio":
-        pic = f'<img src="{e(art)}" alt="" loading="lazy" onerror="this.remove()">' if art else '<span class="script">419</span>'
-        player = (f'<div class="radio-player own"><div class="radio-art">{pic}</div>'
-                  f'<div><span class="radio-onair">On the air</span><b class="radio-title">{title}</b></div>'
-                  f'<audio controls preload="none" src="{e(src)}" aria-label="{title}"></audio></div>')
+        player = f'<div class="rb-player"><audio controls preload="none" src="{e(src)}" aria-label="{title}"></audio></div>'
     else:
         kind = ""
-        player = ('<div class="radio-player soon"><span class="radio-onair">Coming soon</span>'
-                  '<b class="radio-title">A Mansfield podcast airs here</b></div>')
-    ticks = "".join(f"<i>{n}</i>" for n in ("54", "70", "90", "110", "130", "160"))
-    return kind, f"""<div class="radio"><div class="radio-handle" aria-hidden="true"></div>
-<div class="radio-body"><div class="radio-top"><div class="radio-grille" aria-hidden="true"></div>
-<div class="radio-dial" aria-hidden="true"><div class="radio-scale">{ticks}</div><span class="radio-needle"></span><span class="radio-name">Station 419</span></div></div>
-{player}
-<div class="radio-knobs" aria-hidden="true"><span class="tv-dial sm">VOL</span><span class="tv-brand">Sunny</span><span class="tv-dial sm">TUNE</span></div></div>
-<div class="tv-legs radio-feet" aria-hidden="true"><i></i><i></i></div></div>"""
+        player = f'<div class="rb-player"><a class="btn sm" href="{e(site)}/submit.html">Pitch your podcast</a></div>'
+    pic = f'<img src="{e(art)}" alt="" loading="lazy" onerror="this.remove()">' if art else ""
+    status = "Now playing" if kind else "Coming soon"
+    return f"""<section class="wrap radiobar" id="listen" aria-label="Station 419 radio">
+<div class="rb-in"><span class="rb-icon" aria-hidden="true">{pic}<i></i></span>
+<div class="rb-text"><span class="rb-label">Station 419 Radio <b>{status}</b></span><span class="rb-title">{title}{f' <span class="rb-host">{host}</span>' if host else ""}</span></div>
+{player}{station_link(entry, kind, "Listen")}</div></section>"""
 
 
 def station_section(cfg, station):
-    """Station 419 sidebar widget: one featured video on a small TV and one podcast on a small radio (station.json)."""
+    """Station 419 sidebar widget: the video carousel."""
     site = cfg["site_url"].rstrip("/")
-    tv, radio = station.get("tv") or {}, station.get("radio") or {}
-    tv_kind, tv_html = tv_set(tv)
-    radio_kind, radio_html = radio_set(radio)
+    tv = station.get("tv") or []
+    tv = [tv] if isinstance(tv, dict) else tv
     pitch = f'<a class="explore" href="{e(site)}/submit.html">Pitch your show <span aria-hidden="true">&rsaquo;</span></a>'
     return f"""<section class="station" id="station" aria-labelledby="station-h">{section_head("Station 419", pitch, hid="station-h")}
-<div class="station-grid"><div class="station-tv"><span class="caps kicker">Watch</span>{tv_html}{station_caption(tv, tv_kind, "Watch")}</div>
-<div class="station-radio"><span class="caps kicker">Listen</span>{radio_html}{station_caption(radio, radio_kind, "Listen")}</div></div>
-</section>
-<script>/* players load only when tapped, so the front page stays fast */
-document.querySelectorAll('[data-tv],[data-radio]').forEach(b=>b.addEventListener('click',()=>{{const f=document.createElement('iframe');
-f.src=b.dataset.tv||b.dataset.radio;f.title=b.getAttribute('aria-label').replace('Play ','');f.allow='autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen';
-f.allowFullscreen=true;const box=b.parentNode;box.classList.add('on');box.replaceChildren(f)}}))</script>"""
+{tv_set(tv)}</section>"""
+
+
+STATION_JS = """<script>/* Station 419: players load only when tapped, so the front page stays fast */
+(()=>{const live=new Map();
+document.addEventListener('click',ev=>{const b=ev.target.closest('[data-tv],[data-radio]');if(!b)return;
+ const f=document.createElement('iframe');f.src=b.dataset.tv||b.dataset.radio;f.title=b.getAttribute('aria-label').replace('Play ','');
+ f.allow='autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen';f.allowFullscreen=true;
+ const box=b.parentNode;live.set(box,box.innerHTML);box.classList.add('on');box.replaceChildren(f)});
+document.querySelectorAll('.tvcarousel').forEach(c=>{const slides=[...c.querySelectorAll('.tv-slide')];const caps=[...c.querySelectorAll('.cap')];
+ const count=c.querySelector('.tv-count');let i=0;
+ c.querySelectorAll('[data-step]').forEach(b=>b.addEventListener('click',()=>{const old=slides[i];
+  if(live.has(old)){old.innerHTML=live.get(old);old.classList.remove('on');live.delete(old)}  // stop the video that was playing
+  i=(i+ +b.dataset.step+slides.length)%slides.length;
+  slides.forEach((s,k)=>s.hidden=k!==i);caps.forEach((s,k)=>s.hidden=k!==i);if(count)count.textContent=`${i+1} / ${slides.length}`}))});
+})();</script>"""
 
 
 def section_head(title, link="", tag="h2", hid=""):
@@ -2168,13 +2179,14 @@ def mid_card(s):
     return f'<article class="midcard">{photo(s)}{kicker(s)}{hed(s)}{meta(s)}</article>'
 
 
-def magazine(cfg, top, also, station=""):
+def magazine(cfg, top, also, station="", radio=""):
     """Front page top: big lead story, a stack of two stories, and an 'Also today' sidebar."""
-    stack, side = also[:3], also[3:6]
+    stack, side = also[:3], also[3:7]
     explore = '<a class="explore" href="#shelves">Explore all <span aria-hidden="true">&rsaquo;</span></a>'
     return (f'<section class="wrap mag"><div class="mag-main">{section_head("Top stories", explore)}'
             f'<div class="mag-grid">{lead(cfg, top)}<div class="mag-stack">{"".join(mid_card(s) for s in stack)}</div></div></div>'
-            f'<aside class="mag-side">{section_head("Also today", explore)}<div class="side-briefs">{"".join(brief(s) for s in side)}</div>{station}</aside></section>')
+            f'<aside class="mag-side">{section_head("Also today", explore)}<div class="side-briefs">{"".join(brief(s) for s in side)}</div>{station}</aside></section>'
+            f'{radio}{STATION_JS}')
 
 
 def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=()):
@@ -2185,7 +2197,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     pick = pinned(news, headlines)
     if pick:
         news = [pick] + [s for s in news if s is not pick]
-    top, also = (news[0], news[1:7]) if news else (None, [])
+    top, also = (news[0], news[1:8]) if news else (None, [])
     front_ids = {s["id"] for s in ([top] if top else []) + also}
     counts = {k: sum(1 for s in stories if s["section"] == k) for k, _ in SECTIONS}
     tabs = f'<button class="tab" type="button" data-sec="all">All <span class="n">{len(stories)}</span></button>' + "".join(
@@ -2194,7 +2206,8 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     note = ""
     front = ""
     if top:
-        front = magazine(cfg, top, also, station_section(cfg, cfg.get("station") or {}))
+        st = cfg.get("station") or {}
+        front = magazine(cfg, top, also, station_section(cfg, st), radio_bar(cfg, st.get("radio") or {}))
     grid = "".join(card(cfg, s, front=s["id"] in front_ids) for s in stories)
     ads = ads_for(cfg, "A2")
     ad_at = lambda i: ad_card(cfg, ads[i % len(ads)] if ads else None, i=i // 3)
