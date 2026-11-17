@@ -467,3 +467,43 @@ def fill_enclosure_lengths(out, site):
             n = local.stat().st_size if local and local.exists() else 0
             return f'<enclosure url="{m.group(1)}" type="image/jpeg" length="{n}"/>'
         path.write_text(re.sub(r'<enclosure url="([^"]+)" type="image/jpeg" length="0"/>', size, path.read_text()))
+
+
+def watch_image(title, host, photo=None, credit="sunnymansfield.com"):
+    """Facebook link preview for a Watch Mansfield video (1200x630): the video's picture in the same frame as the site,
+    with a Play button, the orange WATCH MANSFIELD tag, the title, and the orange timer bar along the bottom."""
+    from PIL import ImageChops, ImageFilter
+    ww, hh = 1200, 630
+    im = Image.new("RGB", (ww, hh), (20, 20, 20))
+    if photo:
+        im.paste(ImageOps.fit(ImageOps.exif_transpose(photo).convert("RGB"), (ww, hh), centering=(0.5, 0.45)))
+    else:  # no picture: the site's dark card with an orange glow
+        glow = Image.new("L", (ww, hh), 0)
+        ImageDraw.Draw(glow).ellipse((620, -260, 1320, 440), fill=150)
+        im = Image.composite(Image.new("RGB", (ww, hh), ORANGE), im, glow.filter(ImageFilter.GaussianBlur(120)))
+    # darken toward the bottom so the white title always reads
+    ramp = Image.linear_gradient("L").resize((ww, hh))
+    shade = ramp.point(lambda v: int(min(235, max(0, v - 40) * 1.45)))  # bottom: up to ~92% black under the title
+    top = ramp.point(lambda v: int(max(0, 140 - v * 1.6)))  # top: a light shade behind the play button and name
+    im = Image.composite(Image.new("RGB", (ww, hh), (0, 0, 0)), im, ImageChops.lighter(shade, top))
+    d = ImageDraw.Draw(im)
+    white = (255, 255, 255)
+    d.ellipse((56, 56, 152, 152), fill=ORANGE)
+    d.polygon([(93, 80), (93, 128), (133, 104)], fill=white)
+    spaced(d, (ww - 56, 70), "Sunny Mansfield", font("Josefin-700", 22), white, track=0.2, anchor="r")
+    f, lines = headline(d, title, ww - 112, (64, 58, 52, 46, 42), 3)
+    step = round(f.size * 1.16)
+    meta_y = hh - 74
+    y = meta_y - 22 - step * len(lines)
+    for line in lines:
+        d.text((56, y), line, font=f, fill=white)
+        y += step
+    tag = font("Josefin-700", 22)
+    ty = meta_y - 22 - step * len(lines) - 58
+    tw = spaced(d, (0, -100), "Watch Mansfield", tag, white, track=0.16)  # measure off-canvas
+    d.rectangle((56, ty, 56 + tw + 28, ty + 40), fill=ORANGE)
+    spaced(d, (70, ty + 10), "Watch Mansfield", tag, white, track=0.16)
+    meta = f"{host}  ·  {credit}" if host else credit
+    spaced(d, (56, meta_y), meta, font("Josefin-700", 18), (225, 225, 225), track=0.12)
+    d.rectangle((0, hh - 10, ww * 0.62, hh), fill=ORANGE)
+    return im
