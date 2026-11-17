@@ -75,8 +75,20 @@ walking down the list in date order (file order if there are no dates), and star
 
 ## Watch Mansfield (local videos)
 The top-right spot of the front page hero is "Watch Mansfield": local videos that rotate every 10 seconds (an orange
-bar along the bottom is the timer; it pauses while a reader hovers, and stops while a video plays). Edit
-`station.json`: `tv` is a list, and each entry has `url`, `title` (shown as its headline) and `host`. Links can be
-YouTube (watch, youtu.be, shorts, live), Vimeo, Facebook video, or a pasted `<iframe>` video embed code. YouTube videos
-show their thumbnail. Videos load only when a reader taps Play, and YouTube uses its privacy-friendly player. Optional
-`link` sets where the headline goes. With no video links, the spot shows a regular story instead.
+bar along the bottom is the timer; it pauses while a reader hovers, and stops while a video plays). Each video shows
+its YouTube preview picture and its title as the headline. Videos load only when a reader taps Play, and YouTube uses
+its privacy-friendly player. With no videos, the spot shows a regular story.
+
+**To add a video**, edit [`watch.json`](watch.json) on GitHub (pencil icon) and paste the YouTube link into `videos`:
+
+```json
+"videos": [
+  "https://www.youtube.com/watch?v=VIDEO_ID",
+  {"url": "https://youtu.be/OTHER_ID", "title": "Your own headline"}
+],
+```
+
+A plain link is enough: the headline and channel name come from YouTube when the site builds. Use the `{...}` form to
+write your own headline. Vimeo and Facebook video links work too (give those a `title`, and an `image` for the preview).
+Your picks show first, then the newest `from_channel` videos from the YouTube channel in `channel_id` fill in
+(currently the 3 newest from The Lindsay's, @thelindsays7871). Set `from_channel` to `0` to show only your picks.

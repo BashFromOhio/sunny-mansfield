@@ -1,0 +1,7 @@
+{
+  "_how_to": "Watch Mansfield: the video spot at the top right of the front page. It rotates every 10 seconds. To add a video, paste its YouTube link into 'videos' (one link per line, in quotes, with a comma between). The headline and preview picture come from YouTube automatically. To set your own headline, use {\"url\": \"https://youtu.be/...\", \"title\": \"Your headline\"} instead of a plain link. Vimeo and Facebook video links work too (add a 'title' and an 'image' for those). Videos you add here come first, then the newest 'from_channel' videos from 'channel' fill in. Set from_channel to 0 to show only your own picks.",
+  "videos": [],
+  "channel": "https://www.youtube.com/@thelindsays7871",
+  "channel_id": "UCX1O-N6oT3oWQi9ovAoZJUQ",
+  "from_channel": 3
+}

@@ -1164,7 +1164,9 @@ html{background:#fff}html::before{display:none}
 .w-play span{width:54px;height:54px;border-radius:50%;background:var(--secondary);display:grid;place-items:center;box-shadow:0 4px 18px rgba(0,0,0,.4);transition:transform .2s}
 .w-play span::after{content:"";margin-left:4px;border-style:solid;border-width:10px 0 10px 17px;border-color:transparent transparent transparent #fff}
 .w-play:hover span,.w-play:focus-visible span{transform:scale(1.1)}
-.watch .ov-text{z-index:1}
+.watch .ov-text{z-index:1;padding-top:90px;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.6) 40%,rgba(0,0,0,.92))}
+.watch .hed{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.w-play{padding:14px!important;place-items:start!important}
 .watch.playing .ov-text,.watch.playing .w-dots,.watch.playing .w-bar{display:none}
 .w-dots{position:absolute;top:12px;right:12px;z-index:2;display:flex;gap:6px}
 .w-dots button{width:9px;height:9px;padding:0;border:1.5px solid #fff;border-radius:50%;background:transparent;cursor:pointer}
@@ -2007,15 +2009,70 @@ def tv_embed(url):
     return "", "", "", 0
 
 
-def watch_entries(station):
-    """Videos for the Watch Mansfield slot (station.json > tv); entries without a playable video link are skipped."""
-    tv = station.get("tv") or []
-    tv = [tv] if isinstance(tv, dict) else tv
+YT_FEED = "https://www.youtube.com/feeds/videos.xml?channel_id="
+
+
+def youtube_info(url):
+    """Title and channel name for a YouTube link, from YouTube's public oEmbed endpoint ({} if it can't be reached)."""
+    try:
+        _, body = fetch("https://www.youtube.com/oembed?format=json&url=" + urllib.parse.quote(url, safe=""), limit=20_000)
+        return json.loads(body)
+    except Exception as exc:
+        note(f"Watch Mansfield: no title for {url} ({exc})")
+        return {}
+
+
+def channel_videos(channel_id, count):
+    """The newest videos on a YouTube channel, from its public RSS feed (newest first)."""
+    if not channel_id or count <= 0:
+        return []
+    try:
+        _, body = fetch(YT_FEED + urllib.parse.quote(channel_id), limit=600_000)
+    except Exception as exc:
+        note(f"Watch Mansfield: channel feed unavailable ({exc})")
+        return []
     out = []
-    for x in tv:
+    for entry in re.findall(r"<entry>(.*?)</entry>", body, re.S)[:count]:
+        vid = re.search(r"<yt:videoId>([\w-]{11})</yt:videoId>", entry)
+        title = re.search(r"<title>(.*?)</title>", entry, re.S)
+        author = re.search(r"<author>\s*<name>(.*?)</name>", entry, re.S)
+        if vid:
+            out.append({"url": f"https://www.youtube.com/watch?v={vid.group(1)}",
+                        "title": html.unescape(title.group(1)).strip() if title else "",
+                        "host": html.unescape(author.group(1)).strip() if author else ""})
+    return out
+
+
+def load_watch(watch, sample=False):
+    """watch.json -> the video list for Watch Mansfield: hand-picked links first, then the newest channel videos.
+    A plain YouTube link is enough; the headline and channel name are filled in from YouTube."""
+    picks = watch.get("videos") or watch.get("tv") or []  # "tv" is the old station.json name
+    picks = [{"url": x} if isinstance(x, str) else dict(x) for x in ([picks] if isinstance(picks, (str, dict)) else picks)]
+    picks = [x for x in picks if (x.get("url") or "").strip()]
+    if not sample:
+        for x in picks:
+            if tv_embed(x["url"])[0] == "youtube" and not (x.get("title") and x.get("host")):
+                info = youtube_info(x["url"])
+                x.setdefault("title", info.get("title", ""))
+                x["title"] = x["title"] or info.get("title", "")
+                x["host"] = x.get("host") or info.get("author_name", "")
+        seen = {youtube_id(x["url"]) for x in picks}
+        picks += [v for v in channel_videos(watch.get("channel_id", ""), int(watch.get("from_channel") or 0))
+                  if youtube_id(v["url"]) not in seen]
+    if picks:
+        note(f"Watch Mansfield: {len(picks)} videos")
+    return picks
+
+
+def watch_entries(videos):
+    """Videos for the Watch Mansfield slot; entries without a playable video link are skipped.
+    YouTube previews use the video's own thumbnail (the HD one, falling back to the standard one)."""
+    out = []
+    for x in videos:
         kind, src, thumb, _ = tv_embed(x.get("url", ""))
         if kind in ("youtube", "video"):
             url = (x.get("url") or "").strip()
+            thumb = x.get("image") or (thumb.replace("/hqdefault.jpg", "/maxresdefault.jpg") if thumb else "")
             out.append({**x, "src": src, "thumb": thumb, "href": x.get("link") or (url if url.startswith("http") else "")})
     return out
 
@@ -2026,7 +2083,9 @@ def watch_card(videos):
     slides = []
     for i, v in enumerate(videos):
         title = e(v.get("title") or "Watch Mansfield")
-        img = f'<img src="{e(v["thumb"])}" alt="" loading="lazy" onerror="this.remove()">' if v["thumb"] else ""
+        # maxresdefault doesn't exist for every video, so fall back to hqdefault, then to the plain dark card.
+        fall = "if(this.src.includes('maxresdefault'))this.src=this.src.replace('maxresdefault','hqdefault');else this.remove()"
+        img = f'<img src="{e(img_src(v["thumb"]))}" alt="" onerror="{fall}">' if v["thumb"] else ""
         hed_link = (f'<a href="{e(v["href"])}" target="_blank" rel="noopener">{title}</a>' if v["href"] else title)
         host = f'<span class="ov-meta">{e(v["host"])}</span>' if v.get("host") else ""
         slides.append(f'<div class="w-slide"{"" if i == 0 else " hidden"}><div class="w-media">{img}'
@@ -2141,7 +2200,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     note = ""
     front = ""
     if top:
-        front = magazine(cfg, top, also, watch_entries(cfg.get("station") or {}), tabs)
+        front = magazine(cfg, top, also, watch_entries(cfg.get("watch") or []), tabs)
     grid = "".join(card(cfg, s, front=s["id"] in front_ids) for s in stories)
     ads = ads_for(cfg, "A2")
     ad_at = lambda i: ad_card(cfg, ads[i % len(ads)] if ads else None, i=i // 3)
@@ -3572,8 +3631,8 @@ def main():
     cfg = json.loads((HERE / "config.json").read_text())
     cfg["canonical_url"] = cfg["site_url"]  # the paper's own domain, from config.json
     cfg["site_url"] = os.environ.get("SITE_URL") or cfg["site_url"]  # set by the GitHub workflow
-    if (HERE / "station.json").exists():
-        cfg["station"] = json.loads((HERE / "station.json").read_text())
+    watch_file = HERE / "watch.json"
+    cfg["watch"] = load_watch(json.loads(watch_file.read_text()), args.sample) if watch_file.exists() else []
     for key in ("supabase_url", "supabase_anon_key"):
         cfg[key] = os.environ.get(key.upper()) or cfg.get(key, "")
     # Sites served from a sub-folder (like user.github.io/sunny-mansfield) need it on local file paths.
