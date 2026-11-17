@@ -2010,6 +2010,7 @@ def tv_embed(url):
 
 
 YT_FEED = "https://www.youtube.com/feeds/videos.xml?channel_id="
+YT_PLAYLIST_FEED = "https://www.youtube.com/feeds/videos.xml?playlist_id="
 
 
 def youtube_info(url):
@@ -2026,13 +2027,19 @@ def channel_videos(channel_id, count):
     """The newest videos on a YouTube channel, from its public RSS feed (newest first)."""
     if not channel_id or count <= 0:
         return []
-    try:
-        _, body = fetch(YT_FEED + urllib.parse.quote(channel_id), limit=600_000)
-    except Exception as exc:
-        note(f"Watch Mansfield: channel feed unavailable ({exc})")
-        return []
+    # The channel's "UULF" playlist is its Videos tab (long-form only, no Shorts or live streams). If that feed can't
+    # be read, fall back to the full channel feed and skip anything that links to /shorts/.
+    body = ""
+    for feed in (YT_PLAYLIST_FEED + "UULF" + channel_id[2:], YT_FEED + channel_id):
+        try:
+            _, body = fetch(feed.replace(" ", ""), limit=600_000)
+            if "<entry>" in body:
+                break
+        except Exception as exc:
+            note(f"Watch Mansfield: feed unavailable ({exc})")
     out = []
-    for entry in re.findall(r"<entry>(.*?)</entry>", body, re.S)[:count]:
+    entries = [x for x in re.findall(r"<entry>(.*?)</entry>", body, re.S) if "/shorts/" not in x]
+    for entry in entries[:count]:
         vid = re.search(r"<yt:videoId>([\w-]{11})</yt:videoId>", entry)
         title = re.search(r"<title>(.*?)</title>", entry, re.S)
         author = re.search(r"<author>\s*<name>(.*?)</name>", entry, re.S)
