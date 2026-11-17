@@ -1191,6 +1191,23 @@ html{background:#fff}html::before{display:none}
 .watch-tile .w-media{position:relative;aspect-ratio:16/9;overflow:hidden}
 .watch-tile .hed{font-size:17px;line-height:1.25}.watch-tile:hover .hed{color:var(--secondary)}
 @media (max-width:860px){.watch-page,.watch-grid{grid-template-columns:1fr}}
+.first{display:grid;justify-items:center;align-content:center;text-align:center;gap:8px;padding:26px 20px;box-sizing:border-box;
+  border:2px dashed var(--secondary);background:#fff7f2;color:var(--text);text-decoration:none}
+.first:hover{background:#ffefe5}
+.first-logo img{display:block;width:min(200px,80%);height:auto;margin-inline:auto}
+.first .kicker{margin-top:4px}
+.first .hed{font-family:var(--serif);font-weight:700;font-size:22px;line-height:1.15}
+.first .dek{margin:0;color:var(--text-2);font-size:14px;line-height:1.5;max-width:34ch}
+.first .btn{margin-top:6px}
+.first-wrap{max-width:520px;margin:8px auto 0}
+.first-wrap .first{padding:34px 28px}
+.first-wrap .first-logo img{width:min(260px,80%)}
+.watch.big{aspect-ratio:16/9}
+.watch.big .hed{font-size:clamp(20px,2.6vw,32px)}
+.watch-hub{padding-block:8px 20px}
+.watch-tile .w-play{position:absolute;inset:0;padding:12px;place-items:start}
+.watch-tile .w-play span{width:40px;height:40px}.watch-tile .w-play span::after{border-width:8px 0 8px 13px;margin-left:3px}
+.givebox{padding-block:24px 40px}
 footer{background:var(--primary)!important}
 .btn.solid{background:var(--secondary);border-color:var(--secondary)}
 @media (max-width:980px){.nf{grid-template-columns:1fr}.nf-side{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start}}
@@ -1492,8 +1509,8 @@ def masthead(cfg, site, stories, quote=None, current=""):
 <div class="plate-ad">{ad}</div>
 </div>
 <nav class="navbar" aria-label="Main"><div class="wrap strip caps">
-<div class="navgroup"><a href="{e(site)}/"{on("front")}>Front page</a><a href="{e(site)}/events.html">Events</a><a href="{e(site)}/#watch">Watch Mansfield</a>
-<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/fundraisers.html">Fundraisers</a>
+<div class="navgroup"><a href="{e(site)}/"{on("front")}>Front page</a><a href="{e(site)}/events.html">Events</a><a href="{e(site)}/watch.html"{on("watch")}>Watch Mansfield</a>
+<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/fundraisers.html">Donate</a>
 <a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/businesses.html">Businesses</a>
 <button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}</div>
@@ -1624,6 +1641,33 @@ ARROWS = ('<div class="rail-nav"><button class="arrow" type="button" data-dir="-
           '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>'
           '<button class="arrow" type="button" data-dir="1" aria-label="Next">'
           '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button></div>')
+
+
+FIRST_POST = {  # what an empty spot asks for: label, where the form is, button, examples
+    "good": ("Good News", "submit.html", "Share good news", "A birthday, a big win, a neighbor who went above and beyond."),
+    "sports": ("Sports", "submit.html#athlete", "Spotlight an athlete", "A signing day, a personal best, a team that never quit."),
+    "hoods": ("Neighborhoods", "submit.html", "Share your street", "A block party, a cleanup, a street that came together."),
+    "biz": ("Local Business", "submit.html#spotlight", "Spotlight a business", "A grand opening, an anniversary, a new hire you're proud of."),
+    "sales": ("Garage Sales", "submit.html", "Post your sale", "Garage, yard, porch and rummage sales around Richland County."),
+    "seniors": ("Seniors", "submit.html", "Share a story", "A 100th birthday, a retiree who still volunteers, a veteran's story."),
+    "free": ("Free Stuff", "submit.html#free", "Give something away", "A dresser you don't need, outgrown kids' clothes, extra garden tomatoes. Free only."),
+    "jobs": ("Now hiring", "submit.html#job", "Post a job free", "Hiring at your shop, church, school or nonprofit? Neighbors are looking."),
+    "funds": ("Fundraisers", "submit.html#fundraiser", "Share a fundraiser", "Medical bills, team trips, fire recovery and special causes."),
+    "events": ("Local events", "submit.html#flyer", "Post your flyer", "Concerts, fish fries, festivals, games and church suppers."),
+    "watch": ("Watch Mansfield", "submit.html", "Send us your video", "A podcast, a local show, a highlight reel. Mansfield made, Mansfield watched."),
+}
+
+
+def first_post(cfg, key, block=False):
+    """An empty spot: the Sunny Mansfield logo and a 'Be the first to post!' button to the right form."""
+    site = cfg["site_url"].rstrip("/")
+    what, href, cta, examples = FIRST_POST[key]
+    inner = (f'<span class="first-logo"><img src="/brand/logo-retro.svg" alt="Sunny Mansfield" width="220" height="80" loading="lazy"></span>'
+             f'<span class="caps kicker">{e(what)}</span><span class="hed">Be the first to post!</span>'
+             f'<span class="dek">{e(examples)}</span><span class="btn solid sm">{e(cta)}</span>')
+    if block:
+        return f'<div class="first-wrap"><a class="first" href="{e(site)}/{href}">{inner}</a></div>'
+    return f'<a class="slide first" href="{e(site)}/{href}">{inner}</a>'
 
 
 def rail(title, items, more="", rid="", kind=""):
@@ -2130,6 +2174,25 @@ def make_watch_images(videos, out):
     return made
 
 
+def render_watch_index(cfg, videos, stories):
+    """watch.html: every Watch Mansfield video in one big carousel (10 seconds each), then all of them as tiles."""
+    site = cfg["site_url"].rstrip("/")
+    tiles = "".join(f'<a class="watch-tile" href="{e(watch_url(cfg, v))}"><span class="w-media">'
+                    + (f'<img src="{e(img_src(v["thumb"]))}" alt="" loading="lazy" onerror="{THUMB_FALLBACK}">' if v["thumb"] else "")
+                    + f'<span class="w-play" aria-hidden="true"><span></span></span></span><span class="caps kicker">{e(v.get("host") or "Watch Mansfield")}</span>'
+                    f'<span class="hed">{e(v.get("title") or "")}</span></a>' for v in videos)
+    body = (f'<section class="wrap watch-hub">{watch_card(cfg, videos).replace("class=\"ov watch\"", "class=\"ov watch big\"", 1)}</section>'
+            f'<section class="wrap watch-more">{section_head(f"All videos ({len(videos)})")}<div class="watch-grid">{tiles}</div></section>{WATCH_JS}'
+            if videos else f'<section class="wrap latest">{first_post(cfg, "watch", block=True)}</section>')
+    inner = f"""{page_title("Mansfield made", "Watch Mansfield", "Podcasts, shows and videos from people in Mansfield and Richland County. Tap any video to watch, and share the ones you love.")}
+{body}
+<section class="wrap latest"><p class="note" style="text-align:center">Have a Mansfield show, podcast or video? <a class="link" href="{e(site)}/submit.html">Send it to us</a> and we may feature it here.</p></section>"""
+    data = {"@context": "https://schema.org", "@type": "CollectionPage", "name": "Watch Mansfield", "url": f"{site}/watch.html",
+            "hasPart": [{"@type": "VideoObject", "name": v.get("title") or "", "url": watch_url(cfg, v)} for v in videos]}
+    return shell(cfg, f"Watch Mansfield: local videos and podcasts · {cfg['site_name']}",
+                 "Podcasts, shows and videos from people in Mansfield and Richland County, Ohio.", f"{site}/watch.html", inner, stories, data=data)
+
+
 def watch_url(cfg, v):
     return f"{cfg['site_url'].rstrip('/')}/{v['page']}"
 
@@ -2312,6 +2375,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     for i, (k, name) in enumerate(SECTIONS):
         items = [s for s in stories if s["section"] == k][:12]
         if not items:
+            rails.append((k, rail(e(name), first_post(cfg, k), kind="sec")))
             continue
         slides = [slide(cfg, s) for s in items]
         if i % 3 == 1:
@@ -2329,18 +2393,18 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     events = rail("Local events", "".join(flyer_cards) + (
         f'<a class="slide flyer add" href="{e(site)}/submit.html#flyer"><span class="flyer-img"><span class="plus">+</span></span>'
         f'<span class="hed">Post your flyer</span><span class="dek">Free for community events</span></a>'), rid="events", kind="flyers")
-    funds_rail = (f'<section class="wrap givebox" id="give"><div class="give"><div class="give-top">'
-                  f'<div><span class="script">Neighbors helping neighbors</span><h2 class="retro sm">Local causes that need your help</h2>'
+    funds_rail = (f'<section class="wrap givebox" id="donate"><div class="give"><div class="give-top">'
+                  f'<div><span class="script">Neighbors helping neighbors</span><h2 class="retro sm">Donate to local causes</h2>'
                   f'<p>Medical bills, team trips, fire recovery and special causes shared by people in Richland County.</p></div>'
                   f'<div class="share"><a class="btn solid sm" href="{e(site)}/fundraisers.html">See all {len(funds)}</a>'
                   f'<a class="btn sm" href="{e(site)}/submit.html#fundraiser">Share a fundraiser</a></div></div>'
                   + rail("Give where it counts", "".join(fund_card(cfg, f) for f in funds[:12])).replace('class="wrap railbox ', 'class="railbox ')
                   + f'<p class="give-note">{SHIELD}<span>{FUND_SHORT} <a class="link" href="{e(site)}/fundraisers.html#before-you-give">Read before you give</a></span></p>'
-                  f'</div></section>') if funds else ""
+                  f'</div></section>') if funds else rail("Donate to local causes", first_post(cfg, "funds"), rid="donate", kind="sec")
     market = rail("Free Stuff", "".join(listing_card(x, cfg) for x in listings[:12]) + ad_card(cfg, sale_ads[0] if sale_ads else None, "A7", i=1),
-                  f'<a class="link" href="{e(site)}/free.html">See all</a>', kind="sales") if listings else ""
+                  f'<a class="link" href="{e(site)}/free.html">See all</a>', kind="sales") if listings else rail("Free Stuff", first_post(cfg, "free"), kind="sales")
     market += rail("Now hiring", "".join(job_card(cfg, j, slide=True) for j in jobs[:12]),
-                   f'<a class="link" href="{e(site)}/jobs.html">See all</a>', kind="jobs") if jobs else ""
+                   f'<a class="link" href="{e(site)}/jobs.html">See all</a>', kind="jobs") if jobs else rail("Now hiring", first_post(cfg, "jobs"), kind="jobs")
     home = {"@context": "https://schema.org", "@graph": [
         publisher(cfg),
         {"@type": "WebSite", "@id": f"{site}/#site", "name": cfg["site_name"], "url": f"{site}/", "inLanguage": "en-US",
@@ -2354,8 +2418,9 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
 {masthead(cfg, site, stories, current="front")}
 <main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{ticker(news[:10])}{front}
+{funds_rail}
 {civic(cfg, businesses)}
-<div id="shelves">{shelf_order(rails, funds_rail, events)}</div>
+<div id="shelves">{shelf_order(rails, "", events)}</div>
 {market}
 <section class="wrap latest" id="latest" hidden><h2 class="label">More good news</h2>
 <div class="grid">{grid}<p class="empty" hidden>Nothing here this week yet. Know a story? <a class="link" href="{e(site)}/submit.html">Submit it</a></p></div>
@@ -2853,7 +2918,7 @@ def render_sports(cfg, stories, brackets):
     boxes = "".join(render_bracket(cfg, b) for b in brackets) or (
         '<p class="empty">Tournament brackets show up here during the playoffs. Coaches and boosters can send results to '
         f'<a class="link" href="{e(site)}/submit.html">Submit news</a>.</p>')
-    grid = "".join(card(cfg, s) for s in news) or '<p class="empty">No sports stories this week yet.</p>'
+    grid = "".join(card(cfg, s) for s in news) or first_post(cfg, "sports", block=True)
     inner = f"""{page_title("Go team!", "Sports", "Wins, personal bests, signing days and the kids who never quit. Richland County athletes, cheered on by their neighbors.")}
 {banner(cfg, "A5")}
 {spot}
@@ -2877,8 +2942,8 @@ def render_fundraisers(cfg, funds, stories):
     if more:
         blocks += f'<section class="wrap latest"><h2 class="label">{"More fundraisers" if named else "Fundraisers"}</h2><div class="grid market-grid">{more}</div></section>'
     if not funds:
-        blocks = '<section class="wrap latest"><p class="empty">No fundraisers posted right now. Know a neighbor who needs a hand? Share their fundraiser.</p></section>'
-    inner = f"""{page_title("Neighbors helping neighbors", "Fundraisers &amp; causes", "Medical bills, team trips, fire recovery, school projects and special causes. Give if you can, and share if you can't.")}
+        blocks = f'<section class="wrap latest">{first_post(cfg, "funds", block=True)}</section>'
+    inner = f"""{page_title("Neighbors helping neighbors", "Donate to local causes", "Medical bills, team trips, fire recovery, school projects and special causes. Give if you can, and share if you can't.")}
 <section class="wrap"><div class="more-row" style="margin:0 0 8px"><a class="btn solid" href="{e(site)}/submit.html#fundraiser">Share a fundraiser</a></div>
 <p class="give-note">{SHIELD}<span>{FUND_SHORT} <a class="link" href="#before-you-give">Read before you give</a></span></p></section>
 {blocks}
@@ -2945,10 +3010,10 @@ def render_events(cfg, flyers, stories):
     later = [f for f in dated if f["day"].date() > weekend_end] + [f for f in flyers if not f.get("day")]
     grid = lambda xs: '<div class="grid events">' + "".join(flyer_card(f) for f in xs) + "</div>"
     block = lambda label, xs, empty: (f'<section class="wrap latest"><h2 class="label">{label}</h2>'
-                                      + (grid(xs) if xs else f'<p class="empty">{empty}</p>') + "</section>")
+                                      + (grid(xs) if xs else empty) + "</section>")
     inner = f"""{page_title("What's happening", "Things to do in Mansfield", "Concerts, fish fries, festivals, games, church suppers and fundraisers around Mansfield and Richland County, Ohio, posted by the people putting them on.")}
-{block("This weekend in Richland County", now_, "Nothing posted for this weekend yet.")}
-{block("Coming up", later, "No upcoming events posted yet.")}
+{block("This weekend in Richland County", now_, '<p class="empty">Nothing posted for this weekend yet.</p>' if later else first_post(cfg, "events", block=True))}
+{block("Coming up", later, '<p class="empty">No upcoming events posted yet.</p>' if now_ else "")}
 <section class="wrap latest"><p class="note" style="text-align:center">Putting on an event? <a class="link" href="{e(site)}/submit.html#flyer">Post your flyer free</a> and it rides the front page until the big day.</p></section>"""
     data = [event_data(cfg, f) for f in dated] + [breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Events", f"{site}/events.html")])]
     return shell(cfg, f"Things to Do in Mansfield, Ohio This Weekend · Events · {cfg['site_name']}",
@@ -3012,7 +3077,7 @@ def render_market(cfg, listings, stories):
         f'<li><a href="#cat={k}" data-cat="{k}">{e(MARKET_CAT_NAMES[k])}<span class="n">{counts[k] or ""}</span></a></li>' for k in keys)
         + "</ul></div>" for g, keys in groups)
     rows = "".join(listing_card(x, cfg) for x in listings)
-    empty = '<p class="empty" id="m-empty"' + (" hidden" if listings else "") + '>Nothing here yet. <a class="link" href="' + e(site) + '/submit.html#free">Give something away</a></p>'
+    empty = '<div class="empty" id="m-empty"' + (" hidden" if listings else "") + '>' + first_post(cfg, "free", block=True) + '</div>'
     inner = f"""{free_hero(site, len(listings))}
 <section class="wrap market">
 <aside class="catside" aria-label="Categories"><a class="btn solid" href="{e(site)}/submit.html#free">Give something away</a>
@@ -3160,7 +3225,7 @@ def render_jobs(cfg, jobs, stories):
 <a class="btn solid" href="{e(site)}/submit.html#job">Post a job</a></div>
 <div class="qtabs" role="group" aria-label="Job type"><button class="tab" type="button" data-jt="all" aria-pressed="true">All jobs</button>{tabs}</div>
 <div class="joblist" id="j-list">{cards}</div>
-<p class="empty" id="j-empty"{" hidden" if jobs else ""}>No jobs posted right now. <a class="link" href="{e(site)}/submit.html#job">Hiring? Post it free</a></p>
+<div class="empty" id="j-empty"{" hidden" if jobs else ""}>{first_post(cfg, "jobs", block=True)}</div>
 <p class="note safenote">{SHIELD}<span>{e(JOB_SAFETY)} Report a job: {e(cfg['submit_email'])}</span></p></section>
 <script>(()=>{{const items=[...document.getElementById('j-list').children];const q=document.getElementById('j-search');let t='all';
 function go(){{const s=q.value.trim().toLowerCase();let n=0;items.forEach(el=>{{const ok=(t==='all'||el.dataset.type===t)&&(!s||el.dataset.q.includes(s));el.hidden=!ok;n+=ok}});
@@ -3587,7 +3652,7 @@ def merge_community(cfg, stories, community):
 
 
 PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
-         ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"),
+         ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"), ("watch.html", "daily", "0.7"),
          ("submit.html", "monthly", "0.6"), ("rules.html", "monthly", "0.4"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
 
@@ -3791,6 +3856,7 @@ def main():
     for v in videos:
         (out / "watch").mkdir(exist_ok=True)
         (out / v["page"]).write_text(rebase(render_watch_page(cfg, v, videos, stories, v["id"] in pics)))
+    (out / "watch.html").write_text(rebase(render_watch_index(cfg, videos, stories)))
     # The quote of the day only goes to Facebook (quotes.xml + quote.jpg from posts.py); the old page sends people home.
     (out / "quote.html").write_text(rebase(render_moved(cfg, stories, "", "Good news")))
     (out / "feed.xml").write_text(render_feed(cfg, stories))
