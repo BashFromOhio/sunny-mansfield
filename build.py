@@ -877,7 +877,7 @@ footer .sponsors a{color:inherit}
 .spot h3{font:700 20px/1.25 var(--serif);margin:0}
 .spot p{margin:0;font-size:14px;line-height:1.55}
 .spot .price{position:static;display:inline-block;justify-self:start;font-size:14px;padding:6px 10px;margin-top:6px}
-.fund .cause{display:inline-block;justify-self:start;margin-inline:20px;background:var(--surface);border:1px solid var(--secondary);color:var(--secondary-dk);font:700 11px/1 var(--caps);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px}
+.fund .cause,.watch-head .cause{display:inline-block;justify-self:start;margin-inline:20px;background:var(--surface);border:1px solid var(--secondary);color:var(--secondary-dk);font:700 11px/1 var(--caps);letter-spacing:.1em;text-transform:uppercase;padding:5px 7px}
 .fund .muted{font-size:13px;color:var(--text-2)}
 .fund .share{display:flex;flex-wrap:wrap;gap:8px}
 .causebox .script{display:block;font-size:28px;line-height:1.3;color:var(--secondary)}
@@ -1257,6 +1257,10 @@ a.wu-ts:hover{background:var(--secondary)}
 .story-facts dd{margin:2px 0 0;font:700 17px/1.3 var(--sans)}
 .story-note{margin:0;font-size:14px;color:var(--text-2)}
 .story-layout .watch-meta .tag{color:var(--secondary)}
+.fund .dek{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.fund .hed a,.fund .photo{color:inherit;text-decoration:none}.fund .hed a:hover{text-decoration:underline}
+.fund .more-link{display:inline-block;margin:2px 0 6px;color:var(--primary);font-size:12px;text-decoration:none}
+.watch-head .cause{margin:8px 0 4px;justify-self:start}.watch-main .give-note{margin:18px 0 0}
 .event-top{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:28px;align-items:start}
 .event-top .watch-head{border-bottom:0;padding-bottom:0}
 .event-flyer{border:1px solid var(--border-subtle);background:var(--surface)}
@@ -1981,7 +1985,13 @@ def money(v):
     return f"${int(digits):,}" if digits.isdigit() else v
 
 
+def fund_url(f):
+    return f"/give/{f['id']}.html"  # site-relative, so rebase() and sub-folder sites keep working
+
+
 def fund_card(cfg, f):
+    """A fundraiser on a shelf: picture and goal, title, a three-line teaser, Donate and Share. The rest is on its page."""
+    page = fund_url(f)
     img = (f'<img src="{e(img_src(f["image"]))}" alt="" loading="lazy" referrerpolicy="no-referrer">' if f.get("image")
            else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["seniors"]}</svg></span>')
     goal = (f'<span class="goal"><span class="goal-k">Goal</span><span class="goal-v{" long" if len(money(f["goal"])) > 6 else ""}">{e(money(f["goal"]))}</span>'
@@ -1990,15 +2000,15 @@ def fund_card(cfg, f):
     cause = f'<span class="cause">{e(f["cause"])}</span>' if f.get("cause") else ""
     give = (f'<a class="btn solid sm" href="{e(f["link"])}" target="_blank" rel="noopener nofollow ugc">Donate</a>' if f.get("link") else "")
     site = cfg["site_url"].rstrip("/")
-    share = f'<a class="btn fb sm" href="{e(fb_share(site + "/fundraisers.html#f-" + f["id"]))}" target="_blank" rel="noopener">{FB_ICON}Share</a>'
+    share = f'<a class="btn fb sm" href="{e(fb_share(site + page))}" target="_blank" rel="noopener">{FB_ICON}Share</a>'
     by = f'<span class="muted">Organized by {e(f["by"])}</span>' if f.get("by") else ""
-    report = (f'<a class="report" href="mailto:{e(cfg["submit_email"])}?subject={urllib.parse.quote("Report fundraiser: " + f["title"])}">'
-              f'Report this fundraiser</a>')
-    return (f'<article class="slide listing fund" id="f-{f["id"]}"><span class="photo">{img}{goal}</span>'
+    dek = f'<p class="dek">{e(" ".join((f.get("summary") or "").split()))}</p>' if f.get("summary") else ""
+    return (f'<article class="slide listing fund" id="f-{f["id"]}"><a class="photo" href="{e(page)}" tabindex="-1" aria-hidden="true">{img}{goal}</a>'
             f'<span class="caps kicker">{e(f.get("town") or "Richland County")}{when}</span>{cause}'
-            f'<h3 class="hed">{e(f["title"])}</h3><p class="dek">{e(f["summary"])}</p>{by}'
+            f'<h3 class="hed"><a href="{e(page)}">{e(f["title"])}</a></h3>{dek}'
+            f'<a class="caps more-link" href="{e(page)}">Read the full story <span aria-hidden="true">&rsaquo;</span></a>{by}'
             f'<span class="tagline">Community post · Not verified by us</span>'
-            f'<div class="share">{give}{share}</div>{report}</article>')
+            f'<div class="share">{give}{share}</div></article>')
 
 
 def ad_card(cfg, ad=None, spot="A2", i=0):
@@ -2294,6 +2304,65 @@ def seconds(stamp):
     return n
 
 
+YEAR_ITEM = re.compile(r"(?<![\w$,])((?:19|20)\d{2}):\s+")
+ABBREV = re.compile(r"^(?:(?:[A-Z]\.)+|Mr\.|Mrs\.|Ms\.|Dr\.|St\.|Jr\.|Sr\.|Rev\.|No\.|Jan\.|Feb\.|Aug\.|Sept\.|Oct\.|Nov\.|Dec\.|Ave\.|Rd\.)$")
+
+
+def sentences(text):
+    """Split a paragraph into sentences without breaking on 'U.S.' or 'Dr.'."""
+    out, cur = [], []
+    for w in text.split():
+        cur.append(w)
+        if re.search(r"[.!?][\"”’)]?$", w) and not ABBREV.match(w):
+            out.append(" ".join(cur)); cur = []
+    if cur:
+        out.append(" ".join(cur))
+    return out
+
+
+def tidy_wall(text, size=320):
+    """Break a long pasted paragraph into short ones, and turn an inline timeline
+    ("milestones include: 1975: ... 1987: ...") into its own list."""
+    lines = []
+    for raw in (text or "").replace("\r", "").split("\n"):
+        line = raw.strip()
+        if len(line) < 400 or BULLET.match(line):
+            lines.append(raw)
+            continue
+        tail = []
+        hits = list(YEAR_ITEM.finditer(line))
+        if len(hits) >= 2:
+            starts = [m.start() for m in hits] + [len(line)]
+            head, items = line[:starts[0]], [line[a:b].strip() for a, b in zip(starts, starts[1:])]
+            last = sentences(items[-1])
+            if len(last) > 1:
+                items[-1], tail = last[0], [" ".join(last[1:])]
+            line = head
+            items = ["• " + x for x in items]
+        else:
+            items = []
+        sents = sentences(line)
+        intro = sents.pop() if sents and sents[-1].endswith(":") and items else None
+        paras, para = [], []
+        for x in sents:
+            para.append(x)
+            if len(" ".join(para)) >= size:
+                paras.append(" ".join(para)); para = []
+        if para:
+            if paras and len(" ".join(para)) < size // 3:  # no one-line orphan at the end
+                paras[-1] += " " + " ".join(para)
+            else:
+                paras.append(" ".join(para))
+        for x in paras:
+            lines += [x, ""]
+        if intro:
+            lines.append(intro)
+        lines += items + [""] if items else []
+        for t in tail:
+            lines += tidy_wall(t, size).split("\n") + [""]
+    return "\n".join(lines)
+
+
 def format_writeup(text, video_url=""):
     """Turn a YouTube description into a tidy episode write-up: section labels (lines like "IN THIS EPISODE:"),
     real bullet lists (lines starting with a check mark, dash or number, with the lead phrase in bold), clickable
@@ -2313,7 +2382,7 @@ def format_writeup(text, video_url=""):
         items, loose = [], []
 
     after_label = False
-    for raw in (text or "").replace("\r", "").split("\n"):
+    for raw in tidy_wall(text).split("\n"):
         line = raw.strip()
         if not line:
             if loose and not after_label:
@@ -3110,6 +3179,46 @@ def render_sports(cfg, stories, brackets):
                  f"{site}/sports.html", inner, stories)
 
 
+def render_fund_page(cfg, f, funds, stories):
+    """One fundraiser: the full picture, goal, dates and organizer, Donate and Share, the story formatted like
+    the story pages, the before-you-give note and a Report link, with more local causes beside it."""
+    site = cfg["site_url"].rstrip("/")
+    url = f"{site}{fund_url(f)}"
+    img = (f'<div class="event-flyer"><img src="{e(img_src(f["image"]))}" alt="{e(f["title"])}" referrerpolicy="no-referrer"></div>'
+           if f.get("image") else "")
+    about = format_writeup(f.get("summary") or "") or "<p>Details coming soon.</p>"
+    facts = [("Goal", money(f["goal"])) if f.get("goal") else None,
+             ("Until", f["day"].strftime("%B %-d, %Y")) if f.get("day") else None,
+             ("Where", f"{f.get('town') or 'Richland County'}, Ohio"),
+             ("Organized by", f["by"]) if f.get("by") else None]
+    facts = "".join(f"<div><dt>{k}</dt><dd>{e(v)}</dd></div>" for k, v in filter(None, facts))
+    give = (f'<a class="btn solid" href="{e(f["link"])}" target="_blank" rel="noopener nofollow ugc">Donate</a>' if f.get("link") else "")
+    cause = f'<span class="cause">{e(f["cause"])}</span>' if f.get("cause") else ""
+    others = [o for o in funds if o is not f][:6]
+    rows = "".join(f'<a class="watch-row event-row" href="{e(fund_url(o))}"><span class="w-media">'
+                   + (f'<img src="{e(img_src(o["image"]))}" alt="" loading="lazy" referrerpolicy="no-referrer">' if o.get("image") else "")
+                   + f'</span><span><span class="caps kicker">{e("Goal " + money(o["goal"]) if o.get("goal") else (o.get("town") or "Richland County"))}</span>'
+                   f'<span class="hed">{e(o["title"])}</span></span></a>' for o in others)
+    aside = (f'<aside class="watch-aside">{section_head("More local causes")}<div class="watch-list">{rows}</div>'
+             f'<a class="explore" href="{e(site)}/fundraisers.html">All fundraisers <span aria-hidden="true">&rsaquo;</span></a></aside>') if rows else ""
+    report = f"mailto:{cfg['submit_email']}?subject={urllib.parse.quote('Report fundraiser: ' + f['title'])}"
+    inner = f"""<section class="wrap watch-layout event-layout{"" if aside else " solo"}"><article class="watch-main">
+<div class="event-top">{img}<header class="watch-head"><a class="caps kicker" href="{e(site)}/fundraisers.html">Donate to local causes</a>{cause}<h1 class="hed">{e(f["title"])}</h1>
+<dl class="story-facts event-facts">{facts}</dl>
+<div class="share">{give}<a class="btn fb" href="{e(fb_share(url))}" target="_blank" rel="noopener">{FB_ICON}Share on Facebook</a>
+<button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button></div></header></div>
+<section class="wu-card open" aria-labelledby="fu-h"><h2 class="wu-head" id="fu-h">About this fundraiser</h2><div class="wu-body">{about}</div></section>
+<p class="give-note">{SHIELD}<span>{FUND_SHORT} <a class="link" href="{e(site)}/fundraisers.html#before-you-give">Read before you give</a></span></p>
+<p class="note story-note">Community post, not verified by us. Raising money for a neighbor? <a class="link" href="{e(site)}/submit.html#fundraiser">Share a fundraiser</a>.
+Something wrong? <a class="link" href="{e(report)}">Report this fundraiser</a>.</p>
+</article>{aside}</section>"""
+    desc = " ".join((f.get("summary") or f["title"]).split())
+    desc = desc if len(desc) <= 200 else desc[:197].rsplit(" ", 1)[0] + "\u2026"
+    image = f["image"] if (f.get("image") or "").startswith("https://") else None
+    title = f"{f['title']}{' · Goal ' + money(f['goal']) if f.get('goal') else ''} · {cfg['site_name']}"
+    return shell(cfg, title, desc, url, inner, stories, image=image)
+
+
 def render_fundraisers(cfg, funds, stories):
     site = cfg["site_url"].rstrip("/")
     groups = {}
@@ -3729,8 +3838,6 @@ def render_story_page(cfg, s, stories):
     aside = (f'<aside class="watch-aside">{section_head("More Celebrations of Life" if life else "More good news")}<div class="side-list">{rows}</div>'
              f'<a class="explore" href="{e(site)}/{"celebrations.html" if life else ""}">{"All Celebrations of Life" if life else "All stories"} '
              f'<span aria-hidden="true">&rsaquo;</span></a></aside>') if rows else ""
-    post_img = (f'<p class="note story-note"><a class="link" href="{e(site)}/{s["post_image"]}" download>Download the framed image for Facebook or Instagram</a></p>'
-                if s.get("post_image") else "")
     towns = town_links(cfg, s).replace('class="wrap note towns"', 'class="note towns story-note"')
     body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
 <section class="wrap watch-layout story-layout{"" if aside else " solo"}"><article class="watch-main">
@@ -3741,7 +3848,7 @@ def render_story_page(cfg, s, stories):
 <button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button></div></header>
 {facts_html}
 <section class="wu-card open" aria-labelledby="st-h"><h2 class="wu-head" id="st-h">{card_head}</h2><div class="wu-body">{story}</div></section>
-{post_img}{towns}<p class="note story-note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
+{towns}<p class="note story-note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
 </article>{aside}</section>
 {banner(cfg, "A4")}
 {submit_band(cfg, site)}<div class="stripes" aria-hidden="true"></div></main>{footer(cfg)}</div>
@@ -4141,6 +4248,9 @@ def main():
     for kind in LEGAL:
         (out / f"{kind}.html").write_text(rebase(render_legal(cfg, stories, kind)))
     (out / "fundraisers.html").write_text(rebase(render_fundraisers(cfg, got["fundraisers"], stories)))
+    (out / "give").mkdir(exist_ok=True)
+    for f in got["fundraisers"]:
+        (out / "give" / f"{f['id']}.html").write_text(rebase(render_fund_page(cfg, f, got["fundraisers"], stories)))
     (out / "celebrations.html").write_text(rebase(render_moved(cfg, stories, "", "Good news")))  # page retired; old links go home
     (out / "sports.html").write_text(rebase(render_sports(cfg, stories, got["brackets"])))
     (out / "free.html").write_text(rebase(render_market(cfg, listings, stories)))
