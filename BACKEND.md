@@ -66,12 +66,18 @@ People answer Free Stuff and job posts through a form, and the poster gets the m
 
 Replies come from `replies@sunnymansfield.com` (your Resend domain), with Reply-To set to the person writing. Each person can send 8 replies an hour, 2 a day to the same post, and a post takes at most 40 a day.
 
+## 8. Turn on birthday shout-outs
+
+Run the updated `supabase/schema.sql` once more (SQL Editor > paste > Run). It makes birthday shout-outs always wait
+for an editor (even from verified people) and lists each one publicly only on the birthday itself. Nothing else to set up.
+
 ## How it works day to day
 
 - **Waiting**: new posts. Choose **Approve** or **Reject**. **Approve and verify sender** also adds the sender to the verified list.
 - **Team applications**: choose **Approve and verify** to make someone a verified contributor.
 - **Ad inquiries**: messages from businesses about advertising. Reply to them by email.
 - **Verified people**: add or remove people. A verified person who signs in on the submit page (with the "Email me a sign-in link" button) goes live without review, except for fundraisers, which always wait for an editor.
+- **Birthday shout-outs** show up in **Waiting** like any post, with the birthday shown as a date. Approve one and it shows on the front page and `birthdays.html` on the person's next birthday, and posts to Facebook at 9 a.m. that day. Each one runs once.
 - **Approved**: everything on the site. Choose **Take down** to remove a post.
 
 Event flyers stay up until the day after the event. Free Stuff and job posts stay up for 30 days. Jobs always wait for an editor, even from verified people. Free Stuff only shows posts with no price: anything mentioning a dollar amount, a trade or a payment app is left off.
