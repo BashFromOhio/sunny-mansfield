@@ -90,5 +90,5 @@ its privacy-friendly player. With no videos, the spot shows a regular story.
 
 A plain link is enough: the headline and channel name come from YouTube when the site builds. Use the `{...}` form to
 write your own headline. Vimeo and Facebook video links work too (give those a `title`, and an `image` for the preview).
-Your picks show first, then the newest `from_channel` videos from the YouTube channel in `channel_id` fill in
+Your picks show first, then the newest `from_channel` videos from the Videos tab of the YouTube channel in `channel_id` (no Shorts) fill in
 (currently the 3 newest from The Lindsay's, @thelindsays7871). Set `from_channel` to `0` to show only your picks.
