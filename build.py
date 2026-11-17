@@ -219,10 +219,13 @@ def collect(config, sample):
             except Exception as exc:  # one bad feed shouldn't stop the build
                 note(f"{feed['name']}: skipped ({exc})")
     cutoff = datetime.now(timezone.utc) - timedelta(days=config.get("max_age_days", 21))
+    # Outlets we never repost, matched on the outlet name or its web address (config.json "skip_sources").
+    skip = [x.lower() for x in config.get("skip_sources", [])]
+    skipped = lambda s: any(x in s["source"].lower() or x in s["link"].lower() for x in skip)
     seen, stories = set(), []
     for s in sorted(raw, key=lambda s: s["date"], reverse=True):
         key = re.sub(r"\W+", "", s["title"].lower())[:60]
-        if key in seen or s["date"] < cutoff:
+        if key in seen or s["date"] < cutoff or skipped(s):
             continue
         section = classify(s, s.get("forced"))
         if not section:
@@ -233,8 +236,9 @@ def collect(config, sample):
         stories.append(s)
     if not sample:
         add_photos(stories)
+        stories = [s for s in stories if not skipped(s)]  # Google News links only show the real address once decoded
         if config.get("require_photos", True):
-            # Some sites (like the News Journal) block photo lookups, so a brand-new story can arrive with no photo.
+            # Some sites block photo lookups, so a brand-new story can arrive with no photo.
             # Keep the last two days' stories anyway with their section's line drawing, so today's news always shows.
             fresh = datetime.now(timezone.utc) - timedelta(days=2)
             dropped = [s for s in stories if not s.get("image") and s["date"] < fresh]

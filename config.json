@@ -40,6 +40,10 @@
       "url": "https://news.google.com/rss/search?q=Mansfield+Ohio+(football+OR+basketball+OR+volleyball+OR+soccer+OR+wrestling+OR+softball+OR+baseball)+when:7d&hl=en-US&gl=US&ceid=US:en"
     }
   ],
+  "skip_sources": [
+    "Mansfield News Journal",
+    "mansfieldnewsjournal.com"
+  ],
   "postcards": [],
   "submit_form": "",
   "join_form": "",
