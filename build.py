@@ -306,7 +306,7 @@ SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "cool research": "goo
                     "event flyer": "flyer", "free stuff": "market", "buy & sell": "market", "buy and sell": "market",
                     "job": "job", "jobs": "job",
                     "athlete spotlight": "athlete", "bracket": "bracket", "fundraiser": "fund",
-                    "headline": "headline", "link": "link"}
+                    "headline": "headline", "link": "link", "birthday": "birthday"}
 FUND_DAYS = 90  # fundraisers without an end date come down after this
 ATHLETE_FACTS = ("Sport", "School", "Class of")  # folded into the summary by the submit form
 # Free Stuff categories: (key, name, words that suggest it when a listing has no category).
@@ -361,6 +361,31 @@ def parse_day(text):
     return None
 
 
+BIRTHDAY_TITLE = re.compile(r"^happy birthday,?\s*(.+?)!?$", re.I | re.S)
+
+
+def eastern(dt=None):
+    """A time in Mansfield (Eastern), now if none is given."""
+    from zoneinfo import ZoneInfo
+    return (dt or datetime.now(timezone.utc)).astimezone(ZoneInfo("America/New_York"))
+
+
+def birthday_on(month, day, year):
+    """The day a birthday falls on in a year. February 29 birthdays get February 28 in other years."""
+    try:
+        return datetime(year, month, day).date()
+    except ValueError:
+        return datetime(year, 2, 28).date()
+
+
+def birthday_is_today(birthday, sent, today):
+    """A shout-out runs once: on the first birthday on or after the day it was sent."""
+    first = birthday_on(birthday.month, birthday.day, sent.year)
+    if first < sent:
+        first = birthday_on(birthday.month, birthday.day, sent.year + 1)
+    return first == today
+
+
 def drive_image(url):
     """Turn a shared Google Drive photo link into a direct image address."""
     found = re.search(r"drive\.google\.com/(?:file/d/|open\?id=|uc\?id=)([\w-]+)", url or "")
@@ -380,14 +405,20 @@ def fetch_published(config):
     key = config["supabase_anon_key"]
     url = config["supabase_url"].rstrip("/") + "/rest/v1/published?select=*&order=created_at.desc&limit=1000"
     _, text = fetch(url, limit=5_000_000, headers={"apikey": key, "Authorization": f"Bearer {key}"})
+    rows = json.loads(text)
+    # Birthday shout-outs can be sent months ahead, so fetch them on their own (the view only lists today's).
+    _, bdays = fetch(url.split("&order=")[0] + "&section=eq.Birthday", limit=1_000_000,
+                     headers={"apikey": key, "Authorization": f"Bearer {key}"})
+    seen = {r.get("id") for r in rows}
+    rows += [r for r in json.loads(bdays) if r.get("id") not in seen]
     rename = {"created_at": "when", "photo_url": "photo"}
-    return [{rename.get(k, k): ("" if v is None else str(v)) for k, v in r.items()} for r in json.loads(text)]
+    return [{rename.get(k, k): ("" if v is None else str(v)) for k, v in r.items()} for r in rows]
 
 
 def load_submissions(config, sample):
     """Approved posts: from Supabase on the live site, from sample_submissions.csv in the preview."""
     got = {"stories": [], "spotlights": [], "flyers": [], "listings": [], "jobs": [], "brackets": [], "fundraisers": [],
-           "headlines": [], "links": []}
+           "headlines": [], "links": [], "birthdays": []}
     try:
         if sample:
             rows = list(csv.reader(io.StringIO((HERE / "sample_submissions.csv").read_text())))
@@ -466,6 +497,16 @@ def load_submissions(config, sample):
                                        "link": row["link"], "goal": row["price"], "cause": row["business"].strip(),
                                        "by": row["name"], "town": row["town"], "day": day, "date": date})
             continue
+        if section == "birthday":  # shows on the person's birthday only, once an editor approves it
+            today = eastern().date()
+            day = today if sample and row["event_date"].strip().lower() == "today" else parse_day(row["event_date"])
+            day = day.date() if isinstance(day, datetime) else day
+            if not day or not (sample or birthday_is_today(day, eastern(date).date(), today)):
+                continue
+            who = BIRTHDAY_TITLE.match(row["title"].strip())
+            got["birthdays"].append({"id": sid, "name": clean(who.group(1) if who else row["title"], 80),
+                                     "message": clean(row["summary"], 300), "by": clean(row["name"], 80), "date": date})
+            continue
         if section == "link":  # an editor pasted an article link; it becomes a regular news story
             got["links"].append({"link": row["link"], "title": row["title"], "summary": row["summary"],
                                  "section": row["business"], "date": date})
@@ -500,6 +541,7 @@ def load_submissions(config, sample):
                         "town": row["town"]})
     got["flyers"].sort(key=lambda f: f["day"] or f["date"] + timedelta(days=LISTING_DAYS))
     got["listings"].sort(key=lambda x: x["date"], reverse=True)
+    got["birthdays"].sort(key=lambda b: b["date"])
     note("Community: " + ", ".join(f"{len(v)} {k}" for k, v in got.items()))
     return got
 
@@ -965,6 +1007,34 @@ footer .credit .legal.towns{font-weight:400;opacity:.85}
 .trophy{display:grid;justify-items:center;gap:8px;text-align:center}
 .trophy svg{width:72px;height:72px;fill:none;stroke:var(--secondary);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
 .trophy .hed{font:700 22px/1.2 var(--serif)}
+
+/* birthday shout-outs: front page box and birthdays.html */
+.bday{display:grid;gap:24px;padding:32px clamp(16px,3vw,32px);justify-items:center;text-align:center}
+.bday-head{display:grid;justify-items:center;gap:6px}
+.bday-head .script{margin-bottom:4px}
+.bday-head .muted{margin:8px 0 0}
+.bday-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px;width:100%}
+.bday-card{background:#fffdf8;border:2px solid var(--border-medium);border-top:4px solid var(--secondary);padding:20px 18px;display:grid;gap:8px;justify-items:center;align-content:start}
+.bday-cake{color:var(--secondary);line-height:0}.bday-cake svg{width:40px;height:40px}
+.bday-name{font:700 clamp(24px,3vw,30px)/1.15 var(--serif);margin:0;overflow-wrap:anywhere}
+.bday-msg{font:italic 400 16px/1.55 var(--serif);margin:0;color:var(--text);overflow-wrap:anywhere}
+.bday-from{margin:0;color:var(--text-2)}
+.bday-acts{justify-content:center;width:100%}.bday-acts .btn{flex:0 1 280px}
+.bday-date{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px}
+.bday-extra{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;padding:16px;background:var(--surface)}
+
+.bday-strip{display:block;background:var(--secondary);color:var(--tertiary);text-decoration:none;border-bottom:2px solid var(--border-strong)}
+.bday-strip-in{display:flex;align-items:center;justify-content:center;gap:8px 18px;flex-wrap:wrap;padding-block:10px;text-align:center}
+.bday-strip .script{color:var(--tertiary);font-size:26px;margin:0 0 4px;transform:rotate(-4deg)}
+.bday-strip-text{font:400 15px/1.4 var(--sans)}.bday-strip-text b{font-weight:700}
+.bday-strip-go{background:var(--primary);color:var(--tertiary);padding:8px 14px;white-space:nowrap}
+.bday-strip:hover .bday-strip-go{background:var(--tertiary);color:var(--primary)}
+.bday-strip .short{display:none}
+@media (max-width:700px){.bday-strip .long{display:none}.bday-strip .short{display:inline}.bday-strip .script{display:none}
+  .bday-strip-in{flex-wrap:nowrap;justify-content:space-between;text-align:left}.bday-strip-text{font-size:14px}}
+.verify{display:grid;gap:12px;background:var(--tertiary);border:2px solid var(--border-subtle);border-top:4px solid var(--secondary);padding:clamp(16px,3vw,32px)}
+.verify .script{margin-bottom:16px}.verify p{margin:0}
+.verify .row{display:flex;gap:12px;flex-wrap:wrap}.verify [data-v-code]{flex:0 1 200px;font:700 22px/1 var(--sans);letter-spacing:.3em;text-align:center}
 
 /* forms and the admin desk */
 .formbox{padding-block:0 64px;scroll-margin-top:72px}
@@ -1580,6 +1650,7 @@ def masthead(cfg, site, stories, quote=None, current=""):
 <button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}</div>
 <a class="navcta" href="{e(site)}/submit.html">Submit news</a></div></nav>
+{BDAY_STRIP.format(site=e(site))}
 </header>
 <aside class="about" id="about" role="dialog" aria-labelledby="about-h" hidden>
 <button class="close" type="button" data-about-close aria-label="Close">&times;</button>
@@ -1592,6 +1663,18 @@ def masthead(cfg, site, stories, quote=None, current=""):
 <li><b>Made to share.</b> Every story has a Share button. One share can make someone's day.</li></ul>
 <div class="share"><button class="btn solid" type="button" data-about-close>Start reading</button><a class="textbtn" href="{e(site)}/submit.html">Share good news</a></div>
 </aside>"""
+
+
+# The birthday shout-out banner under the menu on every page (birthdays.html and admin.html drop it).
+BDAY_STRIP = ('<a class="bday-strip" href="{site}/birthdays.html#form" data-bday-strip><span class="bday-strip-in wrap">'
+              '<span class="script">Happy birthday!</span><span class="bday-strip-text"><b>Birthday coming up?</b> '
+              '<span class="long">Send a free shout-out and we\'ll celebrate them on the front page and on Facebook.</span>'
+              '<span class="short">Send a free shout-out.</span></span>'
+              '<span class="caps bday-strip-go">Send one <span aria-hidden="true">&rsaquo;</span></span></span></a>')
+
+
+def no_strip(page):
+    return re.sub(r'<a class="bday-strip".*?</a>', "", page, count=1, flags=re.S)
 
 
 def memories(cfg):
@@ -1625,7 +1708,7 @@ def submit_band(cfg, site):
     return f"""<section class="wrap" id="submit"><div class="candy"><div class="candy-in submit">
 <div><span class="script">Hey neighbor!</span><h2 class="retro sm">Got good news?</h2>
 <p>Ribbon cuttings, 100th birthdays, block parties, garage sales and kids doing great things. Neighbors, students, shops and mentors all post here.</p></div>
-<div class="share" id="subscribe"><a class="btn solid" href="{e(site)}/submit.html">Submit good news</a><a class="btn" href="{e(site)}/feed.xml" target="_blank" rel="noopener">Subscribe by RSS</a></div>
+<div class="share" id="subscribe"><a class="btn solid" href="{e(site)}/submit.html">Submit good news</a><a class="btn" href="{e(site)}/birthdays.html#form">Birthday shout-out</a><a class="btn" href="{e(site)}/feed.xml" target="_blank" rel="noopener">Subscribe by RSS</a></div>
 </div></div></section>"""
 
 
@@ -1646,7 +1729,7 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 {sponsor_strip(cfg)}
 <div class="wrap credit"><span class="script">Made in Mansfield</span> <span>by Ofgeneration LLC</span>
 <nav class="legal towns">Good news in {" ".join(f'<a href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS)}</nav>
-<nav class="legal"><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
+<nav class="legal"><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a><a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
 Stories from other outlets belong to their publishers.</small></div></footer>"""
 
@@ -2603,7 +2686,7 @@ def magazine(cfg, top, also, videos=(), tabs=""):
             f'<aside class="nf-side">{recent}</aside></section>{WATCH_JS if watch else ""}{TICKER_JS}')
 
 
-def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=()):
+def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=(), birthdays=()):
     site = cfg["site_url"].rstrip("/")
     stories = [s for s in stories if s["section"] != "life"]  # Celebrations of Life live on their own page
     # The front page leads with the editor's pick, or else the newest story with a photo; the rest stay newest first.
@@ -2676,6 +2759,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
 {masthead(cfg, site, stories, current="front")}
 <main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{ticker(news[:10])}{front}
+{birthday_band(cfg, birthdays)}
 {civic(cfg, businesses)}
 <div id="shelves">{shelf_order(rails, "", events)}</div>
 {market}
@@ -2736,7 +2820,8 @@ def field(name, label, kind="text", req=False, hint="", show=None, opts=None, ex
     return f'<label class="{cls}"{vis}><span class="caps">{label}{" *" if req else ""}</span>{ctl}{hint}</label>'
 
 
-def sunny_form(cfg, fid, section, fields, button, title_tpl="", signin=False):
+def sunny_form(cfg, fid, section, fields, button, title_tpl="", signin=False, verify=False):
+    """verify=True: after sending, the sender types a 6-digit code we email them (the "verify" function)."""
     on = backend_on(cfg)
     sign = ""
     if signin:
@@ -2748,14 +2833,20 @@ def sunny_form(cfg, fid, section, fields, button, title_tpl="", signin=False):
 <button class="btn sm" type="button" data-signin>Sign in</button></div>
 <p class="hint" data-out>No password? <button class="textbtn" type="button" data-signin-link>Email me a sign-in link</button></p></div>"""
     closed = "" if on else '<p class="formnote">Submissions open soon. Until then, email <b>' + e(cfg["submit_email"]) + "</b>.</p>"
-    return f"""<form class="sunny" id="{fid}" data-section="{e(section)}" data-title="{e(title_tpl)}" novalidate>
+    check = ("""<div class="verify" hidden><span class="script">Almost done!</span><h2 class="hed">Check your email</h2>
+<p>We sent a 6-digit code to <b data-v-email></b>. Type it here to send your shout-out to our editors.</p>
+<div class="row"><input inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" data-v-code aria-label="6-digit code">
+<button class="btn solid" type="button" data-v-check>Confirm</button></div>
+<p class="formmsg" data-v-msg role="status" aria-live="polite"></p>
+<p class="hint">No email after a minute? Check your spam folder, or <button class="textbtn" type="button" data-v-resend>email me a new code</button>.</p></div>""" if verify else "")
+    return f"""<form class="sunny" id="{fid}" data-section="{e(section)}" data-title="{e(title_tpl)}"{" data-verify=\"1\"" if verify else ""} novalidate>
 {sign}{"".join(fields)}
 <label class="hp" aria-hidden="true">Leave this empty<input name="hp" tabindex="-1" autocomplete="off"></label>
 <label class="check wide"><input type="checkbox" required name="agree" value="Yes" data-consent="Agreed to rules, terms, photo permission and OK from people named"> <span>I agree to the <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/rules.html#rules" target="_blank">Sunny rules</a> and <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/terms.html" target="_blank">terms</a>, have permission to share any photo I add, and everyone named or pictured said it's OK (a parent or guardian for anyone under 18). <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/privacy.html" target="_blank">Privacy</a></span></label>
 <div class="wide submitrow"><button class="btn solid" type="submit"{"" if on else " disabled"}>{button}</button><span class="formmsg" role="status" aria-live="polite"></span></div>
 {closed}</form>
 <div class="thanks" hidden><span class="script">Thank you!</span><h2 class="hed">Got it.</h2><p data-thanks></p>
-<button class="btn" type="button" data-again>Send another</button></div>"""
+<button class="btn" type="button" data-again>Send another</button></div>{check}"""
 
 
 def form_script(cfg):
@@ -2821,18 +2912,42 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
     const rid=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);const path=new Date().getFullYear()+'/'+rid+'.'+ext;
     const up=await sb.storage.from('photos').upload(path,pic,{{contentType:pic.type}});if(up.error)throw up.error;
     row.photo_url=sb.storage.from('photos').getPublicUrl(path).data.publicUrl}}
+   if(f.dataset.verify)row.id=uuid();
    let {{error}}=await sb.from('submissions').insert(row);
    if(error&&/consent/.test(error.message||'')){{delete row.consent;({{error}}=await sb.from('submissions').insert(row))}}  // until the consent column exists
    if(error)throw error;
+   if(f.dataset.verify){{let why='';try{{await vcall({{action:'send',id:row.id,email:row.email}})}}catch(x){{why=x.message||String(x)}}
+    msg.textContent='';delete f.dataset.piiOk;showVerify(f,row.id,row.email,why);return}}
    msg.textContent='';done(f.dataset.section==='Join the team'?'Your application is in. An editor will email you soon.':
     f.dataset.section==='Advertise'?'We will get back to you within two business days.':
+    sec==='Birthday'?'Your shout-out is in the review queue. Once an editor approves it, it shows on their birthday.':
     sec==='Job'?'Your job is in the review queue. Once an editor approves it, replies come to your email.':
     who?'If you are verified it goes live within 20 minutes. Otherwise an editor will look at it soon.':'It is in the review queue. An editor will look at it soon, usually within a day.')}}
   catch(err){{msg.textContent='Something went wrong: '+(err.message||err)+'. Please try again.'}}
   finally{{btn.disabled=false}}}});}});
+/*VERIFY*/
 document.querySelectorAll('[data-pick]').forEach(b=>b.addEventListener('click',()=>{{const f=document.getElementById('send');if(!f)return;f.section.value=b.dataset.pick;showFor(f)}}));
 }})();
-</script>"""
+</script>""".replace("/*VERIFY*/", VERIFY_JS)
+
+
+VERIFY_JS = r"""// Email check (birthday shout-outs): the row is saved unverified, we email a code, and a match sends it to the queue.
+const uuid=()=>(self.crypto&&crypto.randomUUID)?crypto.randomUUID():'10000000-1000-4000-8000-100000000000'.replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
+async function vcall(body){const {data,error}=await sb.functions.invoke('verify',{body});
+ if(error){let t='';try{t=(await error.context.json()).error}catch(_){}throw new Error(t||error.message)}return data}
+function showVerify(f,id,email,why){const v=f.parentElement.querySelector('.verify');f.hidden=true;v.hidden=false;v.dataset.id=id;v.dataset.email=email;
+ v.querySelector('[data-v-email]').textContent=email;v.querySelector('[data-v-code]').value='';
+ v.querySelector('[data-v-msg]').textContent=why?why+' Press “email me a new code” to try again.':'';
+ v.scrollIntoView({behavior:'smooth',block:'center'});v.querySelector('[data-v-code]').focus({preventScroll:true})}
+document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.matches&&ev.target.matches('[data-v-code]')){ev.preventDefault();ev.target.closest('.verify').querySelector('[data-v-check]').click()}});
+document.addEventListener('click',async ev=>{const c=ev.target.closest('[data-v-check],[data-v-resend]');if(!c)return;const v=c.closest('.verify');const m=v.querySelector('[data-v-msg]');c.disabled=true;
+ try{if(c.hasAttribute('data-v-resend')){await vcall({action:'send',id:v.dataset.id,email:v.dataset.email});m.textContent='New code sent. Check your email.';return}
+  const code=v.querySelector('[data-v-code]').value.replace(/\D/g,'');if(code.length!==6){m.textContent='Type the 6-digit code from the email.';return}
+  m.textContent='Checking…';await vcall({action:'check',id:v.dataset.id,code});m.textContent='';v.hidden=true;
+  const f=v.parentElement.querySelector('form.sunny');const t=f.nextElementSibling;f.reset();showFor(f);syncSign();
+  t.querySelector('[data-thanks]').textContent='Confirmed! Your shout-out is in the review queue. Once an editor approves it, it shows on their birthday.';
+  t.hidden=false;t.scrollIntoView({behavior:'smooth',block:'center'})}
+ catch(err){m.textContent=err.message||String(err)}finally{c.disabled=false}});"""
 
 
 def form_link(cfg, key, subject):
@@ -2842,6 +2957,97 @@ def form_link(cfg, key, subject):
 def page_title(script, title, intro):
     return (f'<section class="wrap pagehead"><span class="script">{script}</span><h1 class="retro sm">{title}</h1>'
             f'<p class="intro">{intro}</p></section>')
+
+
+BIRTHDAY_STEPS = [
+    "Type their name and their birthday. No photo, no year, nothing else needed.",
+    "Want to say more? Check \u201cAdd a special message\u201d and write a line from you.",
+    "Confirm with the 6-digit code we email you. Then an editor approves it, and it shows on the front page and our Facebook page on their birthday.",
+]
+
+
+def birthday_cards(birthdays):
+    return "".join(
+        f'<article class="bday-card" id="bday-{e(b["id"])}"><span class="bday-cake" aria-hidden="true">{CAKE}</span>'
+        f'<span class="caps kicker">Happy birthday</span><h3 class="bday-name">{e(b["name"])}</h3>'
+        + (f'<p class="bday-msg">\u201c{e(b["message"])}\u201d</p>' if b["message"] else "")
+        + (f'<p class="caps bday-from">\u2014 {e(b["by"])}</p>' if b["by"] else "") + "</article>"
+        for b in birthdays)
+
+
+CAKE = ('<svg viewBox="0 0 48 48"><path d="M24 4c2 3 2 5 0 7-2-2-2-4 0-7z" fill="currentColor"/><path d="M22.5 12h3v8h-3z" fill="currentColor"/>'
+        '<path d="M8 22h32v8H8zM6 30h36v12H6z" fill="none" stroke="currentColor" stroke-width="2.5"/>'
+        '<path d="M8 26c3 3 5 3 8 0s5-3 8 0 5 3 8 0 5-3 8 0" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>')
+
+
+def birthday_band(cfg, birthdays):
+    """The front page's Happy Birthday box. Only there on days someone has an approved shout-out."""
+    if not birthdays:
+        return ""
+    site = cfg["site_url"].rstrip("/")
+    return f"""<section class="wrap" id="birthdays"><div class="candy"><div class="candy-in bday">
+<div class="bday-head"><span class="script">Happy birthday!</span><h2 class="retro sm">Mansfield birthdays</h2>
+<p class="caps muted">{eastern().strftime("%A, %B %-d")}</p>{sponsor_tag(cfg, "birthday", site)}</div>
+<div class="bday-grid">{birthday_cards(birthdays)}</div>
+<div class="share bday-acts"><a class="btn fb" href="{e(fb_share(site + '/birthdays.html'))}" target="_blank" rel="noopener">{FB_ICON}Share the birthdays</a>
+<a class="btn" href="{e(site)}/birthdays.html#form">Send a shout-out</a></div></div></div></section>"""
+
+
+BIRTHDAY_JS = """<script>(()=>{const f=document.getElementById('bday-form');if(!f)return;
+const m=f.querySelector('[name=bmonth]'),d=f.querySelector('[name=bday]'),out=f.querySelector('[name=event_date]');
+const box=f.querySelector('.bday-extra'),opt=f.querySelector('[name=add_message]');
+function days(){const mo=m.selectedIndex;const n=mo?new Date(2000,mo,0).getDate():31;const keep=d.value;
+ d.innerHTML='<option value="">Day</option>'+Array.from({length:n},(_,i)=>`<option>${i+1}</option>`).join('');if(+keep<=n)d.value=keep;set()}
+function set(){const mo=m.selectedIndex,dy=+d.value;out.value=mo&&dy?`2000-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`:''}
+function toggle(){box.hidden=!opt.checked;if(opt.checked)box.querySelector('textarea').focus()}
+m.addEventListener('change',days);d.addEventListener('change',set);opt.addEventListener('change',toggle);
+f.addEventListener('reset',()=>setTimeout(()=>{days();box.hidden=true}));days()})();</script>"""
+
+MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+
+def render_birthdays(cfg, birthdays, stories):
+    site = cfg["site_url"].rstrip("/")
+    today = (f'<section class="wrap" id="today"><div class="candy"><div class="candy-in bday">'
+             f'<div class="bday-head"><span class="script">Happy birthday!</span><h2 class="retro sm">Celebrating today</h2>'
+             f'<p class="caps muted">{eastern().strftime("%A, %B %-d")}</p>{sponsor_tag(cfg, "birthday", site)}</div>'
+             f'<div class="bday-grid">{birthday_cards(birthdays)}</div>'
+             f'<div class="share bday-acts"><a class="btn fb" href="{e(fb_share(site + "/birthdays.html"))}" target="_blank" rel="noopener">{FB_ICON}Share the birthdays</a></div>'
+             f'</div></div></section>') if birthdays else ""
+    month = '<label class="fld"><span class="caps">Birthday *</span><span class="bday-date">' + (
+        '<select name="bmonth" id="f-bmonth" required aria-label="Month"><option value="">Month</option>'
+        + "".join(f"<option>{m}</option>" for m in MONTHS) + '</select>'
+        '<select name="bday" id="f-bday" required aria-label="Day"><option value="">Day</option></select></span>'
+        '<span class="hint">Just the month and day. We never ask for the year.</span></label>')
+    fields = [
+        field("who", "Birthday person\u2019s name", req=True, hint="As it should appear, like \u201cGrandma Rose\u201d or \u201cJake Miller\u201d."),
+        month,
+        '<input type="hidden" name="event_date">',
+        field("add_message", "Add a special message <span class=\"muted\">(optional)</span>", "checkbox"),
+        '<div class="bday-extra wide" hidden>'
+        + field("summary", "Your message", "textarea", hint="A line or two, up to 300 characters. It shows with their shout-out.").replace('maxlength="2000"', 'maxlength="300" rows="3"').replace(' rows="5"', "")
+        + field("name", "From", hint="Who it's from, like \u201cLove, Mom and Dad\u201d or \u201cThe crew at Sample Coffee\u201d.")
+        + "</div>",
+        field("email", "Your email", "email", req=True, hint="We email you a 6-digit code to make sure it's really you. Never shown on the site."),
+        field("bday_ok", "Yes, post it. I know them and they'd be happy with a public birthday shout-out on Sunny Mansfield "
+              "and its Facebook page (for anyone under 18, I'm their parent or guardian, or have their OK).", "checkbox",
+              req=True, consent="Birthday person OK with a public shout-out"),
+    ]
+    form = sunny_form(cfg, "bday-form", "Birthday", fields, "Send for review", title_tpl="Happy birthday, {who}!", verify=True)
+    inner = f"""{page_title("Hey neighbor!", "Birthday shout-outs", "Know someone with a birthday coming up? Send a free shout-out and we'll wish them a happy birthday on the front page and on Facebook, on their big day.")}
+{today}
+<section class="wrap formbox" id="form"><h2 class="label">Send a birthday shout-out</h2>{form}</section>
+<section class="wrap civic"><div class="box"><span class="caps kicker">How it works</span><h2 class="hed">Three quick steps</h2>
+<ol class="steps">{"".join(f'<li><span class="n">{i}</span><span>{t}</span></li>' for i, t in enumerate(BIRTHDAY_STEPS, 1))}</ol></div>
+<div class="box"><span class="caps kicker">Good to know</span><h2 class="hed">Free, kind and once a year</h2>
+<ol class="steps"><li><span class="n">1</span><span>Send it any time before the day. Each shout-out runs once, on their next birthday.</span></li>
+<li><span class="n">2</span><span>Use the name they go by. For kids, a parent or guardian should send it.</span></li>
+<li><span class="n">3</span><span>Keep it kind and keep phone numbers, emails and addresses out of your message: it's public. <a class="link" href="{e(site)}/rules.html">All the rules</a></span></li></ol></div></section>"""
+    image = f"{site}/birthday.jpg"
+    return shell(cfg, f"Birthday shout-outs · {cfg['site_name']}",
+                 "Send a free birthday shout-out to someone in Mansfield or Richland County. It shows on their birthday.",
+                 f"{site}/birthdays.html", inner, stories, image=image, extra=form_script(cfg) + BIRTHDAY_JS).replace(
+        BDAY_STRIP.format(site=e(site)), "")
 
 
 def render_submit(cfg, stories):
@@ -2862,6 +3068,8 @@ def render_submit(cfg, stories):
          "People message you through the site, so your phone and email stay private. Up for 30 days.", "#form:Free Stuff", "Give something away", "free"),
         ("biz", "Post a job", "Hiring in Richland County? Post it free for 30 days. Applicants reply through Sunny Mansfield, "
          "so your email is never shown.", "#form:Job", "Post a job", "job"),
+        ("seniors", "Send a birthday shout-out", "Just their name and birthday, plus a special message if you like. "
+         "It shows on the front page and our Facebook page on their big day.", f"{site}/birthdays.html#form", "Send a shout-out", "birthday"),
         ("research", "Join the team", "Aspiring journalists, marketers, students, mentors and motivators. Get verified and "
          "your posts go live on their own.", f"{site}/rules.html#apply", "Apply to join", "join"),
     ]
@@ -3729,15 +3937,16 @@ async function start(s){{if(me&&s&&s.user.email===me)return;if(!s){{$('login').h
  $('login').hidden=true;$('desk').hidden=false;$('me').textContent=me;load()}}
 sb.auth.getSession().then(r=>start(r.data.session));sb.auth.onAuthStateChange((_,s)=>{{if(s&&!me)start(s)}});
 function base(){{return sb.from('submissions').select('*').order('created_at',{{ascending:false}}).limit(200)}}
-const QUERIES={{pending:()=>base().eq('status','pending').not('section','in',NOTQ),brackets:()=>base().eq('section','Bracket').neq('status','rejected'),
+let NOV=false;const ok=x=>NOV?x:x.or('section.neq.Birthday,verified_at.not.is.null');  // unconfirmed birthday shout-outs wait for their code
+const QUERIES={{pending:()=>ok(base().eq('status','pending').not('section','in',NOTQ)),brackets:()=>base().eq('section','Bracket').neq('status','rejected'),
  apps:()=>base().eq('section','Join the team').neq('status','rejected'),ads:()=>base().eq('section','Advertise').eq('status','pending'),
  approved:()=>base().eq('status','approved').not('section','in',NOTQ),rejected:()=>base().eq('status','rejected')}};
-async function counts(){{for(const [k,f] of [['pending',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('status','pending').not('section','in',NOTQ)],
+async function counts(){{for(const [k,f] of [['pending',()=>ok(sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('status','pending').not('section','in',NOTQ))],
  ['apps',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Join the team').eq('status','pending')],
  ['ads',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Advertise').eq('status','pending')]]){{
  const {{count}}=await f();document.querySelector(`[data-q="${{k}}"] .n`).textContent=count||''}}}}
 function item(r){{const when=new Date(r.created_at).toLocaleString();
- const facts=[['Section',r.section],['By',r.name],['Role',r.role],['Town',r.town],['Business',r.business],['Event date',r.event_date],['Price',r.price],['Contact',r.contact],['Email',r.email],['Consent',r.consent&&r.consent.split('\\n').join(' · ')],['Sent',when],['Status',r.status+(r.reviewed_by?' by '+r.reviewed_by:'')]].filter(x=>x[1]);
+ const facts=[['Section',r.section],['By',r.name],['Role',r.role],['Town',r.town],['Business',r.business],[r.section==='Birthday'?'Birthday':'Event date',r.section==='Birthday'&&r.event_date?new Date(r.event_date+'T12:00').toLocaleDateString('en-US',{{month:'long',day:'numeric'}}):r.event_date],['Price',r.price],['Contact',r.contact],['Email',r.email],['Email check',r.section==='Birthday'?(r.verified_at?'Confirmed with a code':'Not confirmed'):''],['Consent',r.consent&&r.consent.split('\\n').join(' · ')],['Sent',when],['Status',r.status+(r.reviewed_by?' by '+r.reviewed_by:'')]].filter(x=>x[1]);
  const link=/^https?:\/\//i.test(r.link||'')?`<a class="link" href="${{esc(r.link)}}" target="_blank" rel="noopener">Open link</a>`:'';
  const btn=(a,t,c='')=>`<button class="btn sm ${{c}}" type="button" data-act="${{a}}" data-id="${{r.id}}">${{t}}</button>`;
  let acts='';if(r.section==='Join the team')acts=btn('verify-approve','Approve and verify','solid')+btn('reject','Decline');
@@ -3754,7 +3963,8 @@ async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAtt
   if(error){{list.innerHTML='';say(error.message);return}}
   list.innerHTML=data.length?data.map(v=>`<article class="qitem"><div class="qbody"><h3 class="hed">${{esc(v.name||v.email)}}</h3><p class="hint">${{esc(v.email)}} ${{v.role?'· '+esc(v.role):''}}</p>
   <div class="share"><button class="btn sm ghost" type="button" data-unverify="${{esc(v.email)}}">Remove</button></div></div></article>`).join(''):'<p class="hint">Nobody verified yet.</p>';return}}
- const {{data,error}}=await QUERIES[q]();if(error){{list.innerHTML='';say(error.message);return}}
+ let {{data,error}}=await QUERIES[q]();if(error&&/verified_at/.test(error.message||'')){{NOV=true;(({{data,error}}=await QUERIES[q]()))}}  // schema not updated yet
+ if(error){{list.innerHTML='';say(error.message);return}}
  list.innerHTML=data.length?data.map(item).join(''):'<p class="hint">All caught up. Nothing waiting here.</p>'}}
 document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q]');if(t){{q=t.dataset.q;load();return}}
  const h=ev.target.closest('[data-head]'),auto=ev.target.closest('#head-auto');
@@ -3775,7 +3985,7 @@ document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q
   if(!error&&m)await sb.storage.from('photos').remove([decodeURIComponent(m[1])])}}
  else{{if(act==='verify-approve'&&row.email){{({{error}}=await sb.from('verified').upsert({{email:row.email.toLowerCase(),name:row.name,role:row.role}}));}}
   if(!error)(({{error}}=await sb.from('submissions').update({{status:act==='reject'?'rejected':'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',id)));}}
- if(error){{say(error.message);b.disabled=false;return}}say(act==='reject'?'Done. It will not appear on the site.':act==='delete'?'Deleted.':'Approved. It will be on the site within 20 minutes.');load()}});
+ if(error){{say(error.message);b.disabled=false;return}}say(act==='reject'?'Done. It will not appear on the site.':act==='delete'?'Deleted.':b.closest('.qitem').querySelector('.kicker').textContent==='Birthday'?'Approved. It will show on their birthday (and on Facebook that morning).':'Approved. It will be on the site within 20 minutes.');load()}});
 function newBracket(){{$('b-form').reset();$('b-id').value='';$('b-head').textContent='New bracket'}}
 $('b-new').onclick=newBracket;
 $('l-form').onsubmit=async ev=>{{ev.preventDefault();const m=$('l-msg');let url=$('l-url').value.trim();
@@ -4030,7 +4240,7 @@ def merge_community(cfg, stories, community):
 
 PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
          ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"), ("watch.html", "daily", "0.7"),
-         ("submit.html", "monthly", "0.6"), ("rules.html", "monthly", "0.4"),
+         ("submit.html", "monthly", "0.6"), ("birthdays.html", "daily", "0.6"), ("rules.html", "monthly", "0.4"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
 
 
@@ -4196,7 +4406,8 @@ def main():
     out = Path(args.out)
     (out / "s").mkdir(parents=True, exist_ok=True)
     quote = quote_of_the_day()
-    page = render_index(cfg, stories, businesses, flyers, listings, got["fundraisers"], got["headlines"], quote, got["jobs"])
+    page = render_index(cfg, stories, businesses, flyers, listings, got["fundraisers"], got["headlines"], quote, got["jobs"],
+                        got["birthdays"])
     (out / "index.html").write_text(rebase(
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
@@ -4214,14 +4425,15 @@ def main():
     preview = re.sub(r'(["(])/(assets/[\w./-]+\.(jpg|webp|png))', inline, page).replace('<link rel="icon" type="image/svg+xml" href="/brand/mark.svg">\n', "")
     (out / "artifact.html").write_text(preview)
     try:
-        from posts import (make_community_feed, make_daily_post, make_post_images, make_quote_feed, make_quote_image,
-                           make_top_story_feed)
+        from posts import (make_birthday_invite_image, make_community_feed, make_daily_post, make_post_images,
+                           make_quote_feed, make_quote_image, make_top_story_feed)
         credit = "sunnymansfield.com"  # the line along the bottom of every post image
         make_post_images(stories, out, SECTION_NAMES, UA, credit, outlet_photos=cfg.get("frame_outlet_photos", False), note=note)
         make_daily_post(cfg, stories, businesses, flyers, got["fundraisers"], listings, out, SECTION_NAMES, UA, credit,
                         lambda s: page_url(cfg, s), note=note)
         make_quote_image(quote, out, credit, note=note)
-        make_quote_feed(cfg, quote, out, credit, note=note)
+        make_birthday_invite_image(out, credit, note=note)
+        make_quote_feed(cfg, quote, out, credit, birthdays=got["birthdays"], note=note)
         make_top_story_feed(cfg, stories, out, lambda s: page_url(cfg, s), note=note)
         make_community_feed(cfg, stories, flyers, got["fundraisers"], businesses, out, lambda s: page_url(cfg, s), UA, credit, note=note)
     except ImportError as exc:
@@ -4250,6 +4462,7 @@ def main():
         (out / "b" / f"{b['slug']}.html").write_text(rebase(render_business(cfg, b, businesses, stories)))
     (out / "businesses.html").write_text(rebase(render_businesses(cfg, businesses, stories)))
     (out / "submit.html").write_text(rebase(render_submit(cfg, stories)))
+    (out / "birthdays.html").write_text(rebase(render_birthdays(cfg, got["birthdays"], stories)))
     (out / "rules.html").write_text(rebase(render_rules(cfg, stories)))
     for kind in LEGAL:
         (out / f"{kind}.html").write_text(rebase(render_legal(cfg, stories, kind)))
@@ -4267,7 +4480,7 @@ def main():
         (out / "jobs" / f"{j['id']}.html").write_text(rebase(render_job_page(cfg, j, stories)))
     (out / "404.html").write_text(rebase(render_not_found(cfg, stories)))
     (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories) if ads_open(cfg) else render_ads_soon(cfg, stories)))
-    (out / "admin.html").write_text(rebase(render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"]))))
+    (out / "admin.html").write_text(rebase(no_strip(render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"])))))
     (out / "town").mkdir(exist_ok=True)
     live_towns = []
     for name, about in TOWNS:

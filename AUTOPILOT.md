@@ -48,10 +48,15 @@ The free plan allows 100 posts a month, and each Zap can have only one action. T
 | Daily post | `/social.xml` | Instagram (Publish Photo) | ~30 |
 | Posted by neighbors | `/community.xml` (every story, athlete spotlight, event flyer, fundraiser and business spotlight sent in through the site, once it's approved) | Facebook Page (Create Page Photo) | usually under 40 |
 
-| Quote of the day | `/quotes.xml` (a framed quote image at 8 a.m. and 8 p.m. Eastern, from `quotes.csv`) | Facebook Page (Create Page Photo) | ~60 |
+| Quote of the day + birthdays | `/quotes.xml` (a framed quote image at 8 a.m. and 8 p.m. Eastern, from `quotes.csv`, plus birthday shout-outs and the every-other-day birthday invite) | Facebook Page (Create Page Photo) | ~75 + birthdays |
 
-Facebook only (no Instagram Zap yet): daily post ~30 + quotes ~60 = ~90, which leaves about 10 for community posts.
-Once neighbors post more than that, either upgrade Zapier or turn the quote Zap off on busy months.
+Facebook only (no Instagram Zap yet): daily post ~30 + quotes ~60 + birthday invites ~15 = ~105, which is just over the free plan before any birthdays.
+If you stay on the free plan, drop the quote to once a day or turn the daily post Zap off; otherwise Zapier's Starter plan covers it.
+
+The quote feed also carries the birthday posts, so the quote Zap posts them with no extra setup:
+
+- **Each approved birthday shout-out** at 9 a.m. Eastern on the birthday: a framed "Happy Birthday!" image with the name, the optional message and who it's from.
+- **An invite to send a shout-out** every other day at noon Eastern: how it works (name, birthday, optional message and from) and the link to `sunnymansfield.com/birthdays.html`. That's about 15 posts a month, plus one per birthday.
 
 Set up the quote Zap like the daily post one: RSS by Zapier, New Item in Feed, feed URL `https://sunnymansfield.com/quotes.xml`,
 then Facebook Pages, Create Page Photo, with Photo = the item's Link and Message = the item's Description.

@@ -5,6 +5,7 @@ so an RSS-to-Facebook service can post the framed picture instead of a bare link
 """
 import io
 import urllib.request
+from datetime import date, datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -262,38 +263,187 @@ def make_quote_image(quote, out, credit, note=print):
     return "quote.jpg"
 
 
-def make_quote_feed(cfg, quote, out, credit, note=print):
-    """quotes.xml: a framed quote image twice a day (8 a.m. and 8 p.m. Eastern), ready to post to Facebook.
-    Like social.xml, each item's link is the image itself and the caption is in the description."""
+def cake(d, cx, top, color=ORANGE, scale=1.0):
+    """A little line-drawn birthday cake, like the one on the site."""
+    k = scale
+    w2, t = 150 * k, 5 * k
+    d.polygon([(cx, top), (cx + 12 * k, top + 26 * k), (cx, top + 40 * k), (cx - 12 * k, top + 26 * k)], fill=color)  # flame
+    d.rectangle((cx - 7 * k, top + 46 * k, cx + 7 * k, top + 90 * k), fill=color)  # candle
+    d.rectangle((cx - w2 * .8, top + 90 * k, cx + w2 * .8, top + 140 * k), outline=color, width=round(t))
+    d.rectangle((cx - w2, top + 140 * k, cx + w2, top + 210 * k), outline=color, width=round(t))
+    pts = [(cx - w2 * .8 + i * (w2 * 1.6 / 8), top + (112 if i % 2 else 100) * k) for i in range(9)]
+    d.line(pts, fill=color, width=round(t), joint="curve")
+
+
+def birthday_post(b, credit):
+    """One approved birthday shout-out: the name big, the optional message and who it's from."""
+    im = stripes()
+    d = ImageDraw.Draw(im)
+    d.text((W / 2, 190), "Happy Birthday!", font=font("Yellowtail", 110), fill=ORANGE, anchor="mm")
+    spaced(d, (W / 2, 280), "A Sunny Mansfield shout-out", font("Josefin-700", 24), BROWN, anchor="m")
+    f, lines = headline(d, b["name"], W - 200, (110, 96, 84, 72, 62), 2)
+    step = round(f.size * 1.12)
+    got, mf = [], None
+    if b.get("message"):
+        text = "\u201c" + b["message"].strip().strip('"\u201c\u201d') + "\u201d"
+        for size in (46, 42, 38, 34, 30):
+            mf = font("Caslon-700", size)
+            got = wrap(d, text, mf, W - 240, 5)
+            if got:
+                break
+        else:
+            got = (wrap(d, text, mf, W - 240, 99) or [text])[:5]
+            got[-1] = got[-1].rstrip(".,;:") + "\u2026"
+    # Center the cake, name, message and "From" between the heading and the logo.
+    height = 170 + step * len(lines) + (40 + round(mf.size * 1.3) * len(got) if got else 0) + (60 if b.get("by") else 0)
+    y = 330 + max(0, (1060 - 330 - height) // 2)
+    cake(d, W / 2, y, scale=0.7)
+    y += 170
+    for line in lines:
+        d.text((W / 2, y), line, font=f, fill=BROWN, anchor="ma")
+        y += step
+    if got:
+        y += 40
+        for line in got:
+            d.text((W / 2, y), line, font=mf, fill=MUTED, anchor="ma")
+            y += round(mf.size * 1.3)
+    if b.get("by"):
+        spaced(d, (W / 2, y + 30), "\u2014  " + b["by"], font("Josefin-700", 26), ORANGE, anchor="m")
+    footer(im, d, credit, center=True)
+    return im
+
+
+def birthday_invite_post(credit):
+    """The every-other-day ask: send a free birthday shout-out. Orange, like the quote of the day."""
+    im = Image.new("RGB", (W, H), ORANGE)
+    d = ImageDraw.Draw(im)
+    d.rectangle((44, 44, W - 45, H - 45), outline=BROWN, width=6)
+
+    def drop(xy, text, f, off, **kw):
+        d.text((xy[0] + off, xy[1] + off), text, font=f, fill=BROWN, **kw)
+        d.text(xy, text, font=f, fill=CREAM, **kw)
+
+    drop((W / 2, 190), "Birthday", font("Yellowtail", 150), 5, anchor="mm")
+    spaced(d, (W / 2, 290), "Shout-outs", font("Josefin-700", 56), BROWN, track=0.24, anchor="m")
+    cake(d, W / 2, 380, color=CREAM, scale=0.62)
+    f = font("Caslon-700", 54)
+    y = 560
+    for line in ("Know someone with a", "birthday coming up?"):
+        drop((W / 2, y), line, f, 3, anchor="ma")
+        y += 66
+    y += 30
+    small = font("Caslon-700", 36)
+    for n, text in enumerate(("Type their name and birthday", "Add a special message (optional)",
+                              "We wish them a happy birthday here!"), 1):
+        d.ellipse((150, y - 4, 202, y + 48), fill=BROWN)
+        d.text((176, y + 22), str(n), font=font("Josefin-700", 30), fill=CREAM, anchor="mm")
+        d.text((228, y + 4), text, font=small, fill=CREAM)
+        y += 84
+    d.line((140, 1120, W - 140, 1120), fill=BROWN, width=5)
+    spaced(d, (W / 2, 1160), "sunnymansfield.com/birthdays", font("Josefin-700", 40), BROWN, track=0.12, anchor="m")
+    spaced(d, (W / 2, 1238), "Free · Every shout-out is approved by an editor", font("Josefin-700", 17), CREAM, anchor="m")
+    return im
+
+
+def make_birthday_invite_image(out, credit, note=print):
+    """site/birthday.jpg: the birthday shout-out invite, also the share picture for birthdays.html."""
+    try:
+        birthday_invite_post(credit).save(Path(out) / "birthday.jpg", quality=88, optimize=True, progressive=False)
+    except Exception as exc:
+        note(f"Birthday invite image: skipped ({exc})")
+
+
+BIRTHDAY_TAGS = "#SunnyMansfield #MansfieldOhio #RichlandCounty #HappyBirthday"
+BIRTHDAY_HOUR = 9   # approved shout-outs post at 9 a.m. Eastern on the birthday
+INVITE_HOUR = 12    # the "send a shout-out" invite posts at noon Eastern, every other day
+
+
+def birthday_items(cfg, birthdays, folder, credit, now, note=print):
+    """Feed items for today's approved shout-outs (from 9 a.m.) and the every-other-day invite (at noon)."""
     from email.utils import format_datetime
     from html import escape as e
-    if not quote:
-        return
+    site = cfg["site_url"].rstrip("/")
+    link = f"{site}/birthdays.html"
+    items = []
+    at = now.replace(hour=BIRTHDAY_HOUR, minute=0, second=0, microsecond=0)
+    if now >= at:
+        for b in birthdays[:8]:
+            key = f"{at:%Y-%m-%d}-{b['id']}"
+            try:
+                birthday_post(b, credit).save(folder / f"birthday-{key}.jpg", quality=88, optimize=True, progressive=False)
+            except Exception as exc:
+                note(f"Birthday post: skipped ({exc})")
+                continue
+            note_line = f"\n\n\u201c{b['message']}\u201d" if b.get("message") else ""
+            note_line += f"\n\u2014 {b['by']}" if b.get("by") else ""
+            caption = (f"\U0001F382 Happy birthday, {b['name']}! \U0001F389{note_line}\n\n"
+                       f"From all of us at Sunny Mansfield, have a sunny day!\n\n"
+                       f"Know someone with a birthday coming up? Send a free shout-out: {link}\n\n{BIRTHDAY_TAGS}")
+            image = f"{site}/social/birthday-{key}.jpg"
+            items.append((at, f"""<item><title>{e("Happy birthday, " + b["name"] + "!")}</title><link>{e(image)}</link>
+<guid isPermaLink="false">sunny-birthday-{key}</guid><pubDate>{format_datetime(at)}</pubDate>
+<description>{e(caption)}</description><enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>"""))
+    # The invite: every other day at noon. Keep the last two, so the feed always has one to show.
+    day = now.replace(hour=INVITE_HOUR, minute=0, second=0, microsecond=0)
+    if now < day:
+        day -= timedelta(days=1)
+    invites = []
+    while len(invites) < 2:
+        if (day.date() - INVITE_START).days % 2 == 0:
+            invites.append(day)
+        day -= timedelta(days=1)
+    caption = ("\U0001F382 Know someone with a birthday coming up?\n\n"
+               "Send them a free Sunny Mansfield birthday shout-out! Here's how:\n"
+               "1\ufe0f\u20e3 Type their name and birthday (just the month and day)\n"
+               "2\ufe0f\u20e3 Want to say more? Add a special message and who it's from\n"
+               "3\ufe0f\u20e3 An editor approves it, and we wish them a happy birthday on the site and right here on Facebook on their big day\n\n"
+               f"Send one here: {link}\n\n{BIRTHDAY_TAGS}")
+    image = f"{site}/birthday.jpg"
+    for when in invites:
+        items.append((when, f"""<item><title>Send a free birthday shout-out</title><link>{e(image)}</link>
+<guid isPermaLink="false">sunny-birthday-invite-{when:%Y-%m-%d}</guid><pubDate>{format_datetime(when)}</pubDate>
+<description>{e(caption)}</description><enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>"""))
+    return items
+
+
+INVITE_START = date(2026, 11, 17)  # invites go out on this day and every second day after
+
+
+def make_quote_feed(cfg, quote, out, credit, birthdays=(), note=print):
+    """quotes.xml: a framed quote image twice a day (8 a.m. and 8 p.m. Eastern), ready to post to Facebook.
+    Like social.xml, each item's link is the image itself and the caption is in the description.
+    The same feed carries birthday posts, so the quote's Facebook Zap posts them too: each approved shout-out
+    at 9 a.m. on the birthday, and an invite to send one every other day at noon."""
+    from email.utils import format_datetime
+    from html import escape as e
+    from zoneinfo import ZoneInfo
     site = cfg["site_url"].rstrip("/")
     folder = Path(out) / "social"
     folder.mkdir(parents=True, exist_ok=True)
     items = []
-    for q in quote["recent"]:
+    for q in (quote or {}).get("recent", []):
         key = q["at"].strftime("%Y-%m-%d-") + ("pm" if q["at"].hour >= 12 else "am")
         try:
             quote_post(q, credit).save(folder / f"quote-{key}.jpg", quality=88, optimize=True, progressive=False)
         except Exception as exc:
             note(f"Quote feed: skipped ({exc})")
-            return
+            break
         text = q["text"].strip().strip('"\u201c\u201d')
         tags = " ".join(dict.fromkeys(TAGS.split() + [x for x in q.get("tags", "").split() if x.startswith("#")]))
         caption = (f"💬 Mansfield quote of the day\n\n\u201c{text}\u201d" + (f"\n\u2014 {q['author']}" if q.get("author") else "")
                    + f"\n\nMore good news: {site}/\n\n{tags}")
         image = f"{site}/social/quote-{key}.jpg"
-        items.append(f"""<item><title>{e("Quote of the day: " + text[:80])}</title><link>{e(image)}</link>
+        items.append((q["at"], f"""<item><title>{e("Quote of the day: " + text[:80])}</title><link>{e(image)}</link>
 <guid isPermaLink="false">sunny-quote-{key}</guid><pubDate>{format_datetime(q["at"])}</pubDate>
-<description>{e(caption)}</description><enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>""")
+<description>{e(caption)}</description><enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>"""))
+    items += birthday_items(cfg, list(birthdays), folder, credit, datetime.now(ZoneInfo("America/New_York")), note=note)
+    items.sort(key=lambda x: x[0], reverse=True)
     (Path(out) / "quotes.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel><title>{e(cfg['site_name'])} quote of the day</title><link>{e(site)}/</link>
-<description>A Mansfield quote twice a day, ready for Facebook</description>
-{"".join(items)}
+<description>A Mansfield quote twice a day, birthday shout-outs, ready for Facebook</description>
+{"".join(x for _, x in items)}
 </channel></rss>""")
-    note(f"Quote feed: {quote['text'][:60]}")
+    note(f"Quote feed: {quote['text'][:60] if quote else 'no quote'}; {len(birthdays)} birthdays today")
 
 
 def pick(stories, *sections, athletes=False):

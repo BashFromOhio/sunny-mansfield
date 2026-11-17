@@ -67,6 +67,16 @@ People post from forms on the site itself: `submit.html` (stories, event flyers,
 database in **review mode**. Editors approve it at `admin.html`, and the site publishes approved posts on its next
 refresh (every 15 minutes). Verified contributors who sign in skip the queue. Setup: [BACKEND.md](BACKEND.md).
 
+## Birthday shout-outs
+
+`birthdays.html` has a short form: the birthday person's name and their birthday (month and day, never the year), plus an
+optional special message and who it's from, the sender's email and a required opt-in box. The sender confirms their email
+with a 6-digit code (the `verify` function, BACKEND.md step 8), and only then does it reach the admin review queue, where every
+shout-out waits for an editor, even from verified people. An orange banner under the menu on every page links to the form.
+Once approved, it shows on the front page ("Mansfield birthdays", only on days someone has one) and on `birthdays.html`
+on the person's next birthday, once. The same day at 9 a.m. it posts to Facebook through `quotes.xml`, which also posts an
+invite to send a shout-out every other day at noon. To sponsor the birthday box, add an ad with `"spot": "A3", "section": "birthday"`.
+
 ## Quote of the day
 
 `quotes.csv` feeds the Facebook quote of the day only (it is not shown on the site): the `quote.jpg` image and `quotes.xml`, which posts a framed quote image to Facebook twice a day. Columns are `quote`,
