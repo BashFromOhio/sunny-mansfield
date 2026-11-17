@@ -367,7 +367,7 @@ def birthday_items(cfg, birthdays, folder, credit, now, note=print):
     items = []
     at = now.replace(hour=BIRTHDAY_HOUR, minute=0, second=0, microsecond=0)
     if now >= at:
-        for b in birthdays[:8]:
+        for b in [b for b in birthdays if b.get("today", True)][:8]:  # Facebook posts once, on the birthday
             key = f"{at:%Y-%m-%d}-{b['id']}"
             try:
                 birthday_post(b, credit).save(folder / f"birthday-{key}.jpg", quality=88, optimize=True, progressive=False)
@@ -443,7 +443,7 @@ def make_quote_feed(cfg, quote, out, credit, birthdays=(), note=print):
 <description>A Mansfield quote twice a day, birthday shout-outs, ready for Facebook</description>
 {"".join(x for _, x in items)}
 </channel></rss>""")
-    note(f"Quote feed: {quote['text'][:60] if quote else 'no quote'}; {len(birthdays)} birthdays today")
+    note(f"Quote feed: {quote['text'][:60] if quote else 'no quote'}; {sum(1 for b in birthdays if b.get('today', True))} birthdays today")
 
 
 def pick(stories, *sections, athletes=False):

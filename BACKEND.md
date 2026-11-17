@@ -86,7 +86,7 @@ Shout-outs nobody confirms never reach the queue and are deleted after 2 days.
 - **Team applications**: choose **Approve and verify** to make someone a verified contributor.
 - **Ad inquiries**: messages from businesses about advertising. Reply to them by email.
 - **Verified people**: add or remove people. A verified person who signs in on the submit page (with the "Email me a sign-in link" button) goes live without review, except for fundraisers, which always wait for an editor.
-- **Birthday shout-outs** show up in **Waiting** once the sender confirms their email, with the birthday shown as a date. Approve one and it shows on the front page and `birthdays.html` on the person's next birthday, and posts to Facebook at 9 a.m. that day. Each one runs once.
+- **Birthday shout-outs** show up in **Waiting** once the sender confirms their email, with the birthday shown as a date. Approve one and it shows on the front page and `birthdays.html` for two days starting on the person's next birthday, and posts to Facebook at 9 a.m. on the birthday. Each one runs once.
 - **Approved**: everything on the site. Choose **Take down** to remove a post.
 
 Event flyers stay up until the day after the event. Free Stuff and job posts stay up for 30 days. Jobs always wait for an editor, even from verified people. Free Stuff only shows posts with no price: anything mentioning a dollar amount, a trade or a payment app is left off.
