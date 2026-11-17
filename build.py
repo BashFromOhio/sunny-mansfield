@@ -916,11 +916,11 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .adbanner.promo .script{font-size:22px;color:var(--secondary);line-height:1}
 .adbanner.promo .retro{font-size:24px;line-height:1.05}
 .adbanner.promo .adtext{font:500 14px/1.4 var(--sans);color:var(--text-2)}
-.adbanner.promo.hot{background:var(--secondary);border:3px solid var(--primary);box-shadow:inset 0 0 0 3px var(--tertiary)}
+.adbanner.promo.hot{background:linear-gradient(135deg,#e5652b 0%,var(--secondary) 55%,var(--secondary-dk) 100%);border:0;border-radius:18px;box-shadow:0 10px 30px -14px rgba(120,52,16,.45)}
 .adbanner.promo.hot .script{color:var(--tertiary)}
 .adbanner.promo.hot .retro{color:var(--tertiary);text-shadow:2px 2px 0 var(--primary)}
 .adbanner.promo.hot .adtext{color:var(--tertiary)}
-.adbanner.promo.hot .btn{background:var(--tertiary);color:var(--primary);border-color:var(--tertiary)}
+.adbanner.promo.hot .btn{background:var(--tertiary);color:var(--primary);border-color:var(--tertiary);border-radius:999px}
 .adbanner.promo.hot:hover .btn{background:var(--primary);color:var(--tertiary);border-color:var(--primary)}
 .ad.house.promo{border:8px solid transparent;background:linear-gradient(var(--tertiary),var(--tertiary)) padding-box,repeating-linear-gradient(-55deg,var(--secondary) 0 9px,var(--tertiary) 9px 18px) border-box}
 .ad.house.promo .dek{font-size:14px;line-height:1.5;margin:0;color:var(--text-2)}
