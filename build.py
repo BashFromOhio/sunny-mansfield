@@ -1208,6 +1208,44 @@ html{background:#fff}html::before{display:none}
 .watch-tile .w-play{position:absolute;inset:0;padding:12px;place-items:start}
 .watch-tile .w-play span{width:40px;height:40px}.watch-tile .w-play span::after{border-width:8px 0 8px 13px;margin-left:3px}
 .givebox{padding-block:24px 40px}
+.watch-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:40px;align-items:start;padding-block:28px 12px}
+.watch-layout.solo{grid-template-columns:minmax(0,860px);justify-content:center}
+.watch-main{display:grid;gap:18px;min-width:0}
+.watch-head{display:grid;gap:8px;padding-bottom:18px;border-bottom:1px solid var(--border-subtle)}
+.watch-head .kicker{text-decoration:none}
+.watch-head h1.hed{margin:0;font-size:clamp(26px,2.8vw,36px);line-height:1.1;text-wrap:balance}
+.watch-meta{margin:0;color:var(--text-2)}
+.watch-head .share{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:6px}
+.watch-head .share .btn{padding:10px 16px 9px}.watch-head .share .textbtn{padding:0}
+.wu-card{position:relative;background:var(--surface);border-left:4px solid var(--secondary);padding:22px 26px 18px}
+.wu-head{margin:0 0 12px;font:800 18px/1.2 var(--sans)}
+.wu-body{max-height:340px;overflow:hidden;position:relative;font-size:16px;line-height:1.7;color:var(--text)}
+.wu-card:not(.open) .wu-body::after{content:"";position:absolute;inset:auto 0 0;height:90px;background:linear-gradient(rgba(243,243,243,0),var(--surface))}
+.wu-card.open .wu-body{max-height:none}
+.wu-body p{margin:0 0 14px;max-width:68ch}
+.wu-label{margin:22px 0 10px;font:700 12px/1.3 var(--caps);letter-spacing:.14em;text-transform:uppercase;color:var(--secondary)}
+.wu-label:first-child{margin-top:0}
+.wu-list{list-style:none;margin:0 0 16px;padding:0;display:grid;gap:10px;max-width:68ch}
+.wu-list li{position:relative;padding-left:22px}
+.wu-list li::before{content:"";position:absolute;left:2px;top:.62em;width:8px;height:8px;background:var(--secondary)}
+.wu-list li.has-ts{display:flex;gap:12px;padding-left:0}.wu-list li.has-ts::before{display:none}
+.wu-ts{flex:none;min-width:52px;text-align:center;box-sizing:border-box;font:700 12px/1.9 var(--sans);color:#fff;background:var(--primary);padding:0 8px;text-decoration:none;height:fit-content}
+a.wu-ts:hover{background:var(--secondary)}
+.wu-body a:not(.wu-ts){color:var(--secondary-dk);text-decoration:underline;text-underline-offset:3px}
+.wu-tags{display:flex;flex-wrap:wrap;gap:6px}.wu-tags span{font:600 12px/1 var(--sans);color:var(--text-2);background:#fff;border:1px solid var(--border-medium);padding:6px 9px}
+.wu-more{margin-top:10px;border:0;background:none;padding:0;cursor:pointer;font:700 12px/1.4 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text);
+  text-decoration:underline;text-decoration-color:var(--secondary);text-decoration-thickness:2px;text-underline-offset:5px}
+.wu-more:hover{color:var(--secondary)}
+.watch-pitch{margin:0;font-size:14px;color:var(--text-2)}
+.watch-aside{display:grid;gap:4px;align-content:start;position:sticky;top:16px}
+.watch-list{display:grid;gap:14px;margin-bottom:10px}
+.watch-row{display:grid;grid-template-columns:140px minmax(0,1fr);gap:12px;align-items:start;text-decoration:none;color:var(--text)}
+.watch-row .w-media{position:relative;aspect-ratio:16/9;overflow:hidden}
+.watch-row .hed{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:15px;line-height:1.3;margin-bottom:4px}
+.watch-row .host{font-size:10px;color:var(--text-3)}
+.watch-row:hover .hed{color:var(--secondary)}
+@media (max-width:980px){.watch-layout{grid-template-columns:minmax(0,1fr)}.watch-aside{position:static}}
+@media (max-width:600px){.wu-card{padding:18px 16px 14px}.watch-row{grid-template-columns:120px minmax(0,1fr)}}
 footer{background:var(--primary)!important}
 .btn.solid{background:var(--secondary);border-color:var(--secondary)}
 @media (max-width:980px){.nf{grid-template-columns:1fr}.nf-side{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start}}
@@ -2103,11 +2141,13 @@ def channel_videos(channel_id, count):
         title = re.search(r"<title>(.*?)</title>", entry, re.S)
         author = re.search(r"<author>\s*<name>(.*?)</name>", entry, re.S)
         about = re.search(r"<media:description>(.*?)</media:description>", entry, re.S)
+        when = re.search(r"<published>(.*?)</published>", entry)
         if vid:
             out.append({"url": f"https://www.youtube.com/watch?v={vid.group(1)}",
                         "title": html.unescape(title.group(1)).strip() if title else "",
                         "host": html.unescape(author.group(1)).strip() if author else "",
-                        "writeup": html.unescape(about.group(1)).strip() if about else ""})
+                        "writeup": html.unescape(about.group(1)).strip() if about else "",
+                        "date": when.group(1).strip() if when else ""})
     return out
 
 
@@ -2204,35 +2244,152 @@ def watch_desc(v):
     return text if len(text) <= 220 else text[:217].rsplit(" ", 1)[0] + "\u2026"
 
 
+BULLET = re.compile(r"^(?:[✅✔☑•▪▸►➡→–—*\-]|\U0001F449|\U0001F539|\U0001F538|\d{1,2}[.)])\s*")
+TIMESTAMP = re.compile(r"^\(?((?:\d{1,2}:)?\d{1,2}:\d{2})\)?\s*[-–—:]?\s*")
+LEAD_SYMBOLS = re.compile(r"^[^\w\"'(]+")
+URL = re.compile(r"(https?://[^\s<]+[^\s<.,;:!?)\]'\"])")
+
+
+def linkify(text):
+    """Escape a line and turn bare links into real ones."""
+    out, last = [], 0
+    for m in URL.finditer(text):
+        out.append(e(text[last:m.start()]))
+        href = m.group(1)
+        label = re.sub(r"^https?://(www\.)?", "", href)
+        out.append(f'<a href="{e(href)}" target="_blank" rel="noopener nofollow ugc">{e(label[:48] + ("…" if len(label) > 48 else ""))}</a>')
+        last = m.end()
+    return "".join(out) + e(text[last:])
+
+
+def seconds(stamp):
+    n = 0
+    for part in stamp.split(":"):
+        n = n * 60 + int(part)
+    return n
+
+
+def format_writeup(text, video_url=""):
+    """Turn a YouTube description into a tidy episode write-up: section labels (lines like "IN THIS EPISODE:"),
+    real bullet lists (lines starting with a check mark, dash or number, with the lead phrase in bold), clickable
+    timestamps, links and a row of hashtags."""
+    vid = youtube_id(video_url)
+    blocks, items, tags = [], [], []
+    loose = []  # short plain lines right after a section label, shown as a list (like "KEY MOMENTS:")
+
+    def flush():
+        nonlocal items, loose
+        if loose and len(loose) >= 2:
+            items = [f"<li>{linkify(x)}</li>" for x in loose] + items
+        elif loose:
+            blocks.extend(f"<p>{linkify(x)}</p>" for x in loose)
+        if items:
+            blocks.append('<ul class="wu-list">' + "".join(items) + "</ul>")
+        items, loose = [], []
+
+    after_label = False
+    for raw in (text or "").replace("\r", "").split("\n"):
+        line = raw.strip()
+        if not line:
+            if loose and not after_label:
+                flush()
+            continue
+        words = line.split()
+        if all(w.startswith("#") for w in words):
+            tags += [w for w in words if len(w) > 1]
+            continue
+        bare = LEAD_SYMBOLS.sub("", line).strip()
+        letters = re.sub(r"[^A-Za-z]", "", bare)
+        is_label = (bare and len(bare) <= 60 and len(bare.split()) <= 7 and not BULLET.match(line)
+                    and (bare.endswith(":") or (letters.isupper() and len(letters) > 3)) and not URL.search(bare))
+        if is_label:
+            flush()
+            label = bare.rstrip(":").strip()
+            label = label.capitalize() if label.isupper() else label
+            blocks.append(f'<h3 class="wu-label">{e(label)}</h3>')
+            after_label = True
+            continue
+        ts = TIMESTAMP.match(line)
+        if (ts and len(line) > len(ts.group(0))) or BULLET.match(line):
+            if loose:
+                flush()
+            after_label = False
+        if ts and len(line) > len(ts.group(0)):
+            stamp = ts.group(1)
+            chip = (f'<a class="wu-ts" href="https://www.youtube.com/watch?v={vid}&amp;t={seconds(stamp)}s" target="_blank" rel="noopener">{stamp}</a>'
+                    if vid else f'<span class="wu-ts">{stamp}</span>')
+            items.append(f"<li class=\"has-ts\">{chip}<span>{linkify(line[ts.end():])}</span></li>")
+            continue
+        bullet = BULLET.match(line)
+        if bullet:
+            body = line[bullet.end():].strip()
+            lead = re.match(r"^(.{3,70}?)\s+[–—-]\s+(.+)$", body) or re.match(r"^([^:]{3,60}):\s+(.+)$", body)
+            html_ = (f"<strong>{linkify(lead.group(1))}</strong> \u2013 {linkify(lead.group(2))}" if lead else linkify(body))
+            items.append(f"<li>{html_}</li>")
+            continue
+        short = len(line) <= 140 and not URL.search(line)
+        if short and ((after_label and not line.endswith((".", "!", "?"))) or (loose and not line.endswith("."))):
+            if items:
+                flush()
+            loose.append(line)
+            continue
+        flush()
+        after_label = False
+        blocks.append(f"<p>{linkify(line)}</p>")
+    flush()
+    if tags:
+        blocks.append('<p class="wu-tags">' + "".join(f"<span>{e(t)}</span>" for t in dict.fromkeys(tags)) + "</p>")
+    return "".join(blocks)
+
+
+def nice_date(iso):
+    try:
+        return datetime.fromisoformat(iso.replace("Z", "+00:00")).strftime("%B %-d, %Y")
+    except (ValueError, AttributeError):
+        return ""
+
+
+WRITEUP_JS = """<script>(()=>{const c=document.querySelector('.wu-card');if(!c)return;const b=c.querySelector('.wu-more');const body=c.querySelector('.wu-body');
+if(body.scrollHeight<=body.clientHeight+40){c.classList.add('open');b.hidden=true;return}
+b.addEventListener('click',()=>{const o=c.classList.toggle('open');b.textContent=o?'Show less':'Show the full description';b.setAttribute('aria-expanded',o)})})()</script>"""
+
+
 def render_watch_page(cfg, v, videos, stories, has_image):
-    """A page for one Watch Mansfield video: the video in its Watch Mansfield frame, the writeup and Share buttons.
-    Sharing this page to Facebook shows the framed preview picture (watch/<id>.jpg) with the title and writeup."""
+    """A page for one Watch Mansfield video, laid out like an episode page: the player in its Watch Mansfield frame,
+    the title, show name and date, Share buttons, then an 'About this episode' card with the formatted write-up.
+    'More from Watch Mansfield' sits beside it. Sharing to Facebook shows the framed picture (watch/<id>.jpg)."""
     site = cfg["site_url"].rstrip("/")
     url = watch_url(cfg, v)
     title = v.get("title") or "Watch Mansfield"
-    paras = [p.strip() for p in re.split(r"\n\s*\n|\n", v.get("writeup") or "") if p.strip()]
-    writeup = "".join(f"<p>{e(p)}</p>" for p in paras[:12]) or f"<p>{e(watch_desc(v))}</p>"
-    source = (f'<a class="textbtn" href="{e(v["href"])}" target="_blank" rel="noopener">Watch on '
+    writeup = format_writeup(v.get("writeup") or "", v.get("url", "")) or f"<p>{e(watch_desc(v))}</p>"
+    when = nice_date(v.get("date", ""))
+    meta_bits = [b for b in (e(v.get("host") or ""), when) if b]
+    source = (f'<a class="btn" href="{e(v["href"])}" target="_blank" rel="noopener">Watch on '
               f'{"YouTube" if "youtu" in v["href"] else "the original site"}</a>') if v["href"] else ""
-    others = [o for o in videos if o is not v][:3]
-    more = (f'<section class="wrap watch-more">{section_head("More from Watch Mansfield")}<div class="watch-grid">'
-            + "".join(f'<a class="watch-tile" href="{e(watch_url(cfg, o))}"><span class="w-media">'
+    others = [o for o in videos if o is not v][:6]
+    more = (f'<aside class="watch-aside">{section_head("More from Watch Mansfield")}<div class="watch-list">'
+            + "".join(f'<a class="watch-row" href="{e(watch_url(cfg, o))}"><span class="w-media">'
                       + (f'<img src="{e(img_src(o["thumb"]))}" alt="" loading="lazy" onerror="{THUMB_FALLBACK}">' if o["thumb"] else "")
-                      + f'</span><span class="caps kicker">Watch Mansfield</span><span class="hed">{e(o.get("title") or "")}</span></a>'
-                      for o in others) + "</div></section>") if others else ""
+                      + f'</span><span><span class="hed">{e(o.get("title") or "")}</span><span class="caps host">{e(o.get("host") or "")}</span></span></a>'
+                      for o in others) + f'</div><a class="explore" href="{e(site)}/watch.html">All videos <span aria-hidden="true">&rsaquo;</span></a></aside>') if others else ""
     image = f"{site}/{v['page'][:-5]}.jpg" if has_image else None
     data = {"@context": "https://schema.org", "@type": "VideoObject", "name": title, "description": watch_desc(v),
             "thumbnailUrl": [image or (v["thumb"] if v["thumb"].startswith("https://") else site + "/og.png")],
             "embedUrl": v["src"].split("?")[0], "url": url, "publisher": {"@id": f"{site}/#org"}}
+    if v.get("date"):
+        data["uploadDate"] = v["date"]
     if v.get("url", "").startswith("http"):
         data["contentUrl"] = v["url"]
-    inner = f"""<section class="wrap watch-page">{watch_card(cfg, [v], solo=True)}
-<div class="watch-body"><span class="caps kicker">Watch Mansfield</span><h1 class="hed">{e(title)}</h1>
-{f'<p class="caps host">{e(v["host"])}</p>' if v.get("host") else ""}<div class="dek body">{writeup}</div>
-<div class="share"><a class="btn fb" href="{e(fb_share(url))}" target="_blank" rel="noopener">{FB_ICON}Share on Facebook</a>
-<button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button>{source}</div>
-<p class="note">Have a Mansfield show or video? <a class="link" href="{e(site)}/submit.html">Send it to us</a> and we may feature it here.</p></div></section>
-{more}{WATCH_JS}"""
+    inner = f"""<section class="wrap watch-layout{"" if others else " solo"}"><article class="watch-main">
+{watch_card(cfg, [v], solo=True)}
+<header class="watch-head"><a class="caps kicker" href="{e(site)}/watch.html">Watch Mansfield</a><h1 class="hed">{e(title)}</h1>
+{f'<p class="caps watch-meta">{" &middot; ".join(meta_bits)}</p>' if meta_bits else ""}
+<div class="share"><a class="btn fb" href="{e(fb_share(url))}" target="_blank" rel="noopener">{FB_ICON}Share on Facebook</a>{source}
+<button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button></div></header>
+<section class="wu-card" aria-labelledby="wu-h"><h2 class="wu-head" id="wu-h">About this episode</h2>
+<div class="wu-body">{writeup}</div><button class="wu-more" type="button" aria-expanded="false">Show the full description</button></section>
+<p class="note watch-pitch">Have a Mansfield show, podcast or video? <a class="link" href="{e(site)}/submit.html">Send it to us</a> and we may feature it on Watch Mansfield.</p>
+</article>{more}</section>{WATCH_JS}{WRITEUP_JS}"""
     return shell(cfg, f"{title} · Watch Mansfield · {cfg['site_name']}", watch_desc(v), url, inner, stories,
                  image=image, data=data)
 
