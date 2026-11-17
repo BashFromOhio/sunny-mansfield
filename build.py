@@ -1166,17 +1166,20 @@ button.tv-dial{cursor:pointer;padding:0}button.tv-dial:hover,button.tv-dial:focu
 .tv-arrow:hover,.tv-arrow:focus-visible{background:var(--primary);color:var(--tertiary)}
 .tv-count{font:700 11px/1 var(--caps);letter-spacing:.1em;color:var(--text-2);min-width:34px;text-align:center}
 
-/* the realistic TV: SVG cabinet with the video laid over its screen (screen box = x38 y72 w242 h164 of 400x330) */
-.tvreal{position:relative;width:100%;aspect-ratio:400/330}
+/* the realistic TV: Canva picture with the video over its screen (screen = 8.70% 28.61% 63.89% x 44.97%) */
+.tvreal{position:relative;width:100%;aspect-ratio:700/728;container-type:inline-size}
 .tvreal-art{position:absolute;inset:0;width:100%;height:100%;display:block}
-.tvreal-screen{position:absolute;left:9.5%;top:21.82%;width:60.5%;height:49.7%;border-radius:6% / 9%;overflow:hidden;background:#0b0908}
+.tvreal-screen{position:absolute;left:8.7%;top:28.61%;width:63.89%;height:44.97%;overflow:hidden;background:#050505;border-radius:1.2%}
 .tvreal-screen .tv-slide{position:absolute;inset:0}
 .tvreal-screen img,.tvreal-screen iframe,.tvreal-screen .tv-play{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
 .tvreal-screen img{object-fit:cover;opacity:.92}
-.tvreal-screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 30% 20%,rgba(255,255,255,.12),transparent 55%);box-shadow:inset 0 0 18px rgba(0,0,0,.7)}
-.tvreal-screen .on::after,.tvreal-screen .tv-slide:has(iframe)::after{display:none}
+.tvreal-screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 30% 20%,rgba(255,255,255,.1),transparent 55%);box-shadow:inset 0 0 22px rgba(0,0,0,.75)}
+.tvreal-screen:has(iframe)::after{display:none}
 .tvreal-screen .tv-bars .tv-card{inset:auto 8% 26% 8%;padding:6px 8px;border-width:2px}.tvreal-screen .tv-bars .tv-card b{font-size:13px}.tvreal-screen .tv-bars .tv-card span{font-size:10px}
-.tvreal-knob{position:absolute;left:79.5%;top:23.3%;width:10.5%;aspect-ratio:1;border-radius:50%;border:0;background:transparent;cursor:pointer;padding:0}
+.tvreal-plate{position:absolute;left:22%;width:36%;top:75.3%;height:4.6%;display:grid;place-items:center;
+  background:linear-gradient(#f3dca4,#c9a15a 55%,#a47a3a);border:1px solid #7a5a28;color:#3f2309;
+  font:700 2.2cqw/1 var(--caps);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;text-shadow:0 1px 0 rgba(255,240,200,.6)}
+.tvreal-knob{position:absolute;left:83%;top:28.4%;width:9.6%;aspect-ratio:1;border-radius:50%;border:0;background:transparent;cursor:pointer;padding:0}
 .tvreal-knob:focus-visible{box-shadow:var(--ring)}
 
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,440px);
@@ -2066,42 +2069,10 @@ def tv_set(entries):
 <div class="tv-caprow">{"".join(caps)}{nav}</div></div>"""
 
 
-# A realistic 1960s wood-cabinet TV (modeled on a Canva-generated reference). The video sits on top of the screen area.
-TV_SVG = """<svg class="tvreal-art" viewBox="0 0 400 330" aria-hidden="true">
-<defs>
-<linearGradient id="tvWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b5582a"/><stop offset=".5" stop-color="#9a4621"/><stop offset="1" stop-color="#7c3517"/></linearGradient>
-<linearGradient id="tvWalnut" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6e3b1f"/><stop offset="1" stop-color="#4a2411"/></linearGradient>
-<linearGradient id="tvBrass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1d9a0"/><stop offset=".5" stop-color="#c9a15a"/><stop offset="1" stop-color="#a47a3a"/></linearGradient>
-<radialGradient id="tvChrome" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#cfc7bb"/><stop offset="1" stop-color="#6f675d"/></radialGradient>
-<radialGradient id="tvGlass" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="#2a2522"/><stop offset="1" stop-color="#0b0908"/></radialGradient>
-<pattern id="tvGrain" width="400" height="12" patternUnits="userSpaceOnUse"><path d="M0 4 C80 2 160 7 240 4 S360 2 400 5" stroke="#5c2a10" stroke-opacity=".22" fill="none"/><path d="M0 10 C100 8 200 12 300 9 S380 10 400 9" stroke="#e08a52" stroke-opacity=".14" fill="none"/></pattern>
-</defs>
-<g stroke-linecap="round"><line x1="200" y1="44" x2="140" y2="2" stroke="#8d877e" stroke-width="3"/><line x1="200" y1="44" x2="262" y2="4" stroke="#8d877e" stroke-width="3"/>
-<circle cx="140" cy="2" r="3" fill="#d6d0c6"/><circle cx="262" cy="4" r="3" fill="#d6d0c6"/></g>
-<ellipse cx="200" cy="46" rx="22" ry="7" fill="#3a2216"/>
-<path d="M72 282 L58 326 L70 326 L88 282Z M312 282 L330 326 L342 326 L328 282Z" fill="url(#tvWalnut)"/>
-<rect x="14" y="48" width="372" height="236" rx="12" fill="url(#tvWood)"/>
-<rect x="14" y="48" width="372" height="236" rx="12" fill="url(#tvGrain)"/>
-<rect x="14" y="48" width="372" height="236" rx="12" fill="none" stroke="#4a2411" stroke-width="3"/>
-<rect x="24" y="58" width="270" height="216" rx="8" fill="url(#tvWalnut)"/>
-<rect x="32" y="66" width="254" height="176" rx="18" fill="#1b1411" stroke="#2b1a10" stroke-width="2"/>
-<rect x="38" y="72" width="242" height="164" rx="16" fill="url(#tvGlass)"/>
-<rect x="94" y="247" width="130" height="20" rx="2" fill="url(#tvBrass)" stroke="#7a5a28"/>
-<text x="159" y="260.5" text-anchor="middle" font-family="Josefin Sans, Futura, sans-serif" font-weight="700" font-size="8" textLength="116" lengthAdjust="spacingAndGlyphs" fill="#4a2a10">MANSFIELD CREATIVES</text>
-<rect x="302" y="58" width="74" height="216" rx="6" fill="url(#tvWalnut)"/>
-<rect x="308" y="64" width="62" height="204" rx="4" fill="none" stroke="#c9a15a" stroke-opacity=".7"/>
-<circle cx="339" cy="98" r="21" fill="#2c1a10"/><circle cx="339" cy="98" r="17" fill="url(#tvChrome)" stroke="#5a5249"/>
-<g stroke="#e9e2d6" stroke-width="1.2">""" + "".join(
-    f'<line x1="{339 + 23 * __import__("math").cos(a / 6 * 3.1416):.1f}" y1="{98 + 23 * __import__("math").sin(a / 6 * 3.1416):.1f}" '
-    f'x2="{339 + 26 * __import__("math").cos(a / 6 * 3.1416):.1f}" y2="{98 + 26 * __import__("math").sin(a / 6 * 3.1416):.1f}"/>'
-    for a in range(12)) + """</g>
-<rect x="337.5" y="83" width="3" height="10" rx="1" fill="#3a3129"/>
-<circle cx="339" cy="152" r="17" fill="#2c1a10"/><circle cx="339" cy="152" r="13.5" fill="url(#tvChrome)" stroke="#5a5249"/>
-<rect x="337.8" y="140" width="2.4" height="8" rx="1" fill="#3a3129"/>
-<circle cx="324" cy="188" r="6" fill="url(#tvChrome)" stroke="#5a5249"/><circle cx="354" cy="188" r="6" fill="url(#tvChrome)" stroke="#5a5249"/>
-<g stroke="#2a150a" stroke-width="2.4">""" + "".join(f'<line x1="316" y1="{y}" x2="362" y2="{y}"/>' for y in range(208, 262, 6)) + """</g>
-<text x="339" y="131" text-anchor="middle" font-family="Josefin Sans, Futura, sans-serif" font-weight="700" font-size="7" letter-spacing="1" fill="#e9d3a6">CH 419</text>
-</svg>"""
+# The TV set is a Canva-generated picture (assets/station-tv.webp, transparent background). The video sits over its
+# screen and an engraved nameplate over the brass plate; positions are percentages of the picture (700x728).
+TV_SVG = ('<img class="tvreal-art" src="/assets/station-tv.webp" alt="" width="700" height="728" loading="lazy">'
+          '<span class="tvreal-plate" aria-hidden="true">Mansfield Creatives</span>')
 
 
 def station_section(cfg, station):
@@ -3642,8 +3613,10 @@ def main():
     if (HERE / "postcards").is_dir():
         shutil.copytree(HERE / "postcards", out / "postcards", dirs_exist_ok=True)
     # The private preview can't load files, so inline every /assets image and drop the favicon link.
-    inline = lambda m: m.group(1) + "data:image/jpeg;base64," + base64.b64encode((HERE / m.group(2)).read_bytes()).decode()
-    preview = re.sub(r'(["(])/(assets/[\w./-]+\.jpg)', inline, page).replace('<link rel="icon" type="image/svg+xml" href="/brand/mark.svg">\n', "")
+    mime = {"jpg": "jpeg", "webp": "webp", "png": "png"}
+    inline = lambda m: (m.group(1) + f"data:image/{mime[m.group(3)]};base64,"
+                        + base64.b64encode((HERE / m.group(2)).read_bytes()).decode())
+    preview = re.sub(r'(["(])/(assets/[\w./-]+\.(jpg|webp|png))', inline, page).replace('<link rel="icon" type="image/svg+xml" href="/brand/mark.svg">\n', "")
     (out / "artifact.html").write_text(preview)
     try:
         from posts import (make_community_feed, make_daily_post, make_post_images, make_quote_feed, make_quote_image,
