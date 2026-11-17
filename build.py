@@ -2987,7 +2987,7 @@ CAKE = ('<svg viewBox="0 0 48 48"><path d="M24 4c2 3 2 5 0 7-2-2-2-4 0-7z" fill=
         '<path d="M8 26c3 3 5 3 8 0s5-3 8 0 5 3 8 0 5-3 8 0" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>')
 
 
-def birthday_rail(cfg, birthdays, title="Mansfield birthdays", page=False):
+def birthday_rail(cfg, birthdays, title="Birthdays", page=False):
     """Birthday shout-outs as a carousel shelf, like the other sections. On the front page it has a See all link
     to birthdays.html; on that page it has a Share link instead. With no birthdays it asks for the first one."""
     site = cfg["site_url"].rstrip("/")
