@@ -1176,6 +1176,23 @@ html{background:#fff}html::before{display:none}
 .watch:hover .w-bar,.watch:focus-within .w-bar{animation-play-state:paused}
 @keyframes wbar{to{width:100%}}
 @media (prefers-reduced-motion:reduce){.w-bar{display:none}}
+.w-share{display:inline-flex;align-items:center;gap:5px;margin-left:12px;padding:3px 8px 2px;border:1px solid rgba(255,255,255,.6);color:#fff;
+  font:700 10px/1.4 var(--caps);letter-spacing:.1em;text-transform:uppercase;text-decoration:none;pointer-events:auto}
+.w-share svg{width:11px;height:11px;fill:currentColor}.w-share:hover{background:var(--secondary);border-color:var(--secondary)}
+.watch-page{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:32px;align-items:start;padding-block:28px}
+.watch.solo{aspect-ratio:16/9}
+.watch-body{display:grid;gap:10px;align-content:start}
+.watch-body h1.hed{margin:0;font-size:clamp(26px,3vw,36px);line-height:1.12}
+.watch-body .host{margin:0;color:var(--text-2)}
+.watch-body .dek{color:var(--text-2);font-size:16px;line-height:1.65}.watch-body .dek p{margin:0 0 10px}
+.watch-body .share{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;margin-top:4px}.watch-body .share .textbtn{padding:0}
+.watch-body .note{margin:6px 0 0;font-size:14px;color:var(--text-2)}
+.watch-more{padding-block:12px 32px}
+.watch-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.watch-tile{display:grid;gap:8px;text-decoration:none;color:var(--text)}
+.watch-tile .w-media{position:relative;aspect-ratio:16/9;overflow:hidden}
+.watch-tile .hed{font-size:17px;line-height:1.25}.watch-tile:hover .hed{color:var(--secondary)}
+@media (max-width:860px){.watch-page,.watch-grid{grid-template-columns:1fr}}
 footer{background:var(--primary)!important}
 .btn.solid{background:var(--secondary);border-color:var(--secondary)}
 @media (max-width:980px){.nf{grid-template-columns:1fr}.nf-side{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start}}
@@ -2043,10 +2060,12 @@ def channel_videos(channel_id, count):
         vid = re.search(r"<yt:videoId>([\w-]{11})</yt:videoId>", entry)
         title = re.search(r"<title>(.*?)</title>", entry, re.S)
         author = re.search(r"<author>\s*<name>(.*?)</name>", entry, re.S)
+        about = re.search(r"<media:description>(.*?)</media:description>", entry, re.S)
         if vid:
             out.append({"url": f"https://www.youtube.com/watch?v={vid.group(1)}",
                         "title": html.unescape(title.group(1)).strip() if title else "",
-                        "host": html.unescape(author.group(1)).strip() if author else ""})
+                        "host": html.unescape(author.group(1)).strip() if author else "",
+                        "writeup": html.unescape(about.group(1)).strip() if about else ""})
     return out
 
 
@@ -2080,21 +2099,97 @@ def watch_entries(videos):
         if kind in ("youtube", "video"):
             url = (x.get("url") or "").strip()
             thumb = x.get("image") or (thumb.replace("/hqdefault.jpg", "/maxresdefault.jpg") if thumb else "")
-            out.append({**x, "src": src, "thumb": thumb, "href": x.get("link") or (url if url.startswith("http") else "")})
+            vid = youtube_id(url) or slug(x.get("title") or url)[:48].strip("-") or f"video-{len(out) + 1}"
+            out.append({**x, "src": src, "thumb": thumb, "href": x.get("link") or (url if url.startswith("http") else ""),
+                        "id": vid, "page": f"watch/{vid}.html"})
     return out
 
 
-def watch_card(videos):
+def make_watch_images(videos, out):
+    """watch/<id>.jpg: each video's preview inside the Watch Mansfield frame, sized for Facebook link previews."""
+    try:
+        from posts import load_photo, watch_image
+    except ImportError as exc:
+        note(f"Watch images: skipped ({exc})")
+        return set()
+    made = set()
+    (out / "watch").mkdir(parents=True, exist_ok=True)
+    for v in videos:
+        photo = None
+        for src in ([v["thumb"], v["thumb"].replace("maxresdefault", "hqdefault")] if v["thumb"] else []):
+            photo = load_photo(src, UA)
+            if photo and photo.width > 200:  # YouTube answers a missing maxres picture with a tiny placeholder
+                break
+            photo = None
+        try:
+            watch_image(v.get("title") or "Watch Mansfield", v.get("host") or "", photo).save(
+                out / "watch" / f"{v['id']}.jpg", quality=86, optimize=True, progressive=False)
+            made.add(v["id"])
+        except Exception as exc:
+            note(f"Watch image for {v['id']}: {exc}")
+    if made:
+        note(f"Watch images: {len(made)} made")
+    return made
+
+
+def watch_url(cfg, v):
+    return f"{cfg['site_url'].rstrip('/')}/{v['page']}"
+
+
+def watch_desc(v):
+    text = " ".join((v.get("writeup") or "").split())
+    if not text:
+        return f"Watch \u201c{v.get('title') or 'this video'}\u201d{' from ' + v['host'] if v.get('host') else ''} on Watch Mansfield, local videos from Mansfield and Richland County, Ohio."
+    return text if len(text) <= 220 else text[:217].rsplit(" ", 1)[0] + "\u2026"
+
+
+def render_watch_page(cfg, v, videos, stories, has_image):
+    """A page for one Watch Mansfield video: the video in its Watch Mansfield frame, the writeup and Share buttons.
+    Sharing this page to Facebook shows the framed preview picture (watch/<id>.jpg) with the title and writeup."""
+    site = cfg["site_url"].rstrip("/")
+    url = watch_url(cfg, v)
+    title = v.get("title") or "Watch Mansfield"
+    paras = [p.strip() for p in re.split(r"\n\s*\n|\n", v.get("writeup") or "") if p.strip()]
+    writeup = "".join(f"<p>{e(p)}</p>" for p in paras[:12]) or f"<p>{e(watch_desc(v))}</p>"
+    source = (f'<a class="textbtn" href="{e(v["href"])}" target="_blank" rel="noopener">Watch on '
+              f'{"YouTube" if "youtu" in v["href"] else "the original site"}</a>') if v["href"] else ""
+    others = [o for o in videos if o is not v][:3]
+    more = (f'<section class="wrap watch-more">{section_head("More from Watch Mansfield")}<div class="watch-grid">'
+            + "".join(f'<a class="watch-tile" href="{e(watch_url(cfg, o))}"><span class="w-media">'
+                      + (f'<img src="{e(img_src(o["thumb"]))}" alt="" loading="lazy" onerror="{THUMB_FALLBACK}">' if o["thumb"] else "")
+                      + f'</span><span class="caps kicker">Watch Mansfield</span><span class="hed">{e(o.get("title") or "")}</span></a>'
+                      for o in others) + "</div></section>") if others else ""
+    image = f"{site}/{v['page'][:-5]}.jpg" if has_image else None
+    data = {"@context": "https://schema.org", "@type": "VideoObject", "name": title, "description": watch_desc(v),
+            "thumbnailUrl": [image or (v["thumb"] if v["thumb"].startswith("https://") else site + "/og.png")],
+            "embedUrl": v["src"].split("?")[0], "url": url, "publisher": {"@id": f"{site}/#org"}}
+    if v.get("url", "").startswith("http"):
+        data["contentUrl"] = v["url"]
+    inner = f"""<section class="wrap watch-page">{watch_card(cfg, [v], solo=True)}
+<div class="watch-body"><span class="caps kicker">Watch Mansfield</span><h1 class="hed">{e(title)}</h1>
+{f'<p class="caps host">{e(v["host"])}</p>' if v.get("host") else ""}<div class="dek body">{writeup}</div>
+<div class="share"><a class="btn fb" href="{e(fb_share(url))}" target="_blank" rel="noopener">{FB_ICON}Share on Facebook</a>
+<button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button>{source}</div>
+<p class="note">Have a Mansfield show or video? <a class="link" href="{e(site)}/submit.html">Send it to us</a> and we may feature it here.</p></div></section>
+{more}{WATCH_JS}"""
+    return shell(cfg, f"{title} · Watch Mansfield · {cfg['site_name']}", watch_desc(v), url, inner, stories,
+                 image=image, data=data)
+
+
+THUMB_FALLBACK = "if(this.src.includes('maxresdefault'))this.src=this.src.replace('maxresdefault','hqdefault');else this.remove()"
+
+
+def watch_card(cfg, videos, solo=False):
     """Watch Mansfield: one hero spot that rotates through local videos every 10 seconds, each titled with its headline.
     The player loads only when a reader taps Play, and the rotation stops while a video plays."""
     slides = []
     for i, v in enumerate(videos):
         title = e(v.get("title") or "Watch Mansfield")
         # maxresdefault doesn't exist for every video, so fall back to hqdefault, then to the plain dark card.
-        fall = "if(this.src.includes('maxresdefault'))this.src=this.src.replace('maxresdefault','hqdefault');else this.remove()"
-        img = f'<img src="{e(img_src(v["thumb"]))}" alt="" onerror="{fall}">' if v["thumb"] else ""
-        hed_link = (f'<a href="{e(v["href"])}" target="_blank" rel="noopener">{title}</a>' if v["href"] else title)
-        host = f'<span class="ov-meta">{e(v["host"])}</span>' if v.get("host") else ""
+        img = f'<img src="{e(img_src(v["thumb"]))}" alt="" onerror="{THUMB_FALLBACK}">' if v["thumb"] else ""
+        hed_link = title if solo else f'<a href="{e(watch_url(cfg, v))}">{title}</a>'
+        fb = f'<a class="w-share" href="{e(fb_share(watch_url(cfg, v)))}" target="_blank" rel="noopener" aria-label="Share {title} on Facebook">{FB_ICON}Share</a>'
+        host = f'<span class="ov-meta">{e(v.get("host") or "")}{"" if solo else fb}</span>'
         slides.append(f'<div class="w-slide"{"" if i == 0 else " hidden"}><div class="w-media">{img}'
                       f'<button class="w-play" type="button" data-tv="{e(v["src"])}" aria-label="Play {title}"><span></span></button></div>'
                       f'<div class="ov-text"><span class="caps kicker">Watch Mansfield</span><h3 class="hed">{hed_link}</h3>{host}</div></div>')
@@ -2103,6 +2198,8 @@ def watch_card(videos):
     dots = ("".join(f'<button type="button" data-go="{i}" aria-label="Video {i + 1} of {n}"{CUR if i == 0 else ""}></button>'
                     for i in range(n)) if n > 1 else "")
     extra = f'<div class="w-dots">{dots}</div><span class="w-bar" aria-hidden="true"></span>' if n > 1 else ""
+    if solo:
+        return f'<div class="ov watch solo">{"".join(slides)}</div>'
     return (f'<article class="ov watch" id="watch" role="region" aria-roledescription="carousel" aria-label="Watch Mansfield videos">'
             f'{"".join(slides)}{extra}</article>')
 
@@ -2177,7 +2274,7 @@ def mid_card(s):
 def magazine(cfg, top, also, videos=(), tabs=""):
     """Front page, NewsFlash style: a three-spot hero (lead story, Watch Mansfield videos, one more story), then
     'Trending today' and 'Around Richland County' beside a 'Recent news' sidebar."""
-    watch = watch_card(videos) if videos else ""
+    watch = watch_card(cfg, videos) if videos else ""
     k = 1 if watch else 2
     two, big, lst, row, side = also[:k], also[k:k + 1], also[k + 1:k + 5], also[k + 5:k + 8], also[k + 8:k + 13]
     explore = '<a class="explore" href="#shelves">Explore all <span aria-hidden="true">&rsaquo;</span></a>'
@@ -3691,6 +3788,11 @@ def main():
         note(f"Post images: skipped ({exc})")
     for s in stories:
         (out / "s" / f"{s['id']}.html").write_text(rebase(render_story_page(cfg, s, stories)))
+    videos = watch_entries(cfg.get("watch") or [])
+    pics = make_watch_images(videos, out)
+    for v in videos:
+        (out / "watch").mkdir(exist_ok=True)
+        (out / v["page"]).write_text(rebase(render_watch_page(cfg, v, videos, stories, v["id"] in pics)))
     # The quote of the day only goes to Facebook (quotes.xml + quote.jpg from posts.py); the old page sends people home.
     (out / "quote.html").write_text(rebase(render_moved(cfg, stories, "", "Good news")))
     (out / "feed.xml").write_text(render_feed(cfg, stories))

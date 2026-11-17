@@ -92,3 +92,8 @@ A plain link is enough: the headline and channel name come from YouTube when the
 write your own headline. Vimeo and Facebook video links work too (give those a `title`, and an `image` for the preview).
 Your picks show first, then the newest `from_channel` videos from the Videos tab of the YouTube channel in `channel_id` (no Shorts) fill in
 (currently the 3 newest from The Lindsay's, @thelindsays7871). Set `from_channel` to `0` to show only your picks.
+
+**Sharing:** every video gets its own page at `watch/<video id>.html` with the video, its writeup (the YouTube
+description, or a `writeup` you add in `watch.json`) and a Share on Facebook button. The front-page spot has a Share
+button too. When shared, Facebook shows `watch/<video id>.jpg`: the video's preview inside the Watch Mansfield frame
+(orange tag, title, Sunny Mansfield name), with the writeup as the post's description.
