@@ -758,7 +758,9 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .flyer-img{display:block;aspect-ratio:4/5;background:var(--surface);border:2px solid var(--border-strong);overflow:hidden}
 .flyer-img img{width:100%;height:100%;object-fit:cover;display:block}
 .flyer .hed{font-size:18px;line-height:1.25}
-.flyer .dek{font-size:14px;line-height:1.5;margin:0}
+.flyer .dek{font-size:14px;line-height:1.5;margin:0;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.flyer .hed a{text-decoration:none}.flyer .hed a:hover{color:var(--secondary)}
+.flyer .more-link{font-size:11px;color:var(--secondary);text-decoration:none}.flyer .more-link:hover{text-decoration:underline}
 .flyer.add .flyer-img{display:grid;place-items:center;border-style:dashed;border-color:var(--border-medium)}
 .flyer.add .plus{font:700 64px/1 var(--serif);color:var(--secondary)}
 .flyer.add:hover .flyer-img{border-color:var(--secondary)}
@@ -1255,6 +1257,14 @@ a.wu-ts:hover{background:var(--secondary)}
 .story-facts dd{margin:2px 0 0;font:700 17px/1.3 var(--sans)}
 .story-note{margin:0;font-size:14px;color:var(--text-2)}
 .story-layout .watch-meta .tag{color:var(--secondary)}
+.event-top{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:28px;align-items:start}
+.event-top .watch-head{border-bottom:0;padding-bottom:0}
+.event-flyer{border:1px solid var(--border-subtle);background:var(--surface)}
+.event-flyer img{display:block;width:100%;height:auto}
+.event-facts{margin-top:6px}
+.event-row .w-media{aspect-ratio:4/5;width:84px}.event-row{grid-template-columns:84px minmax(0,1fr)}
+.event-row .w-media img{width:100%;height:100%;object-fit:cover}
+@media (max-width:700px){.event-top{grid-template-columns:1fr}.event-flyer{max-width:420px}}
 footer{background:var(--primary)!important}
 .btn.solid{background:var(--secondary);border-color:var(--secondary)}
 @media (max-width:980px){.nf{grid-template-columns:1fr}.nf-side{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start}}
@@ -1725,15 +1735,21 @@ def rail(title, items, more="", rid="", kind=""):
             f'<div class="rail" tabindex="0">{items}</div></section>')
 
 
+def event_url(f):
+    return f"/e/{f['id']}.html"  # site-relative, so rebase() and sub-folder sites keep working
+
+
 def flyer_card(f):
+    """A flyer on a shelf: the picture, date and town, title and a three-line teaser. It all opens the event's page."""
     when = f["day"].strftime("%a, %b %-d") if f.get("day") else "Coming up"
     img = (f'<img src="{e(img_src(f["image"]))}" alt="Flyer: {e(f["title"])}" loading="lazy" referrerpolicy="no-referrer">'
            if f.get("image") else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["good"]}</svg></span>')
-    href = f["link"]  # never link the photo itself to its Supabase storage address
-    open_ = f'<a class="flyer-img" href="{e(href)}" target="_blank" rel="noopener">{img}</a>' if href else f'<span class="flyer-img">{img}</span>'
-    dek = f'<p class="dek">{e(f["summary"])}</p>' if f.get("summary") else ""
-    return (f'<article class="slide flyer">{open_}<span class="caps kicker">{e(when)}{" · " + e(f["town"]) if f.get("town") else ""}</span>'
-            f'<h3 class="hed">{e(f["title"])}</h3>{dek}</article>')
+    dek = f'<p class="dek">{e(" ".join(f["summary"].split()))}</p>' if f.get("summary") else ""
+    page = event_url(f)
+    return (f'<article class="slide flyer"><a class="flyer-img" href="{e(page)}" tabindex="-1" aria-hidden="true">{img}</a>'
+            f'<span class="caps kicker">{e(when)}{" · " + e(f["town"]) if f.get("town") else ""}</span>'
+            f'<h3 class="hed"><a href="{e(page)}">{e(f["title"])}</a></h3>{dek}'
+            f'<a class="caps more-link" href="{e(page)}">Event details <span aria-hidden="true">&rsaquo;</span></a></article>')
 
 
 def listing_card(x, cfg):
@@ -3161,10 +3177,57 @@ def event_data(cfg, f):
           "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
           "location": {"@type": "Place", "name": f"{town}, Ohio", "address": {"@type": "PostalAddress",
                        "addressLocality": town, "addressRegion": "OH", "addressCountry": "US"}},
-          "url": f.get("link") or f"{site}/events.html", "description": f.get("summary") or f["title"]}
+          "url": f"{site}{event_url(f)}", "description": " ".join((f.get("summary") or f["title"]).split())[:500]}
     if (f.get("image") or "").startswith("https://"):
         ev["image"] = [f["image"]]
     return ev
+
+
+def calendar_link(cfg, f):
+    """Google Calendar 'add event' link for an all-day event on the flyer's date."""
+    if not f.get("day"):
+        return ""
+    d0 = f["day"].strftime("%Y%m%d")
+    d1 = (f["day"] + timedelta(days=1)).strftime("%Y%m%d")
+    q = urllib.parse.urlencode({"action": "TEMPLATE", "text": f["title"], "dates": f"{d0}/{d1}",
+                                "location": f"{f.get('town') or 'Mansfield'}, Ohio",
+                                "details": f"{cfg['site_url'].rstrip('/')}{event_url(f)}"})
+    return "https://calendar.google.com/calendar/render?" + q
+
+
+def render_event_page(cfg, f, flyers, stories):
+    """One event: the whole flyer (not cropped), date, town, Share and Add to calendar, then 'About this event'
+    formatted like the story pages, with 'More local events' beside it."""
+    site = cfg["site_url"].rstrip("/")
+    url = f"{site}{event_url(f)}"
+    when = f["day"].strftime("%A, %B %-d, %Y") if f.get("day") else "Date to be announced"
+    img = (f'<div class="event-flyer"><img src="{e(img_src(f["image"]))}" alt="Flyer: {e(f["title"])}" referrerpolicy="no-referrer"></div>'
+           if f.get("image") else "")
+    about = format_writeup(f.get("summary") or "") or "<p>Details coming soon.</p>"
+    cal = calendar_link(cfg, f)
+    more_info = (f'<a class="btn" href="{e(f["link"])}" target="_blank" rel="noopener nofollow ugc">More info</a>' if f.get("link") else "")
+    others = [o for o in flyers if o is not f][:6]
+    rows = "".join(f'<a class="watch-row event-row" href="{e(event_url(o))}"><span class="w-media">'
+                   + (f'<img src="{e(img_src(o["image"]))}" alt="" loading="lazy" referrerpolicy="no-referrer">' if o.get("image") else "")
+                   + f'</span><span><span class="caps kicker">{e(o["day"].strftime("%a, %b %-d") if o.get("day") else "Coming up")}</span>'
+                   f'<span class="hed">{e(o["title"])}</span></span></a>' for o in others)
+    aside = (f'<aside class="watch-aside">{section_head("More local events")}<div class="watch-list">{rows}</div>'
+             f'<a class="explore" href="{e(site)}/events.html">All events <span aria-hidden="true">&rsaquo;</span></a></aside>') if rows else ""
+    data = event_data(cfg, f) if f.get("day") else None
+    inner = f"""<section class="wrap watch-layout event-layout{"" if aside else " solo"}"><article class="watch-main">
+<div class="event-top">{img}<header class="watch-head"><a class="caps kicker" href="{e(site)}/events.html">Local events</a><h1 class="hed">{e(f["title"])}</h1>
+<dl class="story-facts event-facts"><div><dt>When</dt><dd>{e(when)}</dd></div><div><dt>Where</dt><dd>{e(f.get("town") or "Richland County")}, Ohio</dd></div></dl>
+<div class="share"><a class="btn fb" href="{e(fb_share(url))}" target="_blank" rel="noopener">{FB_ICON}Share on Facebook</a>
+{f'<a class="btn solid" href="{e(cal)}" target="_blank" rel="noopener">Add to calendar</a>' if cal else ""}{more_info}
+<button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button></div></header></div>
+<section class="wu-card open" aria-labelledby="ev-h"><h2 class="wu-head" id="ev-h">About this event</h2><div class="wu-body">{about}</div></section>
+<p class="note story-note">Posted by the people putting it on. Putting on an event? <a class="link" href="{e(site)}/submit.html#flyer">Post your flyer free</a>.
+Something wrong? <a class="link" href="mailto:{e(cfg['submit_email'])}?subject={urllib.parse.quote('Event: ' + f['title'])}">Tell an editor</a>.</p>
+</article>{aside}</section>"""
+    desc = " ".join((f.get("summary") or f"{f['title']}, {when}").split())
+    desc = desc if len(desc) <= 200 else desc[:197].rsplit(" ", 1)[0] + "\u2026"
+    image = f["image"] if (f.get("image") or "").startswith("https://") else None
+    return shell(cfg, f"{f['title']} · {when} · {cfg['site_name']}", desc, url, inner, stories, image=image, data=data)
 
 
 def render_events(cfg, flyers, stories):
@@ -4058,6 +4121,9 @@ def main():
         (out / "watch").mkdir(exist_ok=True)
         (out / v["page"]).write_text(rebase(render_watch_page(cfg, v, videos, stories, v["id"] in pics)))
     (out / "watch.html").write_text(rebase(render_watch_index(cfg, videos, stories)))
+    (out / "e").mkdir(exist_ok=True)
+    for f in flyers:
+        (out / "e" / f"{f['id']}.html").write_text(rebase(render_event_page(cfg, f, flyers, stories)))
     # The quote of the day only goes to Facebook (quotes.xml + quote.jpg from posts.py); the old page sends people home.
     (out / "quote.html").write_text(rebase(render_moved(cfg, stories, "", "Good news")))
     (out / "feed.xml").write_text(render_feed(cfg, stories))
