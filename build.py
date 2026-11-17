@@ -1033,6 +1033,10 @@ footer .credit .legal.towns{font-weight:400;opacity:.85}
 .bday-name{font:700 clamp(24px,3vw,30px)/1.15 var(--serif);margin:0;overflow-wrap:anywhere}
 .bday-msg{font:italic 400 16px/1.55 var(--serif);margin:0;color:var(--text);overflow-wrap:anywhere}
 .bday-from{margin:0;color:var(--text-2)}
+.bdays .bday-card{height:100%;box-sizing:border-box;text-align:center}
+.bday-card.add{border-style:dashed;border-top-style:solid;text-decoration:none;align-content:center}
+.bday-card.add .plus{font:700 56px/1 var(--serif);color:var(--secondary)}
+.bday-card.add:hover{border-color:var(--secondary)}
 .bday-acts{justify-content:center;width:100%}.bday-acts .btn{flex:0 1 280px}
 .bday-date{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px}
 .bday-extra{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;padding:16px;background:var(--surface)}
@@ -1794,6 +1798,7 @@ FIRST_POST = {  # what an empty spot asks for: label, where the form is, button,
     "jobs": ("Now hiring", "submit.html#job", "Post a job free", "Hiring at your shop, church, school or nonprofit? Neighbors are looking."),
     "funds": ("Fundraisers", "submit.html#fundraiser", "Share a fundraiser", "Medical bills, team trips, fire recovery and special causes."),
     "events": ("Local events", "submit.html#flyer", "Post your flyer", "Concerts, fish fries, festivals, games and church suppers."),
+    "birthday": ("Birthdays", "birthdays.html#form", "Send a shout-out", "Know someone celebrating? We'll wish them a happy birthday here and on Facebook, free."),
     "watch": ("Watch Mansfield", "submit.html", "Send us your video", "A podcast, a local show, a highlight reel. Mansfield made, Mansfield watched."),
 }
 
@@ -2752,7 +2757,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
 {masthead(cfg, site, stories, current="front")}
 <main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{ticker(news[:10])}{front}
-{birthday_band(cfg, birthdays)}
+{birthday_rail(cfg, birthdays)}
 {civic(cfg, businesses)}
 <div id="shelves">{shelf_order(rails, "", events)}</div>
 {market}
@@ -2973,17 +2978,21 @@ CAKE = ('<svg viewBox="0 0 48 48"><path d="M24 4c2 3 2 5 0 7-2-2-2-4 0-7z" fill=
         '<path d="M8 26c3 3 5 3 8 0s5-3 8 0 5 3 8 0 5-3 8 0" fill="none" stroke="currentColor" stroke-width="2.5"/></svg>')
 
 
-def birthday_band(cfg, birthdays):
-    """The front page's Happy Birthday box. Only there on days someone has an approved shout-out."""
-    if not birthdays:
-        return ""
+def birthday_rail(cfg, birthdays, title="Mansfield birthdays", page=False):
+    """Birthday shout-outs as a carousel shelf, like the other sections. On the front page it has a See all link
+    to birthdays.html; on that page it has a Share link instead. With no birthdays it asks for the first one."""
     site = cfg["site_url"].rstrip("/")
-    return f"""<section class="wrap" id="birthdays"><div class="candy"><div class="candy-in bday">
-<div class="bday-head"><span class="script">Happy birthday!</span><h2 class="retro sm">Mansfield birthdays</h2>
-<p class="caps muted">{eastern().strftime("%A, %B %-d")}</p>{sponsor_tag(cfg, "birthday", site)}</div>
-<div class="bday-grid">{birthday_cards(birthdays)}</div>
-<div class="share bday-acts"><a class="btn fb" href="{e(fb_share(site + '/birthdays.html'))}" target="_blank" rel="noopener">{FB_ICON}Share the birthdays</a>
-<a class="btn" href="{e(site)}/birthdays.html#form">Send a shout-out</a></div></div></div></section>"""
+    share = (f'<a class="link" href="{e(fb_share(site + "/birthdays.html"))}" target="_blank" rel="noopener">Share</a>'
+             if birthdays else "")
+    more = sponsor_tag(cfg, "birthday", site) + (share if page else f'<a class="link" href="{e(site)}/birthdays.html">See all</a>')
+    if not birthdays:
+        return rail(e(title), first_post(cfg, "birthday"), more, rid="birthdays", kind="sec bdays")
+    add = ('' if page else
+           f'<a class="slide bday-card add" href="{e(site)}/birthdays.html#form"><span class="plus" aria-hidden="true">+</span>'
+           f'<span class="caps kicker">Know a birthday?</span><span class="bday-name">Send a shout-out</span>'
+           f'<span class="bday-from caps">Free · On the site and Facebook</span></a>')
+    cards = birthday_cards(birthdays).replace('<article class="bday-card"', '<article class="slide bday-card"')
+    return rail(e(title), cards + add, more, rid="birthdays", kind="sec bdays")
 
 
 BIRTHDAY_JS = """<script>(()=>{const f=document.getElementById('bday-form');if(!f)return;
@@ -3001,12 +3010,7 @@ MONTHS = ["January", "February", "March", "April", "May", "June", "July", "Augus
 
 def render_birthdays(cfg, birthdays, stories):
     site = cfg["site_url"].rstrip("/")
-    today = (f'<section class="wrap" id="today"><div class="candy"><div class="candy-in bday">'
-             f'<div class="bday-head"><span class="script">Happy birthday!</span><h2 class="retro sm">Celebrating now</h2>'
-             f'<p class="caps muted">{eastern().strftime("%A, %B %-d")}</p>{sponsor_tag(cfg, "birthday", site)}</div>'
-             f'<div class="bday-grid">{birthday_cards(birthdays)}</div>'
-             f'<div class="share bday-acts"><a class="btn fb" href="{e(fb_share(site + "/birthdays.html"))}" target="_blank" rel="noopener">{FB_ICON}Share the birthdays</a></div>'
-             f'</div></div></section>') if birthdays else ""
+    today = birthday_rail(cfg, birthdays, f"Celebrating now · {eastern().strftime('%A, %B %-d')}", page=True)
     month = '<label class="fld"><span class="caps">Birthday *</span><span class="bday-date">' + (
         '<select name="bmonth" id="f-bmonth" required aria-label="Month"><option value="">Month</option>'
         + "".join(f"<option>{m}</option>" for m in MONTHS) + '</select>'
