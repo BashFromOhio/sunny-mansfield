@@ -50,7 +50,7 @@ wreck|arrest|charged|indict|sentenc|convict|prison|jail|inmate|police|sheriff|de
 assault|rape|abuse|theft|stolen|robber|burglar|overdose|drug|fentanyl|meth|fire\b|blaze|
 lawsuit|sued|lawsuit|layoff|laid off|closing|closes|shut down|bankrupt|missing|injur|
 victim|weapon|gun|trial|guilty|scam|fraud|evict|warning|threat|lockdown|outage|crime|
-investigat|suspect|accident|hospitalized|emergency"""
+investigat|suspect|accident|hospitalized|emergency|traffic impact|detour|lane restriction|road closure"""
 
 # A story needs at least one of these to count as good news.
 POSITIVE = r"""celebrat|award|honor|win\b|wins|won\b|champion|record|first place|scholarship|
@@ -58,7 +58,8 @@ graduat|donat|volunteer|grant|raise[sd]? \$|fundrais|opens|opening|grand opening
 expan|new\b|launch|milestone|anniversary|birthday|festival|parade|concert|fair\b|
 celebration|thank|hero|kindness|helps|helping|rescue|adopt|garden|plant|park|mural|
 restor|renovat|reopen|welcome|proud|success|achiev|inspir|hiring|jobs|community|free\b|
-students|kids|library|cheer|smile|gift|joy|family|reunion|bloom|harvest|sanctuary"""
+students|kids|library|cheer|smile|gift|joy|family|reunion|bloom|harvest|sanctuary|
+shop small|shop local|small business saturday|hall of fame|all-ohio|all-state|nominat"""
 
 # Section rules, checked in order. First match wins; "good" is the fallback.
 SECTION_RULES = [
@@ -233,9 +234,12 @@ def collect(config, sample):
     if not sample:
         add_photos(stories)
         if config.get("require_photos", True):
-            dropped = [s for s in stories if not s.get("image")]
-            stories = [s for s in stories if s.get("image")]
-            note(f"Left out {len(dropped)} stories with no photo")
+            # Some sites (like the News Journal) block photo lookups, so a brand-new story can arrive with no photo.
+            # Keep the last two days' stories anyway with their section's line drawing, so today's news always shows.
+            fresh = datetime.now(timezone.utc) - timedelta(days=2)
+            dropped = [s for s in stories if not s.get("image") and s["date"] < fresh]
+            stories = [s for s in stories if s.get("image") or s["date"] >= fresh]
+            note(f"Left out {len(dropped)} older stories with no photo")
     return stories
 
 
@@ -2602,11 +2606,12 @@ def magazine(cfg, top, also, videos=(), tabs=""):
 def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=()):
     site = cfg["site_url"].rstrip("/")
     stories = [s for s in stories if s["section"] != "life"]  # Celebrations of Life live on their own page
-    # The front page leads with the newest stories that have a photo.
-    news = sorted(stories, key=lambda s: not s.get("image"))
-    pick = pinned(news, headlines)
-    if pick:
-        news = [pick] + [s for s in news if s is not pick]
+    # The front page leads with the editor's pick, or else the newest story with a photo; the rest stay newest first.
+    # The two hero spots beside it lay the headline over the picture, so they also take the newest photo stories.
+    pick = pinned(stories, headlines) or next((s for s in stories if s.get("image")), None)
+    rest = [s for s in stories if s is not pick]
+    beside = [s for s in rest if s.get("image")][:2]
+    news = ([pick] if pick else []) + beside + [s for s in rest if s not in beside]
     top, also = (news[0], news[1:15]) if news else (None, [])
     front_ids = {s["id"] for s in ([top] if top else []) + also}
     counts = {k: sum(1 for s in stories if s["section"] == k) for k, _ in SECTIONS}
