@@ -1,0 +1,21 @@
+name: Debug feeds
+on:
+  push:
+    branches: [debug-feeds]
+jobs:
+  dbg:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pillow
+      - run: |
+          python3 -W ignore - <<'PY'
+          import json, build
+          cfg = json.load(open('config.json'))
+          st = build.collect(cfg, False)
+          print('== final stories', len(st))
+          for s in st:
+              print('  ', s['date'].isoformat()[:16], s['section'], s['source'], '|', s['title'][:80])
+          PY
