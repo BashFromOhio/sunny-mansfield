@@ -341,7 +341,7 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
         fake = {"title": f["title"], "source": f.get("by") or ""}
         photo = load_photo(f.get("image"), ua)
         im = photo_post(fake, "Fundraiser", photo, credit) if photo else text_post(fake, "Fundraiser", credit, "Lend a hand!")
-        link, title = f"{site}/fundraisers.html#f-{f['id']}", f["title"]
+        link, title = f"{site}/give/{f['id']}.html", f["title"]
         text = f"Neighbors helping neighbors: {f['title']}. {f.get('summary') or ''} Give if you can, share if you can't.".strip()
     if im is None:
         s = {0: pick(stories, "hoods", "good"), 3: pick(stories, "sports", athletes=True) or pick(stories, "sports"),
@@ -426,10 +426,10 @@ def make_community_feed(cfg, stories, flyers, funds, businesses, out, page_url, 
     for f in flyers:
         when = f["day"].strftime("%A, %B %-d") if f.get("day") else "Coming up"
         img = framed(f"f{f['id']}", f["title"], f.get("town") or "", f"Event · {when}", f.get("image"), "Save the date!")
-        items.append((f["date"], f"f-{f['id']}", f["title"], f"{site}/#events", img,
+        items.append((f["date"], f"f-{f['id']}", f["title"], f"{site}/e/{f['id']}.html", img,
                       f"{when}: {f['title']}\n\n{f.get('summary') or ''}\n\nMore local events: {site}/#events\n\n{tags} #ThingsToDoMansfield"))
     for f in funds:
-        link = f"{site}/fundraisers.html#f-{f['id']}"
+        link = f"{site}/give/{f['id']}.html"
         img = framed(f"d{f['id']}", f["title"], f.get("by") or "", "Fundraiser", f.get("image"), "Lend a hand!")
         give = f"\n\nGive here: {f['link']}" if f.get("link") else ""
         items.append((f["date"], f"d-{f['id']}", f["title"], link, img,
