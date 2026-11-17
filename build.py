@@ -912,6 +912,12 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .adbanner.promo .script{font-size:22px;color:var(--secondary);line-height:1}
 .adbanner.promo .retro{font-size:24px;line-height:1.05}
 .adbanner.promo .adtext{font:500 14px/1.4 var(--sans);color:var(--text-2)}
+.adbanner.promo.hot{background:var(--secondary);border:3px solid var(--primary);box-shadow:inset 0 0 0 3px var(--tertiary)}
+.adbanner.promo.hot .script{color:var(--tertiary)}
+.adbanner.promo.hot .retro{color:var(--tertiary);text-shadow:2px 2px 0 var(--primary)}
+.adbanner.promo.hot .adtext{color:var(--tertiary)}
+.adbanner.promo.hot .btn{background:var(--tertiary);color:var(--primary);border-color:var(--tertiary)}
+.adbanner.promo.hot:hover .btn{background:var(--primary);color:var(--tertiary);border-color:var(--primary)}
 .ad.house.promo{border:8px solid transparent;background:linear-gradient(var(--tertiary),var(--tertiary)) padding-box,repeating-linear-gradient(-55deg,var(--secondary) 0 9px,var(--tertiary) 9px 18px) border-box}
 .ad.house.promo .dek{font-size:14px;line-height:1.5;margin:0;color:var(--text-2)}
 .evad.promo .flyer-img .script{font-size:34px}
@@ -1938,7 +1944,8 @@ PROMO_CARDS = [
 def promo_banner(cfg, spot):
     site = cfg["site_url"].rstrip("/")
     script, title, line, href, cta = PROMO[spot]
-    return (f'<aside class="wrap adrow" aria-label="From Sunny Mansfield"><a class="adbanner promo" href="{e(site)}/{href}">'
+    hot = " hot" if spot == "A1" else ""  # the top banner (birthday shout-outs) is solid orange
+    return (f'<aside class="wrap adrow" aria-label="From Sunny Mansfield"><a class="adbanner promo{hot}" href="{e(site)}/{href}">'
             f'<span class="ptext"><span class="script">{e(script)}</span><span class="retro">{e(title)}</span>'
             f'<span class="adtext">{e(line)}</span></span><span class="btn solid sm">{e(cta)}</span></a></aside>')
 
