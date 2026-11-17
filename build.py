@@ -41,7 +41,6 @@ SECTIONS = [
     ("biz", "Local Business"),
     ("sales", "Garage Sales"),
     ("seniors", "Seniors"),
-    ("research", "Cool Research"),
 ]
 SECTION_NAMES = dict(SECTIONS)
 
@@ -67,8 +66,6 @@ SECTION_RULES = [
     ("sports", r"\b(football|basketball|volleyball|soccer|baseball|softball|wrestl\w*|swim\w*|cross country|"
                r"track and field|golf|tennis|bowling|hockey|lacrosse|cheerlead\w*|athlet\w*|varsity|playoffs?|"
                r"ohsaa|state champion\w*|district champion\w*|regional champion\w*|tygers|quarterback|touchdown)\b"),
-    ("research", r"research|study|studies|scientist|discover|university|osu mansfield|ohio state|"
-                 r"north central state|nc state|professor|nasa|experiment|data show"),
     # Whole words only: a bare "aging" also matched "managing", "packaging" and "engaging".
     ("seniors", r"\b(senior citizens?|senior centers?|senior living|seniors\b(?! night| day| class| game| prom)|"
                 r"retire(e|es|d|ment)?\b|centenarian|100th birthday|(9\d|1\d\d)(th)? birthday|older adults|"
@@ -300,7 +297,8 @@ def bing_photo(s):
 # Columns of the "Publish" tab in the submissions sheet (see FORMS.md). Emails never reach this tab.
 SUBMIT_COLS = ["when", "section", "title", "summary", "photo", "link", "name", "role", "business", "town",
                "event_date", "price", "contact"]
-SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "business spotlight": "spotlight",
+SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "cool research": "good",  # section retired; old posts go to Good News
+                    "business spotlight": "spotlight",
                     "event flyer": "flyer", "free stuff": "market", "buy & sell": "market", "buy and sell": "market",
                     "job": "job", "jobs": "job",
                     "athlete spotlight": "athlete", "bracket": "bracket", "fundraiser": "fund",
