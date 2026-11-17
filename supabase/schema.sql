@@ -100,9 +100,9 @@ create policy "admins manage verified" on public.verified for all to authenticat
 
 -- What the public site reads: approved posts only, without anyone's email address or phone.
 -- (The old Buy & Sell "contact" column is no longer published: Free Stuff and jobs use private replies instead.)
--- Birthday shout-outs are listed only on the birthday itself (Mansfield time), so nobody can pull a list of
--- everyone's birthdays. The site shows each one once, on the first birthday after it was sent.
--- event_date holds the birthday with the year 2000 (the form never asks for the year); Feb 29 shows on Feb 28 too.
+-- Birthday shout-outs are listed only on the birthday and the day after (Mansfield time), so nobody can pull a list
+-- of everyone's birthdays. The site shows each one once, for two days from the first birthday after it was sent.
+-- event_date holds the birthday with the year 2000 (the form never asks for the year); Feb 29 is also listed on Feb 28 and Mar 1.
 drop view if exists public.published;
 create view public.published as
   select id, created_at, section, title, summary, photo_url, link, name, role, business, town, event_date, price
@@ -112,7 +112,8 @@ create view public.published as
       verified_at is not null and event_date is not null and created_at > now() - interval '370 days'
       and to_char(event_date, 'MM-DD') in (
         to_char((now() at time zone 'America/New_York')::date, 'MM-DD'),
-        case when to_char((now() at time zone 'America/New_York')::date, 'MM-DD') = '02-28' then '02-29' end)));
+        to_char((now() at time zone 'America/New_York')::date - 1, 'MM-DD'),
+        case when to_char((now() at time zone 'America/New_York')::date, 'MM-DD') in ('02-28', '03-01') then '02-29' end)));
 grant select on public.published to anon, authenticated;
 
 -- Private replies to Free Stuff and job posts (the "reply" Edge Function writes here to stop spam).

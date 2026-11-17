@@ -378,12 +378,15 @@ def birthday_on(month, day, year):
         return datetime(year, 2, 28).date()
 
 
-def birthday_is_today(birthday, sent, today):
+BIRTHDAY_DAYS = 2  # a shout-out stays on the site for its birthday and the day after
+
+
+def birthday_day(birthday, sent):
     """A shout-out runs once: on the first birthday on or after the day it was sent."""
     first = birthday_on(birthday.month, birthday.day, sent.year)
     if first < sent:
         first = birthday_on(birthday.month, birthday.day, sent.year + 1)
-    return first == today
+    return first
 
 
 def drive_image(url):
@@ -499,13 +502,18 @@ def load_submissions(config, sample):
             continue
         if section == "birthday":  # shows on the person's birthday only, once an editor approves it
             today = eastern().date()
-            day = today if sample and row["event_date"].strip().lower() == "today" else parse_day(row["event_date"])
-            day = day.date() if isinstance(day, datetime) else day
-            if not day or not (sample or birthday_is_today(day, eastern(date).date(), today)):
+            tag = row["event_date"].strip().lower()
+            if sample and tag in ("today", "yesterday"):  # previews only
+                day = on = today - timedelta(days=tag == "yesterday")
+            else:
+                day = parse_day(row["event_date"])
+                on = birthday_day(day, eastern(date).date()) if day else None
+            if not on or not timedelta(0) <= today - on < timedelta(days=BIRTHDAY_DAYS):
                 continue
             who = BIRTHDAY_TITLE.match(row["title"].strip())
             got["birthdays"].append({"id": sid, "name": clean(who.group(1) if who else row["title"], 80),
-                                     "message": clean(row["summary"], 300), "by": clean(row["name"], 80), "date": date})
+                                     "message": clean(row["summary"], 300), "by": clean(row["name"], 80), "date": date,
+                                     "today": on == today})
             continue
         if section == "link":  # an editor pasted an article link; it becomes a regular news story
             got["links"].append({"link": row["link"], "title": row["title"], "summary": row["summary"],
@@ -541,7 +549,7 @@ def load_submissions(config, sample):
                         "town": row["town"]})
     got["flyers"].sort(key=lambda f: f["day"] or f["date"] + timedelta(days=LISTING_DAYS))
     got["listings"].sort(key=lambda x: x["date"], reverse=True)
-    got["birthdays"].sort(key=lambda b: b["date"])
+    got["birthdays"].sort(key=lambda b: (not b["today"], b["date"]))  # today's first, then yesterday's
     note("Community: " + ", ".join(f"{len(v)} {k}" for k, v in got.items()))
     return got
 
@@ -1023,15 +1031,6 @@ footer .credit .legal.towns{font-weight:400;opacity:.85}
 .bday-date{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px}
 .bday-extra{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;padding:16px;background:var(--surface)}
 
-.bday-strip{display:block;background:var(--secondary);color:var(--tertiary);text-decoration:none;border-bottom:2px solid var(--border-strong)}
-.bday-strip-in{display:flex;align-items:center;justify-content:center;gap:8px 18px;flex-wrap:wrap;padding-block:10px;text-align:center}
-.bday-strip .script{color:var(--tertiary);font-size:26px;margin:0 0 4px;transform:rotate(-4deg)}
-.bday-strip-text{font:400 15px/1.4 var(--sans)}.bday-strip-text b{font-weight:700}
-.bday-strip-go{background:var(--primary);color:var(--tertiary);padding:8px 14px;white-space:nowrap}
-.bday-strip:hover .bday-strip-go{background:var(--tertiary);color:var(--primary)}
-.bday-strip .short{display:none}
-@media (max-width:700px){.bday-strip .long{display:none}.bday-strip .short{display:inline}.bday-strip .script{display:none}
-  .bday-strip-in{flex-wrap:nowrap;justify-content:space-between;text-align:left}.bday-strip-text{font-size:14px}}
 .verify{display:grid;gap:12px;background:var(--tertiary);border:2px solid var(--border-subtle);border-top:4px solid var(--secondary);padding:clamp(16px,3vw,32px)}
 .verify .script{margin-bottom:16px}.verify p{margin:0}
 .verify .row{display:flex;gap:12px;flex-wrap:wrap}.verify [data-v-code]{flex:0 1 200px;font:700 22px/1 var(--sans);letter-spacing:.3em;text-align:center}
@@ -1650,7 +1649,6 @@ def masthead(cfg, site, stories, quote=None, current=""):
 <button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}</div>
 <a class="navcta" href="{e(site)}/submit.html">Submit news</a></div></nav>
-{BDAY_STRIP.format(site=e(site))}
 </header>
 <aside class="about" id="about" role="dialog" aria-labelledby="about-h" hidden>
 <button class="close" type="button" data-about-close aria-label="Close">&times;</button>
@@ -1663,18 +1661,6 @@ def masthead(cfg, site, stories, quote=None, current=""):
 <li><b>Made to share.</b> Every story has a Share button. One share can make someone's day.</li></ul>
 <div class="share"><button class="btn solid" type="button" data-about-close>Start reading</button><a class="textbtn" href="{e(site)}/submit.html">Share good news</a></div>
 </aside>"""
-
-
-# The birthday shout-out banner under the menu on every page (birthdays.html and admin.html drop it).
-BDAY_STRIP = ('<a class="bday-strip" href="{site}/birthdays.html#form" data-bday-strip><span class="bday-strip-in wrap">'
-              '<span class="script">Happy birthday!</span><span class="bday-strip-text"><b>Birthday coming up?</b> '
-              '<span class="long">Send a free shout-out and we\'ll celebrate them on the front page and on Facebook.</span>'
-              '<span class="short">Send a free shout-out.</span></span>'
-              '<span class="caps bday-strip-go">Send one <span aria-hidden="true">&rsaquo;</span></span></span></a>')
-
-
-def no_strip(page):
-    return re.sub(r'<a class="bday-strip".*?</a>', "", page, count=1, flags=re.S)
 
 
 def memories(cfg):
@@ -1937,7 +1923,7 @@ AD_SPOT = {s["spot"]: s for s in AD_SPOTS}
 # While ads are paused, each spot keeps its size and shows one of our own promos instead.
 # (script, headline, line, link, button). Banners use their spot; cards take turns through PROMO_CARDS.
 PROMO = {
-    "A1": ("Hey neighbor!", "Got good news?", "Ribbon cuttings, birthdays, team wins. Neighbors post here.", "submit.html", "Submit good news"),
+    "A1": ("Happy birthday!", "Birthday shout-outs", "Free! We wish them a happy birthday on the site and Facebook.", "birthdays.html#form", "Send a shout-out"),
     "A4": ("Pass it on!", "Know a neighbor doing great things?", "Tell us in a few lines and add a photo.", "submit.html", "Submit good news"),
     "A5": ("Game on!", "Spotlight an athlete", "A big game, a personal best, a kid who never quits.", "submit.html#athlete", "Spotlight an athlete"),
 }
@@ -2962,14 +2948,14 @@ def page_title(script, title, intro):
 BIRTHDAY_STEPS = [
     "Type their name and their birthday. No photo, no year, nothing else needed.",
     "Want to say more? Check \u201cAdd a special message\u201d and write a line from you.",
-    "Confirm with the 6-digit code we email you. Then an editor approves it, and it shows on the front page and our Facebook page on their birthday.",
+    "Confirm with the 6-digit code we email you. Then an editor approves it. It goes up on our Facebook page on their birthday and stays on the site for two days.",
 ]
 
 
 def birthday_cards(birthdays):
     return "".join(
         f'<article class="bday-card" id="bday-{e(b["id"])}"><span class="bday-cake" aria-hidden="true">{CAKE}</span>'
-        f'<span class="caps kicker">Happy birthday</span><h3 class="bday-name">{e(b["name"])}</h3>'
+        f'<span class="caps kicker">{"Happy birthday" if b.get("today", True) else "Happy belated birthday"}</span><h3 class="bday-name">{e(b["name"])}</h3>'
         + (f'<p class="bday-msg">\u201c{e(b["message"])}\u201d</p>' if b["message"] else "")
         + (f'<p class="caps bday-from">\u2014 {e(b["by"])}</p>' if b["by"] else "") + "</article>"
         for b in birthdays)
@@ -3009,7 +2995,7 @@ MONTHS = ["January", "February", "March", "April", "May", "June", "July", "Augus
 def render_birthdays(cfg, birthdays, stories):
     site = cfg["site_url"].rstrip("/")
     today = (f'<section class="wrap" id="today"><div class="candy"><div class="candy-in bday">'
-             f'<div class="bday-head"><span class="script">Happy birthday!</span><h2 class="retro sm">Celebrating today</h2>'
+             f'<div class="bday-head"><span class="script">Happy birthday!</span><h2 class="retro sm">Celebrating now</h2>'
              f'<p class="caps muted">{eastern().strftime("%A, %B %-d")}</p>{sponsor_tag(cfg, "birthday", site)}</div>'
              f'<div class="bday-grid">{birthday_cards(birthdays)}</div>'
              f'<div class="share bday-acts"><a class="btn fb" href="{e(fb_share(site + "/birthdays.html"))}" target="_blank" rel="noopener">{FB_ICON}Share the birthdays</a></div>'
@@ -3046,8 +3032,7 @@ def render_birthdays(cfg, birthdays, stories):
     image = f"{site}/birthday.jpg"
     return shell(cfg, f"Birthday shout-outs · {cfg['site_name']}",
                  "Send a free birthday shout-out to someone in Mansfield or Richland County. It shows on their birthday.",
-                 f"{site}/birthdays.html", inner, stories, image=image, extra=form_script(cfg) + BIRTHDAY_JS).replace(
-        BDAY_STRIP.format(site=e(site)), "")
+                 f"{site}/birthdays.html", inner, stories, image=image, extra=form_script(cfg) + BIRTHDAY_JS)
 
 
 def render_submit(cfg, stories):
@@ -4480,7 +4465,7 @@ def main():
         (out / "jobs" / f"{j['id']}.html").write_text(rebase(render_job_page(cfg, j, stories)))
     (out / "404.html").write_text(rebase(render_not_found(cfg, stories)))
     (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories) if ads_open(cfg) else render_ads_soon(cfg, stories)))
-    (out / "admin.html").write_text(rebase(no_strip(render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"])))))
+    (out / "admin.html").write_text(rebase((render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"])))))
     (out / "town").mkdir(exist_ok=True)
     live_towns = []
     for name, about in TOWNS:
