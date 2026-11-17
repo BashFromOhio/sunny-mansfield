@@ -1168,28 +1168,28 @@ button.tv-dial{cursor:pointer;padding:0}button.tv-dial:hover,button.tv-dial:focu
 .tv-arrow{width:34px;height:34px;border:2px solid var(--primary);background:var(--tertiary);color:var(--primary);font:700 20px/1 var(--serif);cursor:pointer;padding:0 0 3px}
 .tv-arrow:hover,.tv-arrow:focus-visible{background:var(--primary);color:var(--tertiary)}
 .tv-count{font:700 11px/1 var(--caps);letter-spacing:.1em;color:var(--text-2);min-width:34px;text-align:center}
-.radiobar{background:var(--tertiary);padding-block:0 40px;margin-top:-24px}
-.rb-in{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:4px 16px;align-items:center;border:2px solid var(--primary);border-left:8px solid var(--secondary);padding:8px 14px 8px 10px;background:var(--surface)}
-.rb-icon{position:relative;width:44px;height:36px;background:var(--tertiary);border:2px solid var(--primary);overflow:hidden;
+.radiobar{min-width:0}
+.rb-in{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px 12px;align-items:start;border:2px solid var(--primary);border-top:6px solid var(--secondary);padding:12px;background:var(--surface)}
+.rb-icon{position:relative;width:40px;height:34px;background:var(--tertiary);border:2px solid var(--primary);overflow:hidden;
   background-image:repeating-linear-gradient(0deg,var(--secondary) 0 2px,transparent 2px 5px);background-size:45% 100%;background-repeat:no-repeat;background-position:3px 50%}
 .rb-icon i{position:absolute;right:4px;top:6px;bottom:6px;width:40%;border:2px solid var(--primary)}
 .rb-icon img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
-.rb-text{display:grid;gap:2px;min-width:0}
+.rb-text{display:grid;gap:3px;min-width:0}
 .rb-label{font:700 10px/1.3 var(--caps);letter-spacing:.14em;text-transform:uppercase;color:var(--text)}
-.rb-label b{color:var(--secondary-dk);margin-left:8px}
-.rb-title{font:700 16px/1.3 var(--serif);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rb-host{font:500 13px var(--sans);color:var(--text-2);margin-left:6px}
-.rb-player audio{display:block;width:300px;height:36px}
-.rb-play{display:flex;align-items:center;gap:10px;background:var(--primary);color:var(--tertiary);border:0;padding:4px 16px 4px 4px;cursor:pointer;
+.rb-label b{display:block;color:var(--secondary-dk)}
+.rb-title{font:700 17px/1.25 var(--serif);color:var(--text)}
+.rb-host{display:block;font:500 12px/1.5 var(--sans);color:var(--text-2);margin-top:2px}
+.rb-player{grid-column:1/-1;min-width:0}
+.rb-player audio{display:block;width:100%;height:36px}
+.rb-play{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:var(--primary);color:var(--tertiary);border:0;padding:4px;cursor:pointer;
   font:700 12px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase}
 .rb-play .radio-playbtn{width:32px;height:32px;border-width:2px}.rb-play .radio-playbtn::after{border-width:6px 0 6px 10px;margin-left:3px}
 .rb-play:hover{background:var(--secondary)}
-.rb-player.on{grid-column:1/-1;grid-row:2;width:100%}
+.rb-player .btn{width:100%}
 .rb-player.on iframe{display:block;width:100%;height:var(--h);border:0}
-.rb-in .textbtn{padding:8px 0;font-size:11px}
-@media (max-width:760px){.rb-in{grid-template-columns:40px minmax(0,1fr) auto}.rb-in>.textbtn{display:none}.rb-player audio{width:200px}}
-@media (max-width:600px){.radiobar{margin-top:-16px;padding-block:0 32px}.rb-in{grid-template-columns:36px minmax(0,1fr);row-gap:8px}.rb-icon{width:36px}
- .rb-player{grid-column:1/-1}.rb-player audio{width:100%}.rb-play{width:100%;justify-content:center}.rb-title{white-space:normal}.rb-host{display:block;margin:0}}
+.rb-in>.textbtn{grid-column:1/-1;padding:0;font-size:11px;justify-self:start}
+.mag-stack .radiobar{padding-bottom:20px;border-bottom:1px solid var(--border-subtle)}
+@media (max-width:760px){.mag-stack .radiobar{grid-column:1/-1}}
 
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,440px);
   background:var(--primary);color:var(--tertiary);padding:8px 16px;border-radius:0;font:600 14px/1.5 var(--sans);text-align:center}
@@ -2128,7 +2128,7 @@ def radio_bar(cfg, entry):
         player = f'<div class="rb-player"><a class="btn sm" href="{e(site)}/submit.html">Pitch your podcast</a></div>'
     pic = f'<img src="{e(art)}" alt="" loading="lazy" onerror="this.remove()">' if art else ""
     status = "Now playing" if kind else "Coming soon"
-    return f"""<section class="wrap radiobar" id="listen" aria-label="Station 419 radio">
+    return f"""<section class="radiobar" id="listen" aria-label="Station 419 radio">
 <div class="rb-in"><span class="rb-icon" aria-hidden="true">{pic}<i></i></span>
 <div class="rb-text"><span class="rb-label">Station 419 Radio <b>{status}</b></span><span class="rb-title">{title}{f' <span class="rb-host">{host}</span>' if host else ""}</span></div>
 {player}{station_link(entry, kind, "Listen")}</div></section>"""
@@ -2181,12 +2181,11 @@ def mid_card(s):
 
 def magazine(cfg, top, also, station="", radio=""):
     """Front page top: big lead story, a stack of two stories, and an 'Also today' sidebar."""
-    stack, side = also[:3], also[3:7]
+    stack, side = also[:2], also[2:6]
     explore = '<a class="explore" href="#shelves">Explore all <span aria-hidden="true">&rsaquo;</span></a>'
     return (f'<section class="wrap mag"><div class="mag-main">{section_head("Top stories", explore)}'
-            f'<div class="mag-grid">{lead(cfg, top)}<div class="mag-stack">{"".join(mid_card(s) for s in stack)}</div></div></div>'
-            f'<aside class="mag-side">{section_head("Also today", explore)}<div class="side-briefs">{"".join(brief(s) for s in side)}</div>{station}</aside></section>'
-            f'{radio}{STATION_JS}')
+            f'<div class="mag-grid">{lead(cfg, top)}<div class="mag-stack">{radio}{"".join(mid_card(s) for s in stack)}</div></div></div>'
+            f'<aside class="mag-side">{section_head("Also today", explore)}<div class="side-briefs">{"".join(brief(s) for s in side)}</div>{station}</aside></section>{STATION_JS}')
 
 
 def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=()):
