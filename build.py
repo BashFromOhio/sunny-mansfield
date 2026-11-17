@@ -2649,11 +2649,12 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
                   f'<p>Medical bills, team trips, fire recovery and special causes shared by people in Richland County.</p></div>'
                   f'<div class="share"><a class="btn solid sm" href="{e(site)}/fundraisers.html">See all {len(funds)}</a>'
                   f'<a class="btn sm" href="{e(site)}/submit.html#fundraiser">Share a fundraiser</a></div></div>'
-                  + rail("Give where it counts", "".join(fund_card(cfg, f) for f in funds[:12])).replace('class="wrap railbox ', 'class="railbox ')
+                  + rail("Donate", "".join(fund_card(cfg, f) for f in funds[:12])).replace('class="wrap railbox ', 'class="railbox ')
                   + f'<p class="give-note">{SHIELD}<span>{FUND_SHORT} <a class="link" href="{e(site)}/fundraisers.html#before-you-give">Read before you give</a></span></p>'
                   f'</div></section>') if funds else rail("Donate to local causes", first_post(cfg, "funds"), rid="donate", kind="sec")
     market = rail("Free Stuff", "".join(listing_card(x, cfg) for x in listings[:12]) + ad_card(cfg, sale_ads[0] if sale_ads else None, "A7", i=1),
                   f'<a class="link" href="{e(site)}/free.html">See all</a>', kind="sales") if listings else rail("Free Stuff", first_post(cfg, "free"), kind="sales")
+    market += funds_rail  # Donate sits right under Free Stuff
     market += rail("Now hiring", "".join(job_card(cfg, j, slide=True) for j in jobs[:12]),
                    f'<a class="link" href="{e(site)}/jobs.html">See all</a>', kind="jobs") if jobs else rail("Now hiring", first_post(cfg, "jobs"), kind="jobs")
     home = {"@context": "https://schema.org", "@graph": [
@@ -2669,7 +2670,6 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
 {masthead(cfg, site, stories, current="front")}
 <main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{ticker(news[:10])}{front}
-{funds_rail}
 {civic(cfg, businesses)}
 <div id="shelves">{shelf_order(rails, "", events)}</div>
 {market}
