@@ -289,7 +289,7 @@ def make_quote_feed(cfg, quote, out, credit, note=print):
 <guid isPermaLink="false">sunny-quote-{key}</guid><pubDate>{format_datetime(q["at"])}</pubDate>
 <description>{e(caption)}</description><enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>""")
     (Path(out) / "quotes.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0"><channel><title>{e(cfg['site_name'])} quote of the day</title><link>{e(site)}/quote.html</link>
+<rss version="2.0"><channel><title>{e(cfg['site_name'])} quote of the day</title><link>{e(site)}/</link>
 <description>A Mansfield quote twice a day, ready for Facebook</description>
 {"".join(items)}
 </channel></rss>""")

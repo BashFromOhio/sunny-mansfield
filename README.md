@@ -69,7 +69,26 @@ refresh (every 15 minutes). Verified contributors who sign in skip the queue. Se
 
 ## Quote of the day
 
-`quotes.csv` feeds the "Mansfield quote of the day" box next to the top banner, the shareable `quote.html` page and
-`quote.jpg` image, and `quotes.xml`, which posts a framed quote image to Facebook twice a day. Columns are `quote`,
+`quotes.csv` feeds the Facebook quote of the day only (it is not shown on the site): the `quote.jpg` image and `quotes.xml`, which posts a framed quote image to Facebook twice a day. Columns are `quote`,
 `author`, an optional `date` and optional `Suggested Hashtags`. The quote changes at 8 a.m. and 8 p.m. Eastern,
 walking down the list in date order (file order if there are no dates), and starts over at the end.
+
+## Watch Mansfield (local videos)
+The top-right spot of the front page hero is "Watch Mansfield": local videos that rotate every 10 seconds (an orange
+bar along the bottom is the timer; it pauses while a reader hovers, and stops while a video plays). Each video shows
+its YouTube preview picture and its title as the headline. Videos load only when a reader taps Play, and YouTube uses
+its privacy-friendly player. With no videos, the spot shows a regular story.
+
+**To add a video**, edit [`watch.json`](watch.json) on GitHub (pencil icon) and paste the YouTube link into `videos`:
+
+```json
+"videos": [
+  "https://www.youtube.com/watch?v=VIDEO_ID",
+  {"url": "https://youtu.be/OTHER_ID", "title": "Your own headline"}
+],
+```
+
+A plain link is enough: the headline and channel name come from YouTube when the site builds. Use the `{...}` form to
+write your own headline. Vimeo and Facebook video links work too (give those a `title`, and an `image` for the preview).
+Your picks show first, then the newest `from_channel` videos from the YouTube channel in `channel_id` fill in
+(currently the 3 newest from The Lindsay's, @thelindsays7871). Set `from_channel` to `0` to show only your picks.
