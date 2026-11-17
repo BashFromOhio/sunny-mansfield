@@ -89,7 +89,18 @@ def rx(pattern):
 # Elections and politics stay off the site.
 VOTING = r"\bvot(e|ed|er|ers|ing)\b|ballot|election|polls?\b|candidate|levy|board of elections|campaign"
 
+# Stories from wide searches (Google News, Bing) must name a place here to count as local.
+LOCAL = r"""mansfield|richland|madison|lexington|ontario|bellville|shelby|butler|lucas|plymouth|shiloh|
+crestline|mifflin|clear fork|crestview|mohican|malabar|kingwood|ashland|galion|loudonville"""
+
+# Other towns named Mansfield (Texas, Massachusetts, Connecticut, Louisiana...) and their schools and papers.
+OTHER_MANSFIELD = r"""mansfield,? (texas|tx|mass\w*|ma\b|conn\w*|ct\b|louisiana|la\b|pa\b|penn\w*|ga\b|georgia|mo\b|
+missouri|ark\w*|nottinghamshire|england|uk\b)|timberview|mansfield (legacy|lake ridge|summit|isd)|southlake|
+fort worth|arlington|dallas|frisco|keller|attleboro|foxboro|norton|sun chronicle|star-telegram|uconn|storrs|
+desoto parish|nottingham"""
+
 NEG, POS, LIFE, VOTE = rx(NEGATIVE), rx(POSITIVE), rx(LIFE_HINTS), rx(VOTING)
+NEAR, AWAY = rx(LOCAL), rx(OTHER_MANSFIELD)
 RULES = [(key, rx(p)) for key, p in SECTION_RULES]
 
 
@@ -100,6 +111,8 @@ def classify(story, forced=None):
         return None
     if NEG.search(text) or VOTE.search(text):
         return None
+    if AWAY.search(f"{text} {story.get('source', '')}") or (not story.get("local") and not NEAR.search(text)):
+        return None  # another Mansfield, or a wide-search story that never names a local place
     for key, pattern in RULES:
         if pattern.search(text):
             # Garage sales are useful even when they aren't "uplifting".
@@ -198,6 +211,7 @@ def fetch_feed(feed):
             "photos": feed.get("photos", True),
             "date": parse_date(date.text if date is not None else None),
             "forced": feed.get("section"),
+            "local": feed.get("local", False),
         })
     return items
 
@@ -205,7 +219,7 @@ def fetch_feed(feed):
 def load_sample():
     now = datetime.now(timezone.utc)
     rows = json.loads((HERE / "sample_stories.json").read_text())
-    return [{**r, "date": now - timedelta(hours=r["hours_ago"]), "forced": r.get("section")} for r in rows]
+    return [{**r, "date": now - timedelta(hours=r["hours_ago"]), "forced": r.get("section"), "local": True} for r in rows]
 
 
 def collect(config, sample):

@@ -9,19 +9,23 @@
   "feeds": [
     {
       "name": "Richland Source",
-      "url": "https://www.richlandsource.com/feed/"
+      "url": "https://www.richlandsource.com/feed/",
+      "local": true
     },
     {
       "name": "Richland Source",
-      "url": "https://www.richlandsource.com/feed/?paged=2"
+      "url": "https://www.richlandsource.com/feed/?paged=2",
+      "local": true
     },
     {
       "name": "Richland Source",
-      "url": "https://www.richlandsource.com/feed/?paged=3"
+      "url": "https://www.richlandsource.com/feed/?paged=3",
+      "local": true
     },
     {
       "name": "Richland Source Sports",
-      "url": "https://www.richlandsource.com/category/sports/feed/"
+      "url": "https://www.richlandsource.com/category/sports/feed/",
+      "local": true
     },
     {
       "name": "Google News: Mansfield Ohio",
