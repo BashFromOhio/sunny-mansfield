@@ -1054,7 +1054,7 @@ footer .logo{width:220px;line-height:0}footer .logo svg{width:100%;height:auto}
 footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
 
 /* Station 419 (station.json): the retro TV set */
-.station{scroll-margin-top:56px;margin-top:32px}
+.station{scroll-margin-top:56px;margin-bottom:32px}
 .station-grid{display:grid;gap:16px}
 .station .kicker{display:block;color:var(--secondary-dk);margin-bottom:6px}
 .station .cap{margin-top:10px;display:flex;flex-wrap:wrap;align-items:baseline;gap:0 12px}
@@ -1102,9 +1102,6 @@ footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
  .tv-dial{width:44px;height:44px;font-size:12px}.tv-dial.sm{width:34px;height:34px;font-size:8px}.tv-brand{font-size:18px;order:-1}
  .tv-dial::before{height:9px;top:2px}}
 
-/* shared play button */
-.radio-playbtn{width:56px;height:56px;background:var(--tertiary);border:3px solid var(--secondary);display:grid;place-items:center}
-.radio-playbtn::after{content:"";margin-left:4px;border-style:solid;border-width:10px 0 10px 17px;border-color:transparent transparent transparent var(--primary)}
 
 /* magazine front: ticker, lead + stack, sidebar, labelled rules with "Explore all" */
 .ticker{background:var(--primary);color:var(--tertiary)}
@@ -1123,8 +1120,8 @@ footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
 @media (prefers-reduced-motion:reduce){.tick-track{animation:none}.tick-dup{display:none}.tick-viewport{overflow-x:auto;mask-image:none}}
 @media (max-width:600px){.tick-label{font-size:0;gap:0;padding-right:12px;margin-right:12px}.tick-label::before{width:12px;height:12px}}
 .mag-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid var(--primary);margin-bottom:20px}
-.mag-label{margin:0;background:var(--primary);color:var(--tertiary);font:700 12px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;padding:9px 12px 7px}
-.explore{font:700 11px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);text-decoration:none;padding:8px 0}
+.mag-label{white-space:nowrap;margin:0;background:var(--primary);color:var(--tertiary);font:700 12px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;padding:9px 12px 7px}
+.explore{white-space:nowrap;font:700 11px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text-2);text-decoration:none;padding:8px 0}
 .explore:hover{color:var(--secondary)}
 .mag{background:var(--tertiary);display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1fr);gap:40px;padding-block:32px 56px}
 .mag-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start}
@@ -1159,7 +1156,7 @@ footer p{margin:0;max-width:56ch;font-size:14px;line-height:1.6;opacity:.85}
 .station .tv-bars .tv-card{inset:auto 8% 28% 8%;padding:6px 8px;border-width:2px}.station .tv-bars .tv-card b{font-size:13px}.station .tv-bars .tv-card span{font-size:10px}
 @media (max-width:600px){.station .tv-body{grid-template-columns:minmax(0,1fr) 54px}.station .tv-side{display:grid;grid-template-columns:none;align-items:initial}
  .station .tv-brand{order:0}.station .tv-ears{transform:translateX(-50%)}}
-/* Station 419 video carousel and the thin radio bar */
+/* Station 419 video carousel */
 .tv-slide{position:absolute;inset:0}.tv-slide[hidden]{display:none}
 button.tv-dial{cursor:pointer;padding:0}button.tv-dial:hover,button.tv-dial:focus-visible{background:var(--secondary);color:var(--tertiary)}
 .tv-caprow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start;margin-top:10px}
@@ -1168,28 +1165,19 @@ button.tv-dial{cursor:pointer;padding:0}button.tv-dial:hover,button.tv-dial:focu
 .tv-arrow{width:34px;height:34px;border:2px solid var(--primary);background:var(--tertiary);color:var(--primary);font:700 20px/1 var(--serif);cursor:pointer;padding:0 0 3px}
 .tv-arrow:hover,.tv-arrow:focus-visible{background:var(--primary);color:var(--tertiary)}
 .tv-count{font:700 11px/1 var(--caps);letter-spacing:.1em;color:var(--text-2);min-width:34px;text-align:center}
-.radiobar{min-width:0}
-.rb-in{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px 12px;align-items:start;border:2px solid var(--primary);border-top:6px solid var(--secondary);padding:12px;background:var(--surface)}
-.rb-icon{position:relative;width:40px;height:34px;background:var(--tertiary);border:2px solid var(--primary);overflow:hidden;
-  background-image:repeating-linear-gradient(0deg,var(--secondary) 0 2px,transparent 2px 5px);background-size:45% 100%;background-repeat:no-repeat;background-position:3px 50%}
-.rb-icon i{position:absolute;right:4px;top:6px;bottom:6px;width:40%;border:2px solid var(--primary)}
-.rb-icon img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}
-.rb-text{display:grid;gap:3px;min-width:0}
-.rb-label{font:700 10px/1.3 var(--caps);letter-spacing:.14em;text-transform:uppercase;color:var(--text)}
-.rb-label b{display:block;color:var(--secondary-dk)}
-.rb-title{font:700 17px/1.25 var(--serif);color:var(--text)}
-.rb-host{display:block;font:500 12px/1.5 var(--sans);color:var(--text-2);margin-top:2px}
-.rb-player{grid-column:1/-1;min-width:0}
-.rb-player audio{display:block;width:100%;height:36px}
-.rb-play{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:var(--primary);color:var(--tertiary);border:0;padding:4px;cursor:pointer;
-  font:700 12px/1 var(--sans);letter-spacing:.06em;text-transform:uppercase}
-.rb-play .radio-playbtn{width:32px;height:32px;border-width:2px}.rb-play .radio-playbtn::after{border-width:6px 0 6px 10px;margin-left:3px}
-.rb-play:hover{background:var(--secondary)}
-.rb-player .btn{width:100%}
-.rb-player.on iframe{display:block;width:100%;height:var(--h);border:0}
-.rb-in>.textbtn{grid-column:1/-1;padding:0;font-size:11px;justify-self:start}
-.mag-stack .radiobar{padding-bottom:20px;border-bottom:1px solid var(--border-subtle)}
-@media (max-width:760px){.mag-stack .radiobar{grid-column:1/-1}}
+
+/* the realistic TV: SVG cabinet with the video laid over its screen (screen box = x38 y72 w242 h164 of 400x330) */
+.tvreal{position:relative;width:100%;aspect-ratio:400/330}
+.tvreal-art{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tvreal-screen{position:absolute;left:9.5%;top:21.82%;width:60.5%;height:49.7%;border-radius:6% / 9%;overflow:hidden;background:#0b0908}
+.tvreal-screen .tv-slide{position:absolute;inset:0}
+.tvreal-screen img,.tvreal-screen iframe,.tvreal-screen .tv-play{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.tvreal-screen img{object-fit:cover;opacity:.92}
+.tvreal-screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 30% 20%,rgba(255,255,255,.12),transparent 55%);box-shadow:inset 0 0 18px rgba(0,0,0,.7)}
+.tvreal-screen .on::after,.tvreal-screen .tv-slide:has(iframe)::after{display:none}
+.tvreal-screen .tv-bars .tv-card{inset:auto 8% 26% 8%;padding:6px 8px;border-width:2px}.tvreal-screen .tv-bars .tv-card b{font-size:13px}.tvreal-screen .tv-bars .tv-card span{font-size:10px}
+.tvreal-knob{position:absolute;left:79.5%;top:23.3%;width:10.5%;aspect-ratio:1;border-radius:50%;border:0;background:transparent;cursor:pointer;padding:0}
+.tvreal-knob:focus-visible{box-shadow:var(--ring)}
 
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,440px);
   background:var(--primary);color:var(--tertiary);padding:8px 16px;border-radius:0;font:600 14px/1.5 var(--sans);text-align:center}
@@ -1983,24 +1971,6 @@ def shelf_order(rails, funds, events):
     return "".join(out) + funds + events  # if a section is empty today, its neighbor still shows, just lower down
 
 
-def tv_latest_episode(feed_url):
-    """Read a podcast RSS feed and return the newest episode's (audio URL, title, artwork)."""
-    try:
-        _, xml = fetch(feed_url, limit=3_000_000)
-    except Exception as exc:
-        note(f"TV: could not read podcast feed ({exc})")
-        return "", "", ""
-    item = re.search(r"<item[\s>].*?</item>", xml, re.S)
-    if not item:
-        return "", "", ""
-    item = item.group(0)
-    audio = re.search(r'<enclosure[^>]+url="([^"]+)"', item)
-    title = re.search(r"<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>", item, re.S)
-    art = re.search(r'<itunes:image[^>]+href="([^"]+)"', item) or re.search(r'<itunes:image[^>]+href="([^"]+)"', xml)
-    return (html.unescape(audio.group(1)) if audio else "", html.unescape(title.group(1).strip()) if title else "",
-            html.unescape(art.group(1)) if art else "")
-
-
 def tv_embed(url):
     """Turn a podcast or video link into (kind, source URL, thumbnail, player height in px).
     kind is "youtube" (16:9 video), "frame" (an audio player from the host), "audio" (a plain audio file) or ""."""
@@ -2090,48 +2060,48 @@ def tv_set(entries):
     nav = (f'<div class="tv-nav"><button class="tv-arrow" type="button" data-step="-1" aria-label="Previous video">&lsaquo;</button>'
            f'<span class="tv-count" aria-live="polite">1 / {n}</span>'
            f'<button class="tv-arrow" type="button" data-step="1" aria-label="Next video">&rsaquo;</button></div>') if n > 1 else ""
-    dial = (f'<button class="tv-dial" type="button" data-step="1" aria-label="Change channel">419</button>' if n > 1
-            else '<span class="tv-dial">419</span>')
-    return f"""<div class="tvcarousel" role="region" aria-roledescription="carousel" aria-label="Station 419 videos">
-<div class="tvset"><div class="tv-ears" aria-hidden="true"><i></i><i></i><b></b></div>
-<div class="tv-body"><div class="tv-bezel"><div class="tv-screen">{"".join(slides)}</div></div>
-<div class="tv-side"><span class="tv-brand" aria-hidden="true">Sunny</span>{dial}<span class="tv-dial sm" aria-hidden="true">VOL</span><span class="tv-grille" aria-hidden="true"></span></div></div>
-<div class="tv-legs" aria-hidden="true"><i></i><i></i></div></div>
+    dial = '<button class="tvreal-knob" type="button" data-step="1" aria-label="Change channel"></button>' if n > 1 else ""
+    return f"""<div class="tvcarousel" role="region" aria-roledescription="carousel" aria-label="Mansfield Creatives videos">
+<div class="tvreal">{TV_SVG}<div class="tvreal-screen">{"".join(slides)}</div>{dial}</div>
 <div class="tv-caprow">{"".join(caps)}{nav}</div></div>"""
 
 
-def radio_bar(cfg, entry):
-    """Station 419 radio: a thin full-width player bar for one local podcast (station.json > radio)."""
-    site = cfg["site_url"].rstrip("/")
-    entry = dict(entry)
-    url = (entry.get("url") or "").strip()
-    art = entry.get("image", "")
-    kind, src, _, height = tv_embed(url)
-    if url.startswith("http") and not kind:  # anything else is treated as a podcast RSS feed
-        audio, ep_title, ep_art = tv_latest_episode(url)
-        if audio:
-            kind, src, art = "audio", audio, art or ep_art
-            entry["title"] = entry.get("title") or ep_title
-    if "open.spotify.com/embed" in src:
-        height = 80  # Spotify's slim player
-    elif "w.soundcloud.com" in src:
-        src, height = src.replace("visual=true", "visual=false"), 120
-    title = e(entry.get("title") or "Your Mansfield podcast here")
-    host = e(entry.get("host") or "")
-    if kind == "frame":
-        player = (f'<div class="rb-player" style="--h:{height}px"><button class="rb-play" type="button" data-radio="{e(src)}" aria-label="Play {title}">'
-                  f'<span class="radio-playbtn"></span><span>Listen</span></button></div>')
-    elif kind == "audio":
-        player = f'<div class="rb-player"><audio controls preload="none" src="{e(src)}" aria-label="{title}"></audio></div>'
-    else:
-        kind = ""
-        player = f'<div class="rb-player"><a class="btn sm" href="{e(site)}/submit.html">Pitch your podcast</a></div>'
-    pic = f'<img src="{e(art)}" alt="" loading="lazy" onerror="this.remove()">' if art else ""
-    status = "Now playing" if kind else "Coming soon"
-    return f"""<section class="radiobar" id="listen" aria-label="Station 419 radio">
-<div class="rb-in"><span class="rb-icon" aria-hidden="true">{pic}<i></i></span>
-<div class="rb-text"><span class="rb-label">Station 419 Radio <b>{status}</b></span><span class="rb-title">{title}{f' <span class="rb-host">{host}</span>' if host else ""}</span></div>
-{player}{station_link(entry, kind, "Listen")}</div></section>"""
+# A realistic 1960s wood-cabinet TV (modeled on a Canva-generated reference). The video sits on top of the screen area.
+TV_SVG = """<svg class="tvreal-art" viewBox="0 0 400 330" aria-hidden="true">
+<defs>
+<linearGradient id="tvWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b5582a"/><stop offset=".5" stop-color="#9a4621"/><stop offset="1" stop-color="#7c3517"/></linearGradient>
+<linearGradient id="tvWalnut" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6e3b1f"/><stop offset="1" stop-color="#4a2411"/></linearGradient>
+<linearGradient id="tvBrass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1d9a0"/><stop offset=".5" stop-color="#c9a15a"/><stop offset="1" stop-color="#a47a3a"/></linearGradient>
+<radialGradient id="tvChrome" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#cfc7bb"/><stop offset="1" stop-color="#6f675d"/></radialGradient>
+<radialGradient id="tvGlass" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="#2a2522"/><stop offset="1" stop-color="#0b0908"/></radialGradient>
+<pattern id="tvGrain" width="400" height="12" patternUnits="userSpaceOnUse"><path d="M0 4 C80 2 160 7 240 4 S360 2 400 5" stroke="#5c2a10" stroke-opacity=".22" fill="none"/><path d="M0 10 C100 8 200 12 300 9 S380 10 400 9" stroke="#e08a52" stroke-opacity=".14" fill="none"/></pattern>
+</defs>
+<g stroke-linecap="round"><line x1="200" y1="44" x2="140" y2="2" stroke="#8d877e" stroke-width="3"/><line x1="200" y1="44" x2="262" y2="4" stroke="#8d877e" stroke-width="3"/>
+<circle cx="140" cy="2" r="3" fill="#d6d0c6"/><circle cx="262" cy="4" r="3" fill="#d6d0c6"/></g>
+<ellipse cx="200" cy="46" rx="22" ry="7" fill="#3a2216"/>
+<path d="M72 282 L58 326 L70 326 L88 282Z M312 282 L330 326 L342 326 L328 282Z" fill="url(#tvWalnut)"/>
+<rect x="14" y="48" width="372" height="236" rx="12" fill="url(#tvWood)"/>
+<rect x="14" y="48" width="372" height="236" rx="12" fill="url(#tvGrain)"/>
+<rect x="14" y="48" width="372" height="236" rx="12" fill="none" stroke="#4a2411" stroke-width="3"/>
+<rect x="24" y="58" width="270" height="216" rx="8" fill="url(#tvWalnut)"/>
+<rect x="32" y="66" width="254" height="176" rx="18" fill="#1b1411" stroke="#2b1a10" stroke-width="2"/>
+<rect x="38" y="72" width="242" height="164" rx="16" fill="url(#tvGlass)"/>
+<rect x="94" y="247" width="130" height="20" rx="2" fill="url(#tvBrass)" stroke="#7a5a28"/>
+<text x="159" y="260.5" text-anchor="middle" font-family="Josefin Sans, Futura, sans-serif" font-weight="700" font-size="8" textLength="116" lengthAdjust="spacingAndGlyphs" fill="#4a2a10">MANSFIELD CREATIVES</text>
+<rect x="302" y="58" width="74" height="216" rx="6" fill="url(#tvWalnut)"/>
+<rect x="308" y="64" width="62" height="204" rx="4" fill="none" stroke="#c9a15a" stroke-opacity=".7"/>
+<circle cx="339" cy="98" r="21" fill="#2c1a10"/><circle cx="339" cy="98" r="17" fill="url(#tvChrome)" stroke="#5a5249"/>
+<g stroke="#e9e2d6" stroke-width="1.2">""" + "".join(
+    f'<line x1="{339 + 23 * __import__("math").cos(a / 6 * 3.1416):.1f}" y1="{98 + 23 * __import__("math").sin(a / 6 * 3.1416):.1f}" '
+    f'x2="{339 + 26 * __import__("math").cos(a / 6 * 3.1416):.1f}" y2="{98 + 26 * __import__("math").sin(a / 6 * 3.1416):.1f}"/>'
+    for a in range(12)) + """</g>
+<rect x="337.5" y="83" width="3" height="10" rx="1" fill="#3a3129"/>
+<circle cx="339" cy="152" r="17" fill="#2c1a10"/><circle cx="339" cy="152" r="13.5" fill="url(#tvChrome)" stroke="#5a5249"/>
+<rect x="337.8" y="140" width="2.4" height="8" rx="1" fill="#3a3129"/>
+<circle cx="324" cy="188" r="6" fill="url(#tvChrome)" stroke="#5a5249"/><circle cx="354" cy="188" r="6" fill="url(#tvChrome)" stroke="#5a5249"/>
+<g stroke="#2a150a" stroke-width="2.4">""" + "".join(f'<line x1="316" y1="{y}" x2="362" y2="{y}"/>' for y in range(208, 262, 6)) + """</g>
+<text x="339" y="131" text-anchor="middle" font-family="Josefin Sans, Futura, sans-serif" font-weight="700" font-size="7" letter-spacing="1" fill="#e9d3a6">CH 419</text>
+</svg>"""
 
 
 def station_section(cfg, station):
@@ -2139,15 +2109,15 @@ def station_section(cfg, station):
     site = cfg["site_url"].rstrip("/")
     tv = station.get("tv") or []
     tv = [tv] if isinstance(tv, dict) else tv
-    pitch = f'<a class="explore" href="{e(site)}/submit.html">Pitch your show <span aria-hidden="true">&rsaquo;</span></a>'
-    return f"""<section class="station" id="station" aria-labelledby="station-h">{section_head("Station 419", pitch, hid="station-h")}
+    pitch = f'<a class="explore" href="{e(site)}/submit.html">Pitch a show <span aria-hidden="true">&rsaquo;</span></a>'
+    return f"""<section class="station" id="station" aria-labelledby="station-h">{section_head("Mansfield Creatives", pitch, hid="station-h")}
 {tv_set(tv)}</section>"""
 
 
 STATION_JS = """<script>/* Station 419: players load only when tapped, so the front page stays fast */
 (()=>{const live=new Map();
-document.addEventListener('click',ev=>{const b=ev.target.closest('[data-tv],[data-radio]');if(!b)return;
- const f=document.createElement('iframe');f.src=b.dataset.tv||b.dataset.radio;f.title=b.getAttribute('aria-label').replace('Play ','');
+document.addEventListener('click',ev=>{const b=ev.target.closest('[data-tv]');if(!b)return;
+ const f=document.createElement('iframe');f.src=b.dataset.tv;f.title=b.getAttribute('aria-label').replace('Play ','');
  f.allow='autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen';f.allowFullscreen=true;
  const box=b.parentNode;live.set(box,box.innerHTML);box.classList.add('on');box.replaceChildren(f)});
 document.querySelectorAll('.tvcarousel').forEach(c=>{const slides=[...c.querySelectorAll('.tv-slide')];const caps=[...c.querySelectorAll('.cap')];
@@ -2179,13 +2149,13 @@ def mid_card(s):
     return f'<article class="midcard">{photo(s)}{kicker(s)}{hed(s)}{meta(s)}</article>'
 
 
-def magazine(cfg, top, also, station="", radio=""):
+def magazine(cfg, top, also, station=""):
     """Front page top: big lead story, a stack of two stories, and an 'Also today' sidebar."""
-    stack, side = also[:2], also[2:6]
+    stack, side = also[:3], also[3:7]
     explore = '<a class="explore" href="#shelves">Explore all <span aria-hidden="true">&rsaquo;</span></a>'
     return (f'<section class="wrap mag"><div class="mag-main">{section_head("Top stories", explore)}'
-            f'<div class="mag-grid">{lead(cfg, top)}<div class="mag-stack">{radio}{"".join(mid_card(s) for s in stack)}</div></div></div>'
-            f'<aside class="mag-side">{section_head("Also today", explore)}<div class="side-briefs">{"".join(brief(s) for s in side)}</div>{station}</aside></section>{STATION_JS}')
+            f'<div class="mag-grid">{lead(cfg, top)}<div class="mag-stack">{"".join(mid_card(s) for s in stack)}</div></div></div>'
+            f'<aside class="mag-side">{station}{section_head("Also today", explore)}<div class="side-briefs">{"".join(brief(s) for s in side)}</div></aside></section>{STATION_JS}')
 
 
 def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=()):
@@ -2206,7 +2176,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     front = ""
     if top:
         st = cfg.get("station") or {}
-        front = magazine(cfg, top, also, station_section(cfg, st), radio_bar(cfg, st.get("radio") or {}))
+        front = magazine(cfg, top, also, station_section(cfg, st))
     grid = "".join(card(cfg, s, front=s["id"] in front_ids) for s in stories)
     ads = ads_for(cfg, "A2")
     ad_at = lambda i: ad_card(cfg, ads[i % len(ads)] if ads else None, i=i // 3)

@@ -1,5 +1,5 @@
 {
-  "_how_to": "Station 419 on the front page. 'tv' is a list of videos shown as a carousel on the sidebar TV (add as many as you like; each needs a url and a title, which is its headline). Video links: YouTube, Vimeo, Facebook, or a pasted <iframe> embed code. 'radio' is ONE podcast in the thin player bar under the top stories: a Spotify, Apple Podcasts, SoundCloud, Buzzsprout, Podbean or Anchor link, a pasted <iframe> embed code, an .mp3 file, or a podcast RSS feed (plays the newest episode). Empty url = 'coming soon'. Optional: 'link' (where 'at the source' goes) and, for the radio, 'image' (cover art).",
+  "_how_to": "Station 419 'Mansfield Creatives' TV on the front page sidebar. 'tv' is a list of videos shown as a carousel (add as many as you like; each needs a url and a title, which is its headline). Video links: YouTube, Vimeo, Facebook, or a pasted <iframe> embed code. Empty url = 'coming soon'. Optional 'link' sets where 'Watch at the source' goes.",
   "tv": [
     {
       "url": "",
@@ -7,12 +7,5 @@
       "host": "Hosted by a Mansfield neighbor",
       "link": ""
     }
-  ],
-  "radio": {
-    "url": "",
-    "title": "Your Mansfield podcast here",
-    "host": "Hosted by a Mansfield neighbor",
-    "image": "",
-    "link": ""
-  }
+  ]
 }
