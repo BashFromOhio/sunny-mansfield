@@ -2644,19 +2644,20 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     events = rail("Local events", "".join(flyer_cards) + (
         f'<a class="slide flyer add" href="{e(site)}/submit.html#flyer"><span class="flyer-img"><span class="plus">+</span></span>'
         f'<span class="hed">Post your flyer</span><span class="dek">Free for community events</span></a>'), rid="events", kind="flyers")
-    funds_rail = (f'<section class="wrap givebox" id="donate"><div class="give"><div class="give-top">'
+    funds_rail = (f'<section class="wrap givebox" id="donate"><div class="rail-head"><h2 class="label">Donate</h2>'
+                  f'<a class="link" href="{e(site)}/fundraisers.html">See all</a></div><div class="give"><div class="give-top">'
                   f'<div><span class="script">Neighbors helping neighbors</span><h2 class="retro sm">Donate to local causes</h2>'
                   f'<p>Medical bills, team trips, fire recovery and special causes shared by people in Richland County.</p></div>'
                   f'<div class="share"><a class="btn solid sm" href="{e(site)}/fundraisers.html">See all {len(funds)}</a>'
                   f'<a class="btn sm" href="{e(site)}/submit.html#fundraiser">Share a fundraiser</a></div></div>'
-                  + rail("Donate", "".join(fund_card(cfg, f) for f in funds[:12])).replace('class="wrap railbox ', 'class="railbox ')
+                  + rail("Fundraisers", "".join(fund_card(cfg, f) for f in funds[:12])).replace('class="wrap railbox ', 'class="railbox ')
                   + f'<p class="give-note">{SHIELD}<span>{FUND_SHORT} <a class="link" href="{e(site)}/fundraisers.html#before-you-give">Read before you give</a></span></p>'
-                  f'</div></section>') if funds else rail("Donate to local causes", first_post(cfg, "funds"), rid="donate", kind="sec")
+                  f'</div></section>') if funds else rail("Donate", first_post(cfg, "funds"), rid="donate", kind="sec")
     market = rail("Free Stuff", "".join(listing_card(x, cfg) for x in listings[:12]) + ad_card(cfg, sale_ads[0] if sale_ads else None, "A7", i=1),
                   f'<a class="link" href="{e(site)}/free.html">See all</a>', kind="sales") if listings else rail("Free Stuff", first_post(cfg, "free"), kind="sales")
-    market += funds_rail  # Donate sits right under Free Stuff
     market += rail("Now hiring", "".join(job_card(cfg, j, slide=True) for j in jobs[:12]),
                    f'<a class="link" href="{e(site)}/jobs.html">See all</a>', kind="jobs") if jobs else rail("Now hiring", first_post(cfg, "jobs"), kind="jobs")
+    market += funds_rail  # Donate sits under Now hiring, near the bottom
     home = {"@context": "https://schema.org", "@graph": [
         publisher(cfg),
         {"@type": "WebSite", "@id": f"{site}/#site", "name": cfg["site_name"], "url": f"{site}/", "inLanguage": "en-US",
