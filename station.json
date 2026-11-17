@@ -1,5 +1,5 @@
 {
-  "_how_to": "Station 419 'Mansfield Creatives' TV on the front page sidebar. 'tv' is a list of videos shown as a carousel (add as many as you like; each needs a url and a title, which is its headline). Video links: YouTube, Vimeo, Facebook, or a pasted <iframe> embed code. Empty url = 'coming soon'. Optional 'link' sets where 'Watch at the source' goes.",
+  "_how_to": "Watch Mansfield on the front page: 'tv' is a list of videos that rotate every 10 seconds in the top-right hero spot. Each needs a url and a title (its headline); 'host' is optional. Video links: YouTube, Vimeo, Facebook, or a pasted <iframe> embed code. Optional 'link' sets where the headline goes.",
   "tv": [
     {
       "url": "",

@@ -69,15 +69,14 @@ refresh (every 15 minutes). Verified contributors who sign in skip the queue. Se
 
 ## Quote of the day
 
-`quotes.csv` feeds the "Mansfield quote of the day" box next to the top banner, the shareable `quote.html` page and
-`quote.jpg` image, and `quotes.xml`, which posts a framed quote image to Facebook twice a day. Columns are `quote`,
+`quotes.csv` feeds the Facebook quote of the day only (it is not shown on the site): the `quote.jpg` image and `quotes.xml`, which posts a framed quote image to Facebook twice a day. Columns are `quote`,
 `author`, an optional `date` and optional `Suggested Hashtags`. The quote changes at 8 a.m. and 8 p.m. Eastern,
 walking down the list in date order (file order if there are no dates), and starts over at the end.
 
-## Station 419 (Mansfield Creatives TV)
-The front page sidebar opens with the Station 419 TV, titled "Mansfield Creatives": a carousel of local videos.
-Edit `station.json`: `tv` is a list, and each entry has `url`, `title` (shown as its headline) and `host`.
-Readers flip channels with the arrows or the 419 dial. Links can be YouTube (watch, youtu.be, shorts, live), Vimeo,
-Facebook video, or a pasted `<iframe>` video embed code. An empty list or url shows "Coming soon". Optional `link`
-sets where "Watch at the source" goes. Videos load only when a reader taps Play, so the page stays fast, and
-YouTube uses its privacy-friendly player.
+## Watch Mansfield (local videos)
+The top-right spot of the front page hero is "Watch Mansfield": local videos that rotate every 10 seconds (an orange
+bar along the bottom is the timer; it pauses while a reader hovers, and stops while a video plays). Edit
+`station.json`: `tv` is a list, and each entry has `url`, `title` (shown as its headline) and `host`. Links can be
+YouTube (watch, youtu.be, shorts, live), Vimeo, Facebook video, or a pasted `<iframe>` video embed code. YouTube videos
+show their thumbnail. Videos load only when a reader taps Play, and YouTube uses its privacy-friendly player. Optional
+`link` sets where the headline goes. With no video links, the spot shows a regular story instead.
