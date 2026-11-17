@@ -80,6 +80,22 @@ Supabase function through Resend, like private replies (step 7), so finish step 
 Codes come from `hello@sunnymansfield.com` and work for 15 minutes. Each shout-out can get 3 codes and 5 tries per code.
 Shout-outs nobody confirms never reach the queue and are deleted after 2 days.
 
+## 9. Make admin changes show right away (optional, about 5 minutes)
+
+Without this, the site picks up approvals, take-downs and deletes on its regular refresh, every 15 minutes
+(GitHub sometimes runs it a little late). With it, the admin page asks for a rebuild and changes show in about 2 minutes.
+
+1. On GitHub, open **Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token**.
+   Name it `sunny-rebuild`, pick an expiration, and under **Repository access** choose **Only select repositories →
+   sunny-mansfield**. Under **Permissions → Repository permissions**, set **Actions** to **Read and write**. Click
+   **Generate token** and copy it.
+2. In Supabase, go to **Edge Functions → Secrets** and add `GH_ACTIONS_TOKEN` with that token.
+3. Go to **Edge Functions → Deploy a new function → Via Editor**. Name it exactly `rebuild`, paste all of
+   `supabase/functions/rebuild/index.ts`, and deploy. Leave **Verify JWT** on.
+4. Test it: approve or take down a post on the admin page. A few seconds later it says "Updating the site now".
+
+Only signed-in admins can start a rebuild.
+
 ## How it works day to day
 
 - **Waiting**: new posts. Choose **Approve** or **Reject**. **Approve and verify sender** also adds the sender to the verified list.

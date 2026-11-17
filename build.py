@@ -1057,6 +1057,7 @@ footer .credit .legal.towns{font-weight:400;opacity:.85}
 .bday-from{margin:0;color:var(--text-2)}
 .bdays .bday-card{height:100%;box-sizing:border-box;text-align:center}
 .bdays .rail{padding:6px 4px 22px;margin:-6px -4px -18px}
+.bdays .rail:focus,.bdays .rail:focus-visible{outline:none;box-shadow:none}
 .bday-card.add{background:var(--secondary);color:var(--tertiary);text-decoration:none;align-content:center}
 .bday-card.add .kicker,.bday-card.add .bday-from{color:var(--tertiary)}
 .bday-card.add .plus{width:56px;height:56px;border-radius:50%;background:var(--tertiary);color:var(--secondary);display:grid;place-items:center;font:700 34px/1 var(--sans)}
@@ -4004,7 +4005,11 @@ document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q
   if(!error&&m)await sb.storage.from('photos').remove([decodeURIComponent(m[1])])}}
  else{{if(act==='verify-approve'&&row.email){{({{error}}=await sb.from('verified').upsert({{email:row.email.toLowerCase(),name:row.name,role:row.role}}));}}
   if(!error)(({{error}}=await sb.from('submissions').update({{status:act==='reject'?'rejected':'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',id)));}}
- if(error){{say(error.message);b.disabled=false;return}}say(act==='reject'?'Done. It will not appear on the site.':act==='delete'?'Deleted.':b.closest('.qitem').querySelector('.kicker').textContent==='Birthday'?'Approved. It will show on their birthday (and on Facebook that morning).':'Approved. It will be on the site within 20 minutes.');load()}});
+ if(error){{say(error.message);b.disabled=false;return}}say(act==='reject'?'Done. It will not appear on the site.':act==='delete'?'Deleted.':b.closest('.qitem').querySelector('.kicker').textContent==='Birthday'?'Approved. It will show on their birthday (and on Facebook that morning).':'Approved. It will be on the site within 20 minutes.');rebuild();load()}});
+// Ask the site to rebuild now (the "rebuild" function), a few seconds after the last change, so approvals,
+// take-downs and deletes show in about 2 minutes. Without the function the regular 15-minute refresh still runs.
+let rbT;function rebuild(){{clearTimeout(rbT);rbT=setTimeout(async()=>{{const {{error}}=await sb.functions.invoke('rebuild');
+ if(!error)say('Updating the site now. Changes show in about 2 minutes.')}},8000)}}
 function newBracket(){{$('b-form').reset();$('b-id').value='';$('b-head').textContent='New bracket'}}
 $('b-new').onclick=newBracket;
 $('l-form').onsubmit=async ev=>{{ev.preventDefault();const m=$('l-msg');let url=$('l-url').value.trim();
