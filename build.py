@@ -1028,15 +1028,20 @@ footer .credit .legal.towns{font-weight:400;opacity:.85}
 .bday-head .script{margin-bottom:4px}
 .bday-head .muted{margin:8px 0 0}
 .bday-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:16px;width:100%}
-.bday-card{background:#fffdf8;border:2px solid var(--border-medium);border-top:4px solid var(--secondary);padding:20px 18px;display:grid;gap:8px;justify-items:center;align-content:start}
-.bday-cake{color:var(--secondary);line-height:0}.bday-cake svg{width:40px;height:40px}
+.bday-card{background:linear-gradient(160deg,#fffaf2 0%,#fde9d6 100%);border:0;border-radius:18px;padding:28px 22px 26px;display:grid;gap:10px;justify-items:center;align-content:start;
+  box-shadow:0 10px 30px -14px rgba(120,52,16,.35);transition:transform .2s ease,box-shadow .2s ease}
+.bday-card:hover{transform:translateY(-3px);box-shadow:0 16px 36px -14px rgba(120,52,16,.45)}
+.bday-cake{width:56px;height:56px;border-radius:50%;background:var(--secondary);color:var(--tertiary);display:grid;place-items:center;line-height:0}
+.bday-cake svg{width:30px;height:30px}
+.bday-card .kicker{color:var(--secondary);letter-spacing:.16em}
 .bday-name{font:700 clamp(24px,3vw,30px)/1.15 var(--serif);margin:0;overflow-wrap:anywhere}
 .bday-msg{font:italic 400 16px/1.55 var(--serif);margin:0;color:var(--text);overflow-wrap:anywhere}
 .bday-from{margin:0;color:var(--text-2)}
 .bdays .bday-card{height:100%;box-sizing:border-box;text-align:center}
-.bday-card.add{border-style:dashed;border-top-style:solid;text-decoration:none;align-content:center}
-.bday-card.add .plus{font:700 56px/1 var(--serif);color:var(--secondary)}
-.bday-card.add:hover{border-color:var(--secondary)}
+.bdays .rail{padding:6px 4px 22px;margin:-6px -4px -18px}
+.bday-card.add{background:var(--secondary);color:var(--tertiary);text-decoration:none;align-content:center}
+.bday-card.add .kicker,.bday-card.add .bday-from{color:var(--tertiary)}
+.bday-card.add .plus{width:56px;height:56px;border-radius:50%;background:var(--tertiary);color:var(--secondary);display:grid;place-items:center;font:700 34px/1 var(--sans)}
 .bday-acts{justify-content:center;width:100%}.bday-acts .btn{flex:0 1 280px}
 .bday-date{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px}
 .bday-extra{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;padding:16px;background:var(--surface)}
