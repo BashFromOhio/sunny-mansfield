@@ -556,7 +556,7 @@ def add_photos(stories, limit=80):
 
 e = lambda s: html.escape(str(s), quote=True)
 FONTS = ("https://fonts.googleapis.com/css2?family=Yellowtail&family=Libre+Caslon+Text:wght@400;700"
-         "&family=Libre+Franklin:wght@400;500;600;700&family=Josefin+Sans:wght@600;700&display=swap")
+         "&family=Libre+Franklin:wght@400;500;600;700;800&family=Josefin+Sans:wght@600;700&display=swap")
 BRAND = HERE / "brand"
 
 # Sunny Mansfield design system: flat, sharp, bordered; brown ink, one orange accent, cream paper. Light in every theme.
@@ -1182,6 +1182,116 @@ button.tv-dial{cursor:pointer;padding:0}button.tv-dial:hover,button.tv-dial:focu
 .tvreal-knob{position:absolute;left:83%;top:28.4%;width:9.6%;aspect-ratio:1;border-radius:50%;border:0;background:transparent;cursor:pointer;padding:0}
 .tvreal-knob:focus-visible{box-shadow:var(--ring)}
 
+/* ===== NewsFlash structure, Sunny orange accent (2026) ===== */
+:root{--primary:#141414;--text:#1b1b1b;--text-2:#5a5a5a;--text-3:#8c8c8c;--tertiary:#fff;--surface:#f3f3f3;--surface-raised:#e9e9e9;
+  --border-subtle:#e6e6e6;--border-medium:#d4d4d4;--border-strong:#141414}
+html{background:#fff}html::before{display:none}
+.sheet,.sheet:is(*){max-width:none;margin:0;border:0;background:#fff}
+@media (max-width:1264px){.sheet{margin:0}}@media (max-width:600px){.sheet{margin:0;background:#fff}}
+.wrap{max-width:1200px;margin-inline:auto;box-sizing:border-box}
+.stripes{height:4px;background:var(--secondary)}
+.photo img{filter:none}
+.hed{font-family:var(--sans);font-weight:800;letter-spacing:-.01em}
+.kicker{color:var(--secondary)}
+.topbar{background:var(--primary);color:#fff}
+.topbar-in{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:8px;font-size:10.5px}
+.topbar-mid{opacity:.7}
+.topshare{display:flex;align-items:center;gap:6px;color:#fff;text-decoration:none}.topshare svg{width:12px;height:12px;fill:currentColor}
+.topshare:hover{color:var(--secondary)}
+.plate{display:grid;grid-template-columns:minmax(220px,340px) minmax(0,728px);justify-content:space-between;align-items:center;gap:32px;padding-block:22px}
+.plate-ad .adrow{padding:0}.plate-ad .adbanner{min-height:90px;max-width:728px}
+.plate-ad .adbanner.promo{padding:14px 20px}
+.plate-ad .adbanner.promo .retro{font-size:22px}
+.navbar{border-block:1px solid var(--border-subtle);box-shadow:0 2px 0 rgba(0,0,0,.03)}
+.navbar .strip{display:flex;justify-content:space-between;align-items:stretch;flex-wrap:nowrap;gap:12px;padding-block:0}
+.navbar .navgroup{display:flex;align-items:stretch;gap:0;overflow-x:auto;scrollbar-width:none}
+.navbar .navgroup a,.navbar .navbtn{display:flex;align-items:center;padding:15px 13px 13px;color:var(--text);font-size:11.5px}
+.navbar .navgroup a:hover,.navbar .navbtn:hover{color:var(--secondary)}
+.navbar .navgroup a.on{background:var(--secondary);color:#fff}
+.navbar .navcta{align-self:center;background:var(--primary);color:#fff;padding:9px 14px 8px;white-space:nowrap;text-decoration:none}
+.navbar .navcta:hover{background:var(--secondary);color:#fff}
+.ticker{display:flex;align-items:stretch;gap:0;margin-block:20px 0;background:none;color:var(--text)}
+.ticker>*{border-block:1px solid var(--border-subtle)}
+.tick-label{flex:none;display:flex;align-items:center;margin:0;padding:0 16px;background:var(--secondary);color:#fff;border:0;
+  font:700 12px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase}
+.tick-label::before{display:none}
+.tick-list{flex:1;min-width:0;list-style:none;margin:0;padding:0 16px;position:relative;border-left:0}
+.tick-list li{display:none}.tick-list li.on{display:block;animation:tickin .35s ease}
+.tick-list a{display:flex;align-items:center;gap:10px;padding:11px 0 10px;color:var(--text);text-decoration:none;font:600 14px/1.3 var(--sans);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tick-list a:hover{color:var(--secondary)}
+.tick-tag{flex:none;background:none;color:var(--text-3);font:700 10px/1 var(--caps);letter-spacing:.1em;text-transform:uppercase;padding:0}
+.tick-nav{display:flex;border-left:0}
+.tick-nav button{width:36px;border:1px solid var(--border-subtle);border-block:0;background:#fff;color:var(--text);font-size:20px;line-height:1;cursor:pointer}
+.tick-nav button+button{border-left:0}
+.tick-nav button:hover{background:var(--secondary);color:#fff;border-color:var(--secondary)}
+@keyframes tickin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.tick-list li.on{animation:none}}
+.hero{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:4px;padding-block:20px 8px}
+.hero.solo{grid-template-columns:1fr}
+.hero-side{display:grid;grid-template-rows:1fr 1fr;gap:4px}
+.ov{position:relative;overflow:hidden;background:#222;min-height:0}
+.ov.big{aspect-ratio:16/10}
+.ov .photo{position:absolute;inset:0;aspect-ratio:auto;height:100%}
+.ov .photo img{transition:transform .6s ease}.ov:hover .photo img{transform:scale(1.04)}
+.ov-text{position:absolute;inset:auto 0 0;display:grid;justify-items:start;gap:8px;padding:70px 22px 18px;color:#fff;pointer-events:none;
+  background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.82))}
+.ov-text a{pointer-events:auto}
+.ov .kicker{background:var(--secondary);color:#fff;padding:5px 8px 3px}
+.ov .hed{margin:0;color:#fff;font-size:clamp(16px,1.6vw,20px);line-height:1.2;text-wrap:balance}
+.ov.big .hed{font-size:clamp(22px,3vw,36px);line-height:1.1}
+.ov-meta{font:500 12px/1.3 var(--sans);opacity:.85}
+.nf{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:40px;padding-block:28px 12px}
+.nf-col,.nf-side{display:grid;gap:12px;align-content:start}
+.nf-side{gap:20px}
+.mag-head{align-items:center;border-bottom:1px solid var(--border-subtle);margin-bottom:6px;padding-bottom:10px}
+.mag-label{background:none;color:var(--text);border-left:4px solid var(--secondary);padding:2px 0 0 10px;
+  font:800 19px/1.1 var(--sans);letter-spacing:-.01em;text-transform:none}
+.explore{color:var(--text-2)}.explore:hover{color:var(--secondary)}
+.mag-head .sections{position:static;background:none;border:0;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;min-width:0}
+.mag-head .sections .tab{border:0;background:none;padding:4px 8px;font:600 12px/1.2 var(--sans);text-transform:none;letter-spacing:0;color:var(--text-2);white-space:nowrap;box-shadow:none}
+.mag-head .sections .tab .n{display:none}
+.mag-head .sections .tab:hover,.mag-head .sections .tab[aria-pressed="true"]{color:var(--secondary);box-shadow:none}
+.trend{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px;margin-bottom:28px}
+.tcard{display:grid;gap:8px;align-content:start}
+.tcard .hed{margin:4px 0 0;font-size:24px;line-height:1.15}
+.tcard .dek{margin:0;color:var(--text-2);font-size:15px;line-height:1.6}
+.trend-list,.side-list{display:grid;gap:16px;align-content:start}
+.thumb{display:grid;grid-template-columns:104px minmax(0,1fr);gap:14px;align-items:start}
+.thumb .photo{aspect-ratio:4/3}
+.thumb>div{display:grid;gap:4px}
+.thumb .kicker{font-size:10px}
+.thumb .hed{margin:0;font-size:15px;line-height:1.3}
+.tdate{font:500 12px/1.2 var(--sans);color:var(--text-3)}
+.around{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.around .midcard{display:grid;gap:8px;align-content:start}
+.around .hed{margin:0;font-size:17px;line-height:1.25}
+.nf-side .side-list .thumb{grid-template-columns:84px minmax(0,1fr)}
+.nf-side .qotd{margin:0}
+footer{background:var(--primary)!important}
+.btn.solid{background:var(--secondary);border-color:var(--secondary)}
+@media (max-width:980px){.nf{grid-template-columns:1fr}.nf-side{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start}}
+@media (max-width:760px){
+  .plate{grid-template-columns:1fr;justify-items:center;gap:14px;padding-block:16px}.plate .logo{width:min(300px,80%)}
+  .topbar-mid{display:none}
+  .hero{grid-template-columns:1fr}.hero-side{grid-template-rows:none;grid-template-columns:1fr 1fr}
+  .ov.big{aspect-ratio:4/3}.hero-side .ov{aspect-ratio:1}.hero-side .ov-text{padding:40px 12px 12px}.hero-side .ov .hed{font-size:15px}
+  .hero-side .ov-meta{display:none}
+  .trend{grid-template-columns:1fr}.around{grid-template-columns:1fr}
+  .mag-head{flex-wrap:wrap}
+  .navbar .navcta{display:none}}
+body{margin:0}
+.nf>*,.nf-col>*,.nf-side>*,.hero>*{min-width:0}
+.navbar .strip{border:0}
+.navbar .navgroup{flex-wrap:nowrap;justify-content:flex-start}
+.navbar .navgroup a,.navbar .navbtn{padding-inline:11px}
+.mag-head .sections{flex:0 1 auto}
+.plate-ad .adbanner.promo .ptext{gap:4px}.plate-ad .adbanner.promo .script{display:block;line-height:1.25;font-size:20px}
+@media (max-width:760px){.navbar .wrap.strip{padding-inline:0}.navbar .navgroup{padding-inline:8px}
+  .plate-ad{width:100%}.plate-ad .adbanner.promo{min-height:0;padding:12px 14px;flex-wrap:wrap;justify-content:center;gap:10px}.plate-ad .adbanner.promo .ptext{justify-items:center;text-align:center}.plate-ad .adbanner.promo .adtext{display:none}
+  .plate-ad .adbanner.promo .retro{font-size:19px}.plate-ad .adbanner.promo .script{font-size:16px}.plate-ad .btn{white-space:nowrap}}
+@media (max-width:480px){.ticker .tick-tag{display:none}.tick-label{padding:0 10px;font-size:11px}}
+
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,440px);
   background:var(--primary);color:var(--tertiary);padding:8px 16px;border-radius:0;font:600 14px/1.5 var(--sans);text-align:center}
 """
@@ -1454,26 +1564,26 @@ def top_row(cfg, quote):
     return f'<div class="wrap toprow{"" if ad else " solo"}">{ad}{quote_card(cfg, quote)}</div>'
 
 
-def masthead(cfg, site, stories, quote=None):
+def masthead(cfg, site, stories, quote=None, current=""):
     today = datetime.now(timezone.utc).strftime("%A, %B %-d, %Y")
+    on = lambda key: ' class="on" aria-current="page"' if key == current else ""
+    ad = banner(cfg, "A1").replace('class="wrap adrow"', 'class="adrow"', 1)
     return f"""<header>
+<div class="topbar"><div class="wrap topbar-in"><span class="caps">{today}</span>
+<span class="caps topbar-mid">{len(stories)} good stories this week · Free · Updated all day</span>
+<a class="caps topshare" href="{e(fb_share(site + '/'))}" target="_blank" rel="noopener">{FB_ICON}Share the paper</a></div></div>
 <div class="wrap plate">
-<div class="ear"><span class="caps">{today}</span><span class="caps muted">{len(stories)} good stories this week</span>
-<span class="caps muted">Free · Updated all day</span></div>
 <a class="logo" href="{e(site)}/" aria-label="{e(cfg['site_name'])} home">{logo("logo-retro.svg")}</a>
-<div class="ear right"><span class="caps motto">Good news for all seasons<br>Mansfield &amp; Richland County, Ohio</span>
-<a class="btn fb sm" href="{e(fb_share(site + '/'))}" target="_blank" rel="noopener">{FB_ICON}Share the paper</a></div>
-<span class="caps motto mobile">Good news for all seasons · Mansfield &amp; Richland County, Ohio</span>
+<div class="plate-ad">{ad}</div>
 </div>
-<nav class="wrap strip caps" aria-label="Main">
-<div class="navgroup"><span class="navlabel">Read</span><a href="{e(site)}/">Front page</a><a href="{e(site)}/events.html">Events</a><a href="{e(site)}/#station">Station 419</a>
+<nav class="navbar" aria-label="Main"><div class="wrap strip caps">
+<div class="navgroup"><a href="{e(site)}/"{on("front")}>Front page</a><a href="{e(site)}/events.html">Events</a><a href="{e(site)}/#station">Station 419</a>
 <a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/fundraisers.html">Fundraisers</a>
-<a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/businesses.html">Businesses</a></div>
-<div class="navgroup"><span class="navlabel">Take part</span><button class="navbtn" type="button" data-about>About</button>
-<a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}
+<a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/businesses.html">Businesses</a>
+<button class="navbtn" type="button" data-about>About</button>
+<a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}</div>
 <a class="navcta" href="{e(site)}/submit.html">Submit news</a></div></nav>
 </header>
-{top_row(cfg, quote)}
 <aside class="about" id="about" role="dialog" aria-labelledby="about-h" hidden>
 <button class="close" type="button" data-about-close aria-label="Close">&times;</button>
 <span class="script">Welcome, neighbor!</span><h2 class="hed" id="about-h">Why Sunny Mansfield?</h2>
@@ -2107,26 +2217,62 @@ def section_head(title, link="", tag="h2", hid=""):
 
 
 def ticker(stories):
-    """The 'Good news now' strip: newest headlines scrolling under the section tabs (pauses on hover and for reduced motion)."""
+    """The 'Good news' flash bar: one headline at a time behind an orange label, with back and next arrows."""
     if not stories:
         return ""
-    items = "".join(f'<a href="{e(s["link"])}"{target(s)}><span class="tick-tag">{e(SECTION_NAMES[s["section"]])}</span>{e(s["title"])}</a>'
-                    for s in stories)
-    return (f'<div class="ticker" role="region" aria-label="Good news now"><div class="wrap ticker-in"><span class="tick-label">Good news now</span>'
-            f'<div class="tick-viewport"><div class="tick-track">{items}<span class="tick-dup" aria-hidden="true">{items}</span></div></div></div></div>')
+    ON = ' class="on"'
+    items = "".join(f'<li{"" if i else ON}><a href="{e(s["link"])}"{target(s)}><span class="tick-tag">{e(SECTION_NAMES[s["section"]])}</span>'
+                    f'{e(s["title"])}</a></li>' for i, s in enumerate(stories))
+    return (f'<div class="wrap ticker" role="region" aria-label="Good news now"><span class="tick-label">Good news</span>'
+            f'<ul class="tick-list">{items}</ul><div class="tick-nav"><button type="button" data-tick="-1" aria-label="Previous headline">&lsaquo;</button>'
+            f'<button type="button" data-tick="1" aria-label="Next headline">&rsaquo;</button></div></div>')
+
+
+TICKER_JS = """<script>(()=>{const t=document.querySelector('.ticker');if(!t)return;const li=[...t.querySelectorAll('.tick-list li')];let i=0,timer;
+const go=d=>{li[i].classList.remove('on');i=(i+d+li.length)%li.length;li[i].classList.add('on')};
+t.querySelectorAll('[data-tick]').forEach(b=>b.addEventListener('click',()=>{go(+b.dataset.tick);start()}));
+const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function start(){clearInterval(timer);if(!calm&&li.length>1)timer=setInterval(()=>go(1),5000)}
+t.addEventListener('mouseenter',()=>clearInterval(timer));t.addEventListener('mouseleave',start);
+t.addEventListener('focusin',()=>clearInterval(timer));start()})()</script>"""
+
+
+def overlay(s, big=False):
+    """A photo card with the section tag and headline laid over the picture."""
+    return (f'<article class="ov{" big" if big else ""}">{photo(s)}<div class="ov-text">{kicker(s)}{hed(s, "h2" if big else "h3")}'
+            f'<span class="ov-meta">{e(s["source"])} · {ago(s["date"])}</span></div></article>')
+
+
+def hero(top, two):
+    side = f'<div class="hero-side">{"".join(overlay(s) for s in two)}</div>' if two else ""
+    return f'<section class="wrap hero{"" if two else " solo"}">{overlay(top, True)}{side}</section>'
+
+
+def thumb(s):
+    return f'<article class="thumb">{photo(s)}<div>{kicker(s)}{hed(s)}<span class="tdate">{ago(s["date"])}</span></div></article>'
+
+
+def trend_card(s):
+    dek = f'<p class="dek">{e(s["summary"])}</p>' if s["summary"] else ""
+    return f'<article class="tcard">{photo(s)}{kicker(s)}{hed(s)}{meta(s)}{dek}</article>'
 
 
 def mid_card(s):
     return f'<article class="midcard">{photo(s)}{kicker(s)}{hed(s)}{meta(s)}</article>'
 
 
-def magazine(cfg, top, also, station=""):
-    """Front page top: big lead story, a stack of two stories, and an 'Also today' sidebar."""
-    stack, side = also[:3], also[3:7]
+def magazine(cfg, top, also, station="", tabs="", quote=None):
+    """Front page, NewsFlash style: a three-photo hero, then 'Trending today' and 'Around Richland County'
+    beside a sidebar with the Mansfield Creatives TV, the quote of the day and recent news."""
+    two, big, lst, row, side = also[:2], also[2:3], also[3:7], also[7:10], also[10:14]
     explore = '<a class="explore" href="#shelves">Explore all <span aria-hidden="true">&rsaquo;</span></a>'
-    return (f'<section class="wrap mag"><div class="mag-main">{section_head("Top stories", explore)}'
-            f'<div class="mag-grid">{lead(cfg, top)}<div class="mag-stack">{"".join(mid_card(s) for s in stack)}</div></div></div>'
-            f'<aside class="mag-side">{station}{section_head("Also today", explore)}<div class="side-briefs">{"".join(brief(s) for s in side)}</div></aside></section>{STATION_JS}')
+    filters = f'<nav class="sections" aria-label="Sections">{tabs}</nav>' if tabs else explore
+    trend = (f'{section_head("Trending today", filters)}<div class="trend">{trend_card(big[0])}'
+             f'<div class="trend-list">{"".join(thumb(s) for s in lst)}</div></div>') if big else ""
+    around = (f'{section_head("Around Richland County", explore)}<div class="around">{"".join(mid_card(s) for s in row)}</div>') if row else ""
+    recent = f'{section_head("Recent news")}<div class="side-list">{"".join(thumb(s) for s in side)}</div>' if side else ""
+    return (f'{hero(top, two)}<section class="wrap nf"><div class="nf-col">{trend}{around}</div>'
+            f'<aside class="nf-side">{station}{quote_card(cfg, quote)}{recent}</aside></section>{STATION_JS}{TICKER_JS}')
 
 
 def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=()):
@@ -2137,7 +2283,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     pick = pinned(news, headlines)
     if pick:
         news = [pick] + [s for s in news if s is not pick]
-    top, also = (news[0], news[1:8]) if news else (None, [])
+    top, also = (news[0], news[1:15]) if news else (None, [])
     front_ids = {s["id"] for s in ([top] if top else []) + also}
     counts = {k: sum(1 for s in stories if s["section"] == k) for k, _ in SECTIONS}
     tabs = f'<button class="tab" type="button" data-sec="all">All <span class="n">{len(stories)}</span></button>' + "".join(
@@ -2147,7 +2293,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     front = ""
     if top:
         st = cfg.get("station") or {}
-        front = magazine(cfg, top, also, station_section(cfg, st))
+        front = magazine(cfg, top, also, station_section(cfg, st), tabs, quote)
     grid = "".join(card(cfg, s, front=s["id"] in front_ids) for s in stories)
     ads = ads_for(cfg, "A2")
     ad_at = lambda i: ad_card(cfg, ads[i % len(ads)] if ads else None, i=i // 3)
@@ -2197,8 +2343,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
                  "Positive local news from Mansfield, Ontario, Lexington, Shelby, Bellville and all of Richland County, Ohio: "
                  "community wins, local business, high school sports, events, free stuff and local jobs.", site + '/', data=home)}
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
-{masthead(cfg, site, stories, quote)}
-<nav class="sections" aria-label="Sections"><div class="wrap">{tabs}</div></nav>
+{masthead(cfg, site, stories, quote, current="front")}
 <main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{ticker(news[:10])}{front}
 {civic(cfg, businesses)}
 <div id="shelves">{shelf_order(rails, funds_rail, events)}</div>
