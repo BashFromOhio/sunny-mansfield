@@ -1246,6 +1246,15 @@ a.wu-ts:hover{background:var(--secondary)}
 .watch-row:hover .hed{color:var(--secondary)}
 @media (max-width:980px){.watch-layout{grid-template-columns:minmax(0,1fr)}.watch-aside{position:static}}
 @media (max-width:600px){.wu-card{padding:18px 16px 14px}.watch-row{grid-template-columns:120px minmax(0,1fr)}}
+.story-layout .photo{aspect-ratio:16/9}
+.story-layout .photo img{object-fit:cover}
+.story-layout .wu-body .readfull{display:grid;gap:12px;justify-items:start;margin-top:6px;padding-top:16px;border-top:1px solid var(--border-medium);color:var(--text-2);font-size:15px}
+.story-facts{display:flex;flex-wrap:wrap;gap:0;margin:0;border:1px solid var(--border-subtle)}
+.story-facts div{flex:1 1 140px;padding:12px 16px;border-right:1px solid var(--border-subtle)}.story-facts div:last-child{border-right:0}
+.story-facts dt{font:700 10px/1.4 var(--caps);letter-spacing:.14em;text-transform:uppercase;color:var(--secondary)}
+.story-facts dd{margin:2px 0 0;font:700 17px/1.3 var(--sans)}
+.story-note{margin:0;font-size:14px;color:var(--text-2)}
+.story-layout .watch-meta .tag{color:var(--secondary)}
 footer{background:var(--primary)!important}
 .btn.solid{background:var(--secondary);border-color:var(--secondary)}
 @media (max-width:980px){.nf{grid-template-columns:1fr}.nf-side{grid-template-columns:repeat(auto-fit,minmax(280px,1fr));align-items:start}}
@@ -3616,32 +3625,67 @@ $('v-add').onclick=async()=>{{const em=$('v-email').value.trim().toLowerCase();i
 
 
 def render_story_page(cfg, s, stories):
+    """A story page, laid out like the Watch Mansfield episode pages: photo or video, headline, byline and date,
+    Share buttons, then the story in a card (neighbors' posts are formatted like the episode write-ups: section
+    labels, bullet lists, links), with 'More good news' beside it. Rebuilt every run, so old and new posts match."""
     site = cfg["site_url"].rstrip("/")
-    desc = s["summary"] or f"Good news from {cfg['site_name']}"
     image = s["image"] if (s.get("image") or "").startswith("https://") else None
-    # Celebrations of Life only sit next to each other; every other story page shows other good news.
-    same = [o for o in stories if o is not s and (o["section"] == "life") == (s["section"] == "life")]
-    more = "".join(card(cfg, o) for o in same[:3])
     life = s["section"] == "life"
-    media = None
+    # Celebrations of Life only sit next to each other; every other story page shows other good news.
+    same = [o for o in stories if o is not s and (o["section"] == "life") == life]
+    media = ""
     if s.get("video"):
         media = (f'<div class="photo video"><iframe src="https://www.youtube-nocookie.com/embed/{e(s["video"])}" title="{e(s["title"])}" '
                  f'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>')
     elif s.get("community") and "/s/" in s["link"] and s.get("image"):
         src = s["image"] if s["image"].startswith("https://") else "/" + s["image"]
         media = (f'<span class="photo"><img src="{e(src)}" alt="" referrerpolicy="no-referrer"></span>')  # plain photo, no link to its Supabase storage address
+    elif s.get("image"):
+        media = photo(s)
+    section = SECTION_NAMES.get(s["section"], "Celebrations of Life" if life else "Good News")
+    by = f'By {e(s["source"])}' if s.get("community") else e(s["source"])
+    bits = [by] + ([e(s["role"])] if s.get("community") and s.get("role") else []) + [s["date"].strftime("%B %-d, %Y")]
+    facts = s.get("athlete") or {}
+    facts_html = ('<dl class="story-facts">' + "".join(f"<div><dt>{e(k)}</dt><dd>{e(v)}</dd></div>" for k, v in facts.items() if v)
+                  + "</dl>") if facts else ""
+    if s.get("community") and s.get("body"):
+        story = format_writeup("\n".join(s["body"]))
+        card_head = "The story"
+    else:
+        story = f"<p>{linkify(s['summary'])}</p>" if s["summary"] else ""
+        card_head = "In brief"
+        if s.get("link") and not s.get("community"):
+            # Outside news: the feed only gives a short excerpt and we can't republish the article, so point to it clearly.
+            story += (f'<div class="readfull"><span>This is a short preview from {e(s["source"])}.</span>'
+                      f'<a class="btn solid" href="{e(s["link"])}" target="_blank" rel="noopener">Read the full story at {e(s["source"])} &rarr;</a></div>')
+    extra = ""
+    if s.get("community") and s.get("more"):
+        extra = f'<a class="btn" href="{e(s["more"])}" target="_blank" rel="noopener nofollow ugc">Read more</a>'
+    url = page_url(cfg, s)
+    rows = "".join(thumb(o) for o in same[:6])
+    aside = (f'<aside class="watch-aside">{section_head("More Celebrations of Life" if life else "More good news")}<div class="side-list">{rows}</div>'
+             f'<a class="explore" href="{e(site)}/{"celebrations.html" if life else ""}">{"All Celebrations of Life" if life else "All stories"} '
+             f'<span aria-hidden="true">&rsaquo;</span></a></aside>') if rows else ""
+    post_img = (f'<p class="note story-note"><a class="link" href="{e(site)}/{s["post_image"]}" download>Download the framed image for Facebook or Instagram</a></p>'
+                if s.get("post_image") else "")
+    towns = town_links(cfg, s).replace('class="wrap note towns"', 'class="note towns story-note"')
     body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
-<section class="wrap front" style="grid-template-columns:minmax(0,1fr)">{lead(cfg, s, media, "h1", full=True)}</section>
+<section class="wrap watch-layout story-layout{"" if aside else " solo"}"><article class="watch-main">
+{media}
+<header class="watch-head"><span class="caps kicker">{e(section)}</span><h1 class="hed">{e(s["title"])}</h1>
+<p class="caps watch-meta">{" &middot; ".join(bits)}{' &middot; <span class="tag">Community</span>' if s.get("community") else ""}</p>
+<div class="share"><a class="btn fb" href="{e(fb_share(url))}" target="_blank" rel="noopener">{FB_ICON}Share on Facebook</a>{extra}
+<button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button></div></header>
+{facts_html}
+<section class="wu-card open" aria-labelledby="st-h"><h2 class="wu-head" id="st-h">{card_head}</h2><div class="wu-body">{story}</div></section>
+{post_img}{towns}<p class="note story-note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
+</article>{aside}</section>
 {banner(cfg, "A4")}
-{f'<p class="wrap note postimg"><a class="link" href="{e(site)}/{s["post_image"]}" download>Download the framed image for Facebook or Instagram</a></p>' if s.get("post_image") else ""}
-{town_links(cfg, s)}<p class="wrap note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
-<section class="wrap latest"><h2 class="label">{"More Celebrations of Life" if life else "More good news"}</h2><div class="grid">{more}</div>
-<div class="more-row"><a class="btn" href="{e(site)}/{"celebrations.html" if life else ""}">{"See all Celebrations of Life" if life else "See all stories"}</a></div></section>
 {submit_band(cfg, site)}<div class="stripes" aria-hidden="true"></div></main>{footer(cfg)}</div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>"""
     return ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
             "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
-            f"{head(cfg, story_title(cfg, s), story_desc(cfg, s), page_url(cfg, s), image, 'article', story_data(cfg, s, image), indexable(s))}"
+            f"{head(cfg, story_title(cfg, s), story_desc(cfg, s), url, image, 'article', story_data(cfg, s, image), indexable(s))}"
             f"</head><body>{body}{SCRIPT}</body></html>")
 
 
