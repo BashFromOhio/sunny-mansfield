@@ -66,10 +66,19 @@ People answer Free Stuff and job posts through a form, and the poster gets the m
 
 Replies come from `replies@sunnymansfield.com` (your Resend domain), with Reply-To set to the person writing. Each person can send 8 replies an hour, 2 a day to the same post, and a post takes at most 40 a day.
 
-## 8. Turn on birthday shout-outs
+## 8. Turn on birthday shout-outs (about 5 minutes)
 
-Run the updated `supabase/schema.sql` once more (SQL Editor > paste > Run). It makes birthday shout-outs always wait
-for an editor (even from verified people) and lists each one publicly only on the birthday itself. Nothing else to set up.
+People confirm their email with a 6-digit code before a birthday shout-out reaches the queue. The code is sent by a small
+Supabase function through Resend, like private replies (step 7), so finish step 7 first.
+
+1. Run the updated `supabase/schema.sql` once more (SQL Editor > paste > Run). It adds the email-code table, makes birthday
+   shout-outs always wait for an editor (even from verified people), and lists each one publicly only on the birthday itself.
+2. Go to **Edge Functions > Deploy a new function > Via Editor**. Name it exactly `verify`, paste all of
+   `supabase/functions/verify/index.ts`, and deploy. Leave **Verify JWT** on. It uses the `RESEND_API_KEY` secret you already added.
+3. Test it: send a shout-out on `birthdays.html` with your own email, type the code, and look for it under **Waiting**.
+
+Codes come from `hello@sunnymansfield.com` and work for 15 minutes. Each shout-out can get 3 codes and 5 tries per code.
+Shout-outs nobody confirms never reach the queue and are deleted after 2 days.
 
 ## How it works day to day
 
@@ -77,7 +86,7 @@ for an editor (even from verified people) and lists each one publicly only on th
 - **Team applications**: choose **Approve and verify** to make someone a verified contributor.
 - **Ad inquiries**: messages from businesses about advertising. Reply to them by email.
 - **Verified people**: add or remove people. A verified person who signs in on the submit page (with the "Email me a sign-in link" button) goes live without review, except for fundraisers, which always wait for an editor.
-- **Birthday shout-outs** show up in **Waiting** like any post, with the birthday shown as a date. Approve one and it shows on the front page and `birthdays.html` on the person's next birthday, and posts to Facebook at 9 a.m. that day. Each one runs once.
+- **Birthday shout-outs** show up in **Waiting** once the sender confirms their email, with the birthday shown as a date. Approve one and it shows on the front page and `birthdays.html` on the person's next birthday, and posts to Facebook at 9 a.m. that day. Each one runs once.
 - **Approved**: everything on the site. Choose **Take down** to remove a post.
 
 Event flyers stay up until the day after the event. Free Stuff and job posts stay up for 30 days. Jobs always wait for an editor, even from verified people. Free Stuff only shows posts with no price: anything mentioning a dollar amount, a trade or a payment app is left off.

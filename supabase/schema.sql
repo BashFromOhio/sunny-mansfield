@@ -24,6 +24,8 @@ create table if not exists public.submissions (
 );
 -- What the sender confirmed (rules, photo permission, a guardian's OK for minors). Editors only, never published.
 alter table public.submissions add column if not exists consent text check (char_length(consent) <= 1000);
+-- When the sender confirmed their email with a code (birthday shout-outs). Only the "verify" function sets it.
+alter table public.submissions add column if not exists verified_at timestamptz;
 create index if not exists submissions_status_idx on public.submissions (status, created_at desc);
 
 -- People who can use the admin page, and people whose posts skip the review queue.
@@ -60,6 +62,7 @@ begin
   new.reviewed_at := null;
   new.reviewed_by := null;
   new.created_at := now();
+  new.verified_at := null;  -- only the "verify" Edge Function can mark an email as confirmed
   if signed_in is not null then
     new.email := signed_in;  -- a signed-in sender can't claim someone else's address
     if new.section not in ('Join the team', 'Advertise', 'Fundraiser', 'Job', 'Birthday', 'Bracket', 'Headline', 'Link')
@@ -106,7 +109,7 @@ create view public.published as
   from public.submissions
   where status = 'approved' and section not in ('Join the team', 'Advertise')
     and (section <> 'Birthday' or (
-      event_date is not null and created_at > now() - interval '370 days'
+      verified_at is not null and event_date is not null and created_at > now() - interval '370 days'
       and to_char(event_date, 'MM-DD') in (
         to_char((now() at time zone 'America/New_York')::date, 'MM-DD'),
         case when to_char((now() at time zone 'America/New_York')::date, 'MM-DD') = '02-28' then '02-29' end)));
@@ -125,9 +128,23 @@ create index if not exists relay_log_ip_idx on public.relay_log (ip_hash, create
 create index if not exists relay_log_post_idx on public.relay_log (post_id, created_at desc);
 alter table public.relay_log enable row level security;  -- no policies: closed to the public
 
+-- Email codes for birthday shout-outs (the "verify" Edge Function writes here). Only a scrambled code is kept,
+-- it works for 15 minutes, and nobody but the function can read it.
+create table if not exists public.email_codes (
+  submission_id uuid primary key references public.submissions (id) on delete cascade,
+  code_hash text not null,
+  ip_hash text not null,
+  tries int not null default 0,
+  sends int not null default 1,
+  sent_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+create index if not exists email_codes_ip_idx on public.email_codes (ip_hash, sent_at desc);
+alter table public.email_codes enable row level security;  -- no policies: closed to the public
+
 -- Housekeeping: declined posts go after 30 days, reply records after 30 days, and the poster's email comes off
 -- Free Stuff and job posts after 60 days (replies stop at 30). Birthday shout-outs go a year and a month after
--- they were sent (they run once). The consent record stays as proof of permission.
+-- they were sent (they run once), or after 2 days if nobody confirmed the email. The consent record stays as proof of permission.
 create or replace function public.tidy_up() returns void
 language sql security definer set search_path = public as $$
   delete from submissions where status = 'rejected' and created_at < now() - interval '30 days';
@@ -135,6 +152,7 @@ language sql security definer set search_path = public as $$
   update submissions set email = null
     where section in ('Free Stuff', 'Job', 'Buy & Sell') and email is not null and created_at < now() - interval '60 days';
   delete from submissions where section = 'Birthday' and created_at < now() - interval '400 days';
+  delete from submissions where section = 'Birthday' and verified_at is null and created_at < now() - interval '2 days';
 $$;
 revoke all on function public.tidy_up() from public, anon, authenticated;
 -- Run it every night at 3 a.m. if the pg_cron extension is on (Database > Extensions > pg_cron). Safe to skip.

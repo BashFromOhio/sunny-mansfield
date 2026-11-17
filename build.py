@@ -1023,6 +1023,19 @@ footer .credit .legal.towns{font-weight:400;opacity:.85}
 .bday-date{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:8px}
 .bday-extra{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;padding:16px;background:var(--surface)}
 
+.bday-strip{display:block;background:var(--secondary);color:var(--tertiary);text-decoration:none;border-bottom:2px solid var(--border-strong)}
+.bday-strip-in{display:flex;align-items:center;justify-content:center;gap:8px 18px;flex-wrap:wrap;padding-block:10px;text-align:center}
+.bday-strip .script{color:var(--tertiary);font-size:26px;margin:0 0 4px;transform:rotate(-4deg)}
+.bday-strip-text{font:400 15px/1.4 var(--sans)}.bday-strip-text b{font-weight:700}
+.bday-strip-go{background:var(--primary);color:var(--tertiary);padding:8px 14px;white-space:nowrap}
+.bday-strip:hover .bday-strip-go{background:var(--tertiary);color:var(--primary)}
+.bday-strip .short{display:none}
+@media (max-width:700px){.bday-strip .long{display:none}.bday-strip .short{display:inline}.bday-strip .script{display:none}
+  .bday-strip-in{flex-wrap:nowrap;justify-content:space-between;text-align:left}.bday-strip-text{font-size:14px}}
+.verify{display:grid;gap:12px;background:var(--tertiary);border:2px solid var(--border-subtle);border-top:4px solid var(--secondary);padding:clamp(16px,3vw,32px)}
+.verify .script{margin-bottom:16px}.verify p{margin:0}
+.verify .row{display:flex;gap:12px;flex-wrap:wrap}.verify [data-v-code]{flex:0 1 200px;font:700 22px/1 var(--sans);letter-spacing:.3em;text-align:center}
+
 /* forms and the admin desk */
 .formbox{padding-block:0 64px;scroll-margin-top:72px}
 .formbox .label{margin-bottom:24px}
@@ -1637,6 +1650,7 @@ def masthead(cfg, site, stories, quote=None, current=""):
 <button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}</div>
 <a class="navcta" href="{e(site)}/submit.html">Submit news</a></div></nav>
+{BDAY_STRIP.format(site=e(site))}
 </header>
 <aside class="about" id="about" role="dialog" aria-labelledby="about-h" hidden>
 <button class="close" type="button" data-about-close aria-label="Close">&times;</button>
@@ -1649,6 +1663,18 @@ def masthead(cfg, site, stories, quote=None, current=""):
 <li><b>Made to share.</b> Every story has a Share button. One share can make someone's day.</li></ul>
 <div class="share"><button class="btn solid" type="button" data-about-close>Start reading</button><a class="textbtn" href="{e(site)}/submit.html">Share good news</a></div>
 </aside>"""
+
+
+# The birthday shout-out banner under the menu on every page (birthdays.html and admin.html drop it).
+BDAY_STRIP = ('<a class="bday-strip" href="{site}/birthdays.html#form" data-bday-strip><span class="bday-strip-in wrap">'
+              '<span class="script">Happy birthday!</span><span class="bday-strip-text"><b>Birthday coming up?</b> '
+              '<span class="long">Send a free shout-out and we\'ll celebrate them on the front page and on Facebook.</span>'
+              '<span class="short">Send a free shout-out.</span></span>'
+              '<span class="caps bday-strip-go">Send one <span aria-hidden="true">&rsaquo;</span></span></span></a>')
+
+
+def no_strip(page):
+    return re.sub(r'<a class="bday-strip".*?</a>', "", page, count=1, flags=re.S)
 
 
 def memories(cfg):
@@ -2794,7 +2820,8 @@ def field(name, label, kind="text", req=False, hint="", show=None, opts=None, ex
     return f'<label class="{cls}"{vis}><span class="caps">{label}{" *" if req else ""}</span>{ctl}{hint}</label>'
 
 
-def sunny_form(cfg, fid, section, fields, button, title_tpl="", signin=False):
+def sunny_form(cfg, fid, section, fields, button, title_tpl="", signin=False, verify=False):
+    """verify=True: after sending, the sender types a 6-digit code we email them (the "verify" function)."""
     on = backend_on(cfg)
     sign = ""
     if signin:
@@ -2806,14 +2833,20 @@ def sunny_form(cfg, fid, section, fields, button, title_tpl="", signin=False):
 <button class="btn sm" type="button" data-signin>Sign in</button></div>
 <p class="hint" data-out>No password? <button class="textbtn" type="button" data-signin-link>Email me a sign-in link</button></p></div>"""
     closed = "" if on else '<p class="formnote">Submissions open soon. Until then, email <b>' + e(cfg["submit_email"]) + "</b>.</p>"
-    return f"""<form class="sunny" id="{fid}" data-section="{e(section)}" data-title="{e(title_tpl)}" novalidate>
+    check = ("""<div class="verify" hidden><span class="script">Almost done!</span><h2 class="hed">Check your email</h2>
+<p>We sent a 6-digit code to <b data-v-email></b>. Type it here to send your shout-out to our editors.</p>
+<div class="row"><input inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" data-v-code aria-label="6-digit code">
+<button class="btn solid" type="button" data-v-check>Confirm</button></div>
+<p class="formmsg" data-v-msg role="status" aria-live="polite"></p>
+<p class="hint">No email after a minute? Check your spam folder, or <button class="textbtn" type="button" data-v-resend>email me a new code</button>.</p></div>""" if verify else "")
+    return f"""<form class="sunny" id="{fid}" data-section="{e(section)}" data-title="{e(title_tpl)}"{" data-verify=\"1\"" if verify else ""} novalidate>
 {sign}{"".join(fields)}
 <label class="hp" aria-hidden="true">Leave this empty<input name="hp" tabindex="-1" autocomplete="off"></label>
 <label class="check wide"><input type="checkbox" required name="agree" value="Yes" data-consent="Agreed to rules, terms, photo permission and OK from people named"> <span>I agree to the <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/rules.html#rules" target="_blank">Sunny rules</a> and <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/terms.html" target="_blank">terms</a>, have permission to share any photo I add, and everyone named or pictured said it's OK (a parent or guardian for anyone under 18). <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/privacy.html" target="_blank">Privacy</a></span></label>
 <div class="wide submitrow"><button class="btn solid" type="submit"{"" if on else " disabled"}>{button}</button><span class="formmsg" role="status" aria-live="polite"></span></div>
 {closed}</form>
 <div class="thanks" hidden><span class="script">Thank you!</span><h2 class="hed">Got it.</h2><p data-thanks></p>
-<button class="btn" type="button" data-again>Send another</button></div>"""
+<button class="btn" type="button" data-again>Send another</button></div>{check}"""
 
 
 def form_script(cfg):
@@ -2879,9 +2912,12 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
     const rid=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);const path=new Date().getFullYear()+'/'+rid+'.'+ext;
     const up=await sb.storage.from('photos').upload(path,pic,{{contentType:pic.type}});if(up.error)throw up.error;
     row.photo_url=sb.storage.from('photos').getPublicUrl(path).data.publicUrl}}
+   if(f.dataset.verify)row.id=uuid();
    let {{error}}=await sb.from('submissions').insert(row);
    if(error&&/consent/.test(error.message||'')){{delete row.consent;({{error}}=await sb.from('submissions').insert(row))}}  // until the consent column exists
    if(error)throw error;
+   if(f.dataset.verify){{let why='';try{{await vcall({{action:'send',id:row.id,email:row.email}})}}catch(x){{why=x.message||String(x)}}
+    msg.textContent='';delete f.dataset.piiOk;showVerify(f,row.id,row.email,why);return}}
    msg.textContent='';done(f.dataset.section==='Join the team'?'Your application is in. An editor will email you soon.':
     f.dataset.section==='Advertise'?'We will get back to you within two business days.':
     sec==='Birthday'?'Your shout-out is in the review queue. Once an editor approves it, it shows on their birthday.':
@@ -2889,9 +2925,29 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
     who?'If you are verified it goes live within 20 minutes. Otherwise an editor will look at it soon.':'It is in the review queue. An editor will look at it soon, usually within a day.')}}
   catch(err){{msg.textContent='Something went wrong: '+(err.message||err)+'. Please try again.'}}
   finally{{btn.disabled=false}}}});}});
+/*VERIFY*/
 document.querySelectorAll('[data-pick]').forEach(b=>b.addEventListener('click',()=>{{const f=document.getElementById('send');if(!f)return;f.section.value=b.dataset.pick;showFor(f)}}));
 }})();
-</script>"""
+</script>""".replace("/*VERIFY*/", VERIFY_JS)
+
+
+VERIFY_JS = r"""// Email check (birthday shout-outs): the row is saved unverified, we email a code, and a match sends it to the queue.
+const uuid=()=>(self.crypto&&crypto.randomUUID)?crypto.randomUUID():'10000000-1000-4000-8000-100000000000'.replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
+async function vcall(body){const {data,error}=await sb.functions.invoke('verify',{body});
+ if(error){let t='';try{t=(await error.context.json()).error}catch(_){}throw new Error(t||error.message)}return data}
+function showVerify(f,id,email,why){const v=f.parentElement.querySelector('.verify');f.hidden=true;v.hidden=false;v.dataset.id=id;v.dataset.email=email;
+ v.querySelector('[data-v-email]').textContent=email;v.querySelector('[data-v-code]').value='';
+ v.querySelector('[data-v-msg]').textContent=why?why+' Press “email me a new code” to try again.':'';
+ v.scrollIntoView({behavior:'smooth',block:'center'});v.querySelector('[data-v-code]').focus({preventScroll:true})}
+document.addEventListener('keydown',ev=>{if(ev.key==='Enter'&&ev.target.matches&&ev.target.matches('[data-v-code]')){ev.preventDefault();ev.target.closest('.verify').querySelector('[data-v-check]').click()}});
+document.addEventListener('click',async ev=>{const c=ev.target.closest('[data-v-check],[data-v-resend]');if(!c)return;const v=c.closest('.verify');const m=v.querySelector('[data-v-msg]');c.disabled=true;
+ try{if(c.hasAttribute('data-v-resend')){await vcall({action:'send',id:v.dataset.id,email:v.dataset.email});m.textContent='New code sent. Check your email.';return}
+  const code=v.querySelector('[data-v-code]').value.replace(/\D/g,'');if(code.length!==6){m.textContent='Type the 6-digit code from the email.';return}
+  m.textContent='Checking…';await vcall({action:'check',id:v.dataset.id,code});m.textContent='';v.hidden=true;
+  const f=v.parentElement.querySelector('form.sunny');const t=f.nextElementSibling;f.reset();showFor(f);syncSign();
+  t.querySelector('[data-thanks]').textContent='Confirmed! Your shout-out is in the review queue. Once an editor approves it, it shows on their birthday.';
+  t.hidden=false;t.scrollIntoView({behavior:'smooth',block:'center'})}
+ catch(err){m.textContent=err.message||String(err)}finally{c.disabled=false}});"""
 
 
 def form_link(cfg, key, subject):
@@ -2906,7 +2962,7 @@ def page_title(script, title, intro):
 BIRTHDAY_STEPS = [
     "Type their name and their birthday. No photo, no year, nothing else needed.",
     "Want to say more? Check \u201cAdd a special message\u201d and write a line from you.",
-    "An editor approves every shout-out. It shows on the front page on their birthday and goes up on our Facebook page.",
+    "Confirm with the 6-digit code we email you. Then an editor approves it, and it shows on the front page and our Facebook page on their birthday.",
 ]
 
 
@@ -2972,9 +3028,12 @@ def render_birthdays(cfg, birthdays, stories):
         + field("summary", "Your message", "textarea", hint="A line or two, up to 300 characters. It shows with their shout-out.").replace('maxlength="2000"', 'maxlength="300" rows="3"').replace(' rows="5"', "")
         + field("name", "From", hint="Who it's from, like \u201cLove, Mom and Dad\u201d or \u201cThe crew at Sample Coffee\u201d.")
         + "</div>",
-        field("email", "Your email", "email", hint="Optional. Never shown. Only used if an editor has a question."),
+        field("email", "Your email", "email", req=True, hint="We email you a 6-digit code to make sure it's really you. Never shown on the site."),
+        field("bday_ok", "Yes, post it. I know them and they'd be happy with a public birthday shout-out on Sunny Mansfield "
+              "and its Facebook page (for anyone under 18, I'm their parent or guardian, or have their OK).", "checkbox",
+              req=True, consent="Birthday person OK with a public shout-out"),
     ]
-    form = sunny_form(cfg, "bday-form", "Birthday", fields, "Send for review", title_tpl="Happy birthday, {who}!")
+    form = sunny_form(cfg, "bday-form", "Birthday", fields, "Send for review", title_tpl="Happy birthday, {who}!", verify=True)
     inner = f"""{page_title("Hey neighbor!", "Birthday shout-outs", "Know someone with a birthday coming up? Send a free shout-out and we'll wish them a happy birthday on the front page and on Facebook, on their big day.")}
 {today}
 <section class="wrap formbox" id="form"><h2 class="label">Send a birthday shout-out</h2>{form}</section>
@@ -2987,7 +3046,8 @@ def render_birthdays(cfg, birthdays, stories):
     image = f"{site}/birthday.jpg"
     return shell(cfg, f"Birthday shout-outs · {cfg['site_name']}",
                  "Send a free birthday shout-out to someone in Mansfield or Richland County. It shows on their birthday.",
-                 f"{site}/birthdays.html", inner, stories, image=image, extra=form_script(cfg) + BIRTHDAY_JS)
+                 f"{site}/birthdays.html", inner, stories, image=image, extra=form_script(cfg) + BIRTHDAY_JS).replace(
+        BDAY_STRIP.format(site=e(site)), "")
 
 
 def render_submit(cfg, stories):
@@ -3877,15 +3937,16 @@ async function start(s){{if(me&&s&&s.user.email===me)return;if(!s){{$('login').h
  $('login').hidden=true;$('desk').hidden=false;$('me').textContent=me;load()}}
 sb.auth.getSession().then(r=>start(r.data.session));sb.auth.onAuthStateChange((_,s)=>{{if(s&&!me)start(s)}});
 function base(){{return sb.from('submissions').select('*').order('created_at',{{ascending:false}}).limit(200)}}
-const QUERIES={{pending:()=>base().eq('status','pending').not('section','in',NOTQ),brackets:()=>base().eq('section','Bracket').neq('status','rejected'),
+let NOV=false;const ok=x=>NOV?x:x.or('section.neq.Birthday,verified_at.not.is.null');  // unconfirmed birthday shout-outs wait for their code
+const QUERIES={{pending:()=>ok(base().eq('status','pending').not('section','in',NOTQ)),brackets:()=>base().eq('section','Bracket').neq('status','rejected'),
  apps:()=>base().eq('section','Join the team').neq('status','rejected'),ads:()=>base().eq('section','Advertise').eq('status','pending'),
  approved:()=>base().eq('status','approved').not('section','in',NOTQ),rejected:()=>base().eq('status','rejected')}};
-async function counts(){{for(const [k,f] of [['pending',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('status','pending').not('section','in',NOTQ)],
+async function counts(){{for(const [k,f] of [['pending',()=>ok(sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('status','pending').not('section','in',NOTQ))],
  ['apps',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Join the team').eq('status','pending')],
  ['ads',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Advertise').eq('status','pending')]]){{
  const {{count}}=await f();document.querySelector(`[data-q="${{k}}"] .n`).textContent=count||''}}}}
 function item(r){{const when=new Date(r.created_at).toLocaleString();
- const facts=[['Section',r.section],['By',r.name],['Role',r.role],['Town',r.town],['Business',r.business],[r.section==='Birthday'?'Birthday':'Event date',r.section==='Birthday'&&r.event_date?new Date(r.event_date+'T12:00').toLocaleDateString('en-US',{{month:'long',day:'numeric'}}):r.event_date],['Price',r.price],['Contact',r.contact],['Email',r.email],['Consent',r.consent&&r.consent.split('\\n').join(' · ')],['Sent',when],['Status',r.status+(r.reviewed_by?' by '+r.reviewed_by:'')]].filter(x=>x[1]);
+ const facts=[['Section',r.section],['By',r.name],['Role',r.role],['Town',r.town],['Business',r.business],[r.section==='Birthday'?'Birthday':'Event date',r.section==='Birthday'&&r.event_date?new Date(r.event_date+'T12:00').toLocaleDateString('en-US',{{month:'long',day:'numeric'}}):r.event_date],['Price',r.price],['Contact',r.contact],['Email',r.email],['Email check',r.section==='Birthday'?(r.verified_at?'Confirmed with a code':'Not confirmed'):''],['Consent',r.consent&&r.consent.split('\\n').join(' · ')],['Sent',when],['Status',r.status+(r.reviewed_by?' by '+r.reviewed_by:'')]].filter(x=>x[1]);
  const link=/^https?:\/\//i.test(r.link||'')?`<a class="link" href="${{esc(r.link)}}" target="_blank" rel="noopener">Open link</a>`:'';
  const btn=(a,t,c='')=>`<button class="btn sm ${{c}}" type="button" data-act="${{a}}" data-id="${{r.id}}">${{t}}</button>`;
  let acts='';if(r.section==='Join the team')acts=btn('verify-approve','Approve and verify','solid')+btn('reject','Decline');
@@ -3902,7 +3963,8 @@ async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAtt
   if(error){{list.innerHTML='';say(error.message);return}}
   list.innerHTML=data.length?data.map(v=>`<article class="qitem"><div class="qbody"><h3 class="hed">${{esc(v.name||v.email)}}</h3><p class="hint">${{esc(v.email)}} ${{v.role?'· '+esc(v.role):''}}</p>
   <div class="share"><button class="btn sm ghost" type="button" data-unverify="${{esc(v.email)}}">Remove</button></div></div></article>`).join(''):'<p class="hint">Nobody verified yet.</p>';return}}
- const {{data,error}}=await QUERIES[q]();if(error){{list.innerHTML='';say(error.message);return}}
+ let {{data,error}}=await QUERIES[q]();if(error&&/verified_at/.test(error.message||'')){{NOV=true;(({{data,error}}=await QUERIES[q]()))}}  // schema not updated yet
+ if(error){{list.innerHTML='';say(error.message);return}}
  list.innerHTML=data.length?data.map(item).join(''):'<p class="hint">All caught up. Nothing waiting here.</p>'}}
 document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q]');if(t){{q=t.dataset.q;load();return}}
  const h=ev.target.closest('[data-head]'),auto=ev.target.closest('#head-auto');
@@ -4418,7 +4480,7 @@ def main():
         (out / "jobs" / f"{j['id']}.html").write_text(rebase(render_job_page(cfg, j, stories)))
     (out / "404.html").write_text(rebase(render_not_found(cfg, stories)))
     (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories) if ads_open(cfg) else render_ads_soon(cfg, stories)))
-    (out / "admin.html").write_text(rebase(render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"]))))
+    (out / "admin.html").write_text(rebase(no_strip(render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"])))))
     (out / "town").mkdir(exist_ok=True)
     live_towns = []
     for name, about in TOWNS:
