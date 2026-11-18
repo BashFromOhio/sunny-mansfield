@@ -917,6 +917,7 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .dogcard .photo img{object-position:50% 25%}.give .listing.dogcard .photo{aspect-ratio:1}
 .dogcard .goal-v{font-size:17px}.give .dogcard .goal-v{font-size:14px}
 .give-note svg.paw{fill:var(--secondary);stroke:none}
+.nl{margin-bottom:48px}.nl .nl-form{min-height:72px}.nl .nl-form iframe{max-width:100%}.nl .nl-alt{margin:8px 0 0;font-size:13px;color:var(--text-2)}
 .dogday{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:32px;align-items:center;background:var(--tertiary);border:2px solid var(--border-strong);padding:24px}
 .dogday .photo{aspect-ratio:1}.dogday .hed{font-size:clamp(30px,4vw,48px);line-height:1.05;margin:6px 0 12px}.dogday .dek{font-size:18px;line-height:1.6}
 @media (max-width:700px){.dogday{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}}
@@ -1921,6 +1922,22 @@ def civic(cfg, businesses):
     return rail("Shop local", cards + more, f'<a class="link" href="{e(site)}/businesses.html">See all</a>', rid="shops", kind="sec")
 
 
+def newsletter_band(cfg):
+    """The weekly email sign-up: beehiiv's embedded form (people confirm by email before they're added)."""
+    nl = cfg.get("newsletter") or {}
+    if not nl.get("page"):
+        return ""
+    form = (f'<div class="nl-form"><script async src="https://subscribe-forms.beehiiv.com/v3/loader.js" '
+            f'data-beehiiv-form="{e(nl["beehiiv_form"])}"></script></div>') if nl.get("beehiiv_form") else ""
+    day = f'Every {e(nl["day"])}, free' if nl.get("day") else "Free"
+    return (f'<section class="wrap" id="newsletter"><div class="give nl"><div class="give-top"><div>'
+            f'<span class="script">Good news, delivered!</span><h2 class="retro sm">Get it by email</h2>'
+            f'<p>{day}: the week\'s best good news, events and Happy Tails from Mansfield and Richland County. '
+            f'We\'ll email you once to confirm. Unsubscribe anytime.</p></div></div>{form}'
+            f'<p class="nl-alt">Form not showing? <a class="link" href="{e(nl["page"])}" target="_blank" rel="noopener">Sign up on our newsletter page</a></p>'
+            f'</div></section>')
+
+
 def submit_band(cfg, site):
     return f"""<section class="wrap" id="submit"><div class="candy"><div class="candy-in submit">
 <div><span class="script">Hey neighbor!</span><h2 class="retro sm">Got good news?</h2>
@@ -1945,6 +1962,11 @@ def follow_links(cfg):
             "".join(f'<a href="{e(u)}" rel="me noopener" target="_blank">{e(n)}</a>' for n, u in links) + "</nav>\n")
 
 
+def newsletter_link(cfg):
+    page = (cfg.get("newsletter") or {}).get("page")
+    return f'<a href="{e(page)}" target="_blank" rel="noopener">Email newsletter</a>' if page else ""
+
+
 def footer(cfg):
     site = cfg["site_url"].rstrip("/")
     return f"""<footer>{skyline().replace('class="skyline"', 'class="sky"')}<div class="wrap">
@@ -1955,7 +1977,7 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 {sponsor_strip(cfg)}
 <div class="wrap credit"><span class="script">Made in Mansfield</span> <span>by Ofgeneration LLC</span>
 {follow_links(cfg)}<nav class="legal towns">Good news in {" ".join(f'<a href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS)}</nav>
-<nav class="legal"><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a><a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
+<nav class="legal"><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a>{newsletter_link(cfg)}<a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
 Stories from other outlets belong to their publishers.</small></div></footer>"""
 
@@ -3001,6 +3023,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 <div class="grid">{grid}<p class="empty" hidden>Nothing here this week yet. Know a story? <a class="link" href="{e(site)}/submit.html">Submit it</a></p></div>
 <div class="more-row"><button class="btn" type="button" id="more" hidden>Show more stories</button></div></section>
 {memories(cfg)}
+{newsletter_band(cfg)}
 {submit_band(cfg, site)}
 <div class="stripes" aria-hidden="true"></div>
 </main>
@@ -3451,8 +3474,11 @@ LEGAL = {
          "(hashed) record of each reply for 30 days, not the message itself."),
         ("What stays private", "Your email address is never published. Only our editors can see it, and we use it only to ask "
          "about your post or reply to you. Team applications and advertising questions are never published."),
+        ("Email newsletter", "If you sign up for our weekly email, we collect your email address through beehiiv, our "
+         "newsletter service. We email you once to confirm, and every newsletter has an unsubscribe link. We use the address only "
+         "to send the newsletter and never sell or share it."),
         ("Who helps us run the site", "Our database and photo storage are hosted by Supabase, the site is hosted by GitHub Pages, "
-         "sign-in emails and private replies are sent through Resend, and approved posts are shared to Facebook through Zapier. They process data "
+         "sign-in emails and private replies are sent through Resend, the newsletter is sent through beehiiv, and approved posts are shared to Facebook through Zapier. They process data "
          "only to provide those services. We never sell your information."),
         ("How long we keep it", "Approved posts stay up until they're taken down. Event flyers come down after the event, "
          "Free Stuff, job and home posts after 30 days, and fundraisers after 90 days or their end date. We erase the email address "
