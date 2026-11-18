@@ -99,6 +99,11 @@ missouri|ark\w*|nottinghamshire|england|uk\b)|timberview|mansfield (legacy|lake 
 fort worth|arlington|dallas|frisco|keller|attleboro|foxboro|norton|sun chronicle|star-telegram|uconn|storrs|
 desoto parish|nottingham"""
 
+# Obituary wording, and the feed tags, authors and web addresses obituaries come with.
+OBIT_TEXT = rx(r"obituar|passed away|funeral|in loving memory|survived by|preceded (him |her )?in death|calling hours|"
+               r"entered (into )?(eternal )?rest|laid to rest|went (home )?to be with the lord|passed peacefully|"
+               r"\bdied\b|\bR\.?I\.?P\b|rest in peace|age (of )?\d{2,3}\b.{0,40}\b(died|passed)")
+OBIT_TAG = rx(r"obituar|\bobits?\b|death notice|funeral|cremation|mortuary|legacy\.com|tributearchive")
 NEG, POS, LIFE, VOTE = rx(NEGATIVE), rx(POSITIVE), rx(LIFE_HINTS), rx(VOTING)
 NEAR, AWAY = rx(LOCAL), rx(OTHER_MANSFIELD)
 RULES = [(key, rx(p)) for key, p in SECTION_RULES]
@@ -107,7 +112,8 @@ RULES = [(key, rx(p)) for key, p in SECTION_RULES]
 def classify(story, forced=None):
     """Return a section key, or None if the story should be skipped."""
     text = f"{story['title']} {story['summary']}"
-    if forced == "life" or LIFE.search(story["title"]) or re.search(r"obituar|passed away|funeral|in loving memory", text, re.I):
+    if (forced == "life" or LIFE.search(story["title"]) or OBIT_TEXT.search(text)
+            or OBIT_TAG.search(" | ".join(story.get("tags") or [])) or OBIT_TAG.search(story.get("link") or "")):
         return None
     if NEG.search(text) or VOTE.search(text):
         return None
@@ -180,6 +186,8 @@ def fetch_feed(feed):
         desc = get("description", "summary", "encoded")
         date = get("pubDate", "published", "updated")
         source = get("source", "Source")
+        # Feed tags and author: Richland Source files obituaries under the "Obituaries" category, written by a funeral home.
+        tags = [c.text.strip() for c in item if c.tag.split("}")[-1] in ("category", "creator", "author") and (c.text or "").strip()]
         # Feeds can list videos alongside photos (WordPress puts an .mp4 first); take the first real image.
         media = [c for c in item for n in ("content", "thumbnail", "enclosure", "Image") if c.tag.split("}")[-1] == n]
         image = next((u for c in media if (u := c.get("url") or c.text) and is_image(u, c.get("type"), c.get("medium"))), None)
@@ -212,6 +220,7 @@ def fetch_feed(feed):
             "date": parse_date(date.text if date is not None else None),
             "forced": feed.get("section"),
             "local": feed.get("local", False),
+            "tags": tags,
         })
     return items
 
