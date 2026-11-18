@@ -917,25 +917,23 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .dogcard .photo img{object-position:50% 25%}.give .listing.dogcard .photo{aspect-ratio:1}
 .dogcard .goal-v{font-size:17px}.give .dogcard .goal-v{font-size:14px}
 .give-note svg.paw{fill:var(--secondary);stroke:none}
-.nl2{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;margin-bottom:56px}
-.nl-pitch{background:#2e1a10;color:#fbf6ec;padding:clamp(22px,4vw,44px);border:2px solid #2e1a10}
-.nl-hed{font:700 clamp(30px,3.8vw,46px)/1.08 var(--serif);margin:0 0 14px;color:#fbf6ec;letter-spacing:-.01em}
-.nl-hed em{font:400 1.12em/1 "Yellowtail","Brush Script MT",cursive;color:#f28a4b;letter-spacing:0}
-.nl-sub{font-size:clamp(16px,1.6vw,19px);line-height:1.5;margin:0 0 18px;color:#e9dcc6}
+.nl2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);margin-bottom:56px;background:var(--tertiary);
+ border:2px solid var(--border-strong);border-top:6px solid var(--secondary)}
+.nl-pitch{padding:clamp(22px,3.5vw,40px);display:grid;gap:10px;align-content:center}
+.nl-pitch .script{font-size:30px;line-height:1.1;margin:0 0 8px}
+.nl-hed{font:700 clamp(28px,3.4vw,40px)/1.12 var(--serif);margin:0;color:var(--text)}
+.nl-sub{font-size:clamp(16px,1.5vw,18px);line-height:1.55;margin:0 0 4px;color:var(--text-2)}.nl-sub b{color:var(--text)}
 .nl-pitch .nl-form{min-height:64px;margin:0 -8px}.nl-pitch .nl-form iframe{max-width:100%}
-.nl-fine{font-size:13px;line-height:1.6;margin:10px 0 0;color:#c9b89c}.nl-fine a{color:#fbf6ec;font-weight:700;text-decoration:underline}
-.nl-side{position:relative;overflow:hidden;background:linear-gradient(140deg,#f7b538 0%,#ee7d33 45%,#d9531e 75%,#963614 100%);color:#fff;
- padding:clamp(22px,4vw,44px);border:2px solid #963614;display:flex;flex-direction:column;justify-content:center}
-.nl-sun{position:absolute;right:-70px;top:-70px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,#ffe7a3 0 38%,transparent 39%),
- repeating-conic-gradient(rgba(255,231,163,.55) 0 8deg,transparent 8deg 20deg);opacity:.8}
-.nl-side .script{color:#fff;font-size:clamp(28px,3vw,38px);margin-bottom:26px;position:relative}
-.nl-list{list-style:none;margin:0;padding:0;display:grid;gap:16px;position:relative}
+.nl-fine{font-size:13px;line-height:1.6;margin:0;color:var(--text-2)}
+.nl-side{position:relative;overflow:hidden;background:linear-gradient(135deg,#e5652b 0%,var(--secondary) 55%,var(--secondary-dk) 100%);color:var(--tertiary);
+ padding:clamp(22px,3.5vw,40px);display:flex;flex-direction:column;justify-content:center}
+.nl-side .script{color:var(--tertiary);font-size:clamp(28px,3vw,36px);margin-bottom:26px;position:relative}
+.nl-list{list-style:none;margin:0;padding:0;display:grid;gap:18px;position:relative}
 .nl-list li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;align-items:center}
 .nl-list b{display:block;font:700 15px/1.3 var(--caps);letter-spacing:.06em;text-transform:uppercase}
-.nl-ex{display:block;font-size:15px;line-height:1.45;color:#fff4e6;margin-top:3px}
-.nl-ico{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.7);display:grid;place-items:center;font-size:24px;overflow:hidden}
-.nl-pic img{width:100%;height:100%;object-fit:cover}
-@media (max-width:820px){.nl2{grid-template-columns:minmax(0,1fr)}.nl-sun{width:150px;height:150px;right:-60px;top:-60px;opacity:.4}}
+.nl-ex{display:block;font-size:15px;line-height:1.45;color:var(--tertiary);opacity:.92;margin-top:3px}
+.nl-ico{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.75);display:grid;place-items:center;font-size:24px}
+@media (max-width:820px){.nl2{grid-template-columns:minmax(0,1fr)}}
 .dogday{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:32px;align-items:center;background:var(--tertiary);border:2px solid var(--border-strong);padding:24px}
 .dogday .photo{aspect-ratio:1}.dogday .hed{font-size:clamp(30px,4vw,48px);line-height:1.05;margin:6px 0 12px}.dogday .dek{font-size:18px;line-height:1.6}
 @media (max-width:700px){.dogday{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}}
@@ -1741,12 +1739,26 @@ def jsonld(data):
 ALT_NAMES = ["SunnyMansfield", "SunnyMansfield.com", "Sunny Mansfield Ohio"]
 
 
+def mailing_address(cfg, sep=", "):
+    """The publisher's mailing address from config.json, on one line (or joined by sep)."""
+    return sep.join(cfg.get("mailing_address") or ["Ofgeneration, LLC", "Mansfield, OH"])
+
+
+def mailing_postal(cfg):
+    lines = cfg.get("mailing_address") or []
+    m = re.match(r"(.+),\s*([A-Z]{2})\s+(\d{5})", lines[-1]) if len(lines) >= 3 else None
+    if not m:
+        return {"@type": "PostalAddress", "addressLocality": "Mansfield", "addressRegion": "OH", "addressCountry": "US"}
+    return {"@type": "PostalAddress", "streetAddress": ", ".join(lines[1:-1]), "addressLocality": m.group(1),
+            "addressRegion": m.group(2), "postalCode": m.group(3), "addressCountry": "US"}
+
+
 def publisher(cfg):
     site = cfg["site_url"].rstrip("/")
     org = {"@type": "NewsMediaOrganization", "@id": f"{site}/#org", "name": cfg["site_name"], "alternateName": ALT_NAMES,
            "url": f"{site}/", "logo": {"@type": "ImageObject", "url": f"{site}/brand/icon-512.png", "width": 512, "height": 512},
            "image": f"{site}/og.png",
-           "address": {"@type": "PostalAddress", "addressLocality": "Mansfield", "addressRegion": "OH", "addressCountry": "US"},
+           "address": mailing_postal(cfg),
            "description": "Curated positive local news from Mansfield and Richland County, Ohio, written by the people who live here.",
            "areaServed": [{"@type": "City", "name": "Mansfield, Ohio"}, {"@type": "AdministrativeArea", "name": "Richland County, Ohio"}],
            "publishingPrinciples": f"{site}/rules.html#rules", "correctionsPolicy": f"{site}/terms.html",
@@ -1940,9 +1952,9 @@ def civic(cfg, businesses):
     return rail("Shop local", cards + more, f'<a class="link" href="{e(site)}/businesses.html">See all</a>', rid="shops", kind="sec")
 
 
-def newsletter_band(cfg, top=None, dog=None):
-    """The weekly email sign-up, two panels: the pitch and beehiiv's embedded form on the left (people confirm by email
-    before they're added), and a sunny panel on the right showing what's inside, with this week's real top story and dog."""
+def newsletter_band(cfg, top=None):
+    """The weekly email sign-up, styled like the About pop-out: the pitch and beehiiv's embedded form on the left
+    (people confirm by email before they're added), and a sunny panel on the right showing what's inside."""
     nl = cfg.get("newsletter") or {}
     if not nl.get("page"):
         return ""
@@ -1950,25 +1962,17 @@ def newsletter_band(cfg, top=None, dog=None):
             f'data-beehiiv-form="{e(nl["beehiiv_form"])}"></script></div>') if nl.get("beehiiv_form") else (
             f'<a class="btn solid" href="{e(nl["page"])}" target="_blank" rel="noopener">Subscribe</a>')
     day = f'Every {e(nl["day"])}' if nl.get("day") else "Every week"
-    inside = []
-    if top:
-        inside.append(f'<li><span class="nl-ico" aria-hidden="true">&#9728;</span><span><b>The week\'s best good news</b>'
-                      f'<span class="nl-ex">Like: {e(top["title"])}</span></span></li>')
-    else:
-        inside.append('<li><span class="nl-ico" aria-hidden="true">&#9728;</span><span><b>The week\'s best good news</b></span></li>')
-    if dog:
-        pic = (f'<img src="{e(dog["image"])}" alt="" loading="lazy" referrerpolicy="no-referrer">' if dog.get("image")
-               else '<span aria-hidden="true">&#128062;</span>')
-        inside.append(f'<li><span class="nl-ico nl-pic">{pic}</span><span><b>A Happy Tails dog who needs a home</b>'
-                      f'<span class="nl-ex">Like {e(dog["name"])}, waiting at the Richland County Dog Shelter</span></span></li>')
-    inside.append('<li><span class="nl-ico" aria-hidden="true">&#9733;</span><span><b>Things to do this weekend</b>'
-                  '<span class="nl-ex">Events, free stuff, jobs and birthday shout-outs</span></span></li>')
+    example = f'<span class="nl-ex">Like: {e(top["title"])}</span>' if top else ""
+    inside = [f'<li><span class="nl-ico" aria-hidden="true">&#9728;</span><span><b>The week\'s best good news</b>{example}</span></li>',
+              '<li><span class="nl-ico" aria-hidden="true">&#9733;</span><span><b>Things to do this weekend</b>'
+              '<span class="nl-ex">Local events, free stuff, jobs and birthday shout-outs</span></span></li>']
     return (f'<section class="wrap" id="newsletter"><div class="nl2">'
-            f'<div class="nl-pitch"><h2 class="nl-hed">Mansfield\'s <em>good news</em> straight to your inbox.</h2>'
-            f'<p class="nl-sub">{day}, free. One short email with the best of Mansfield and Richland County.</p>'
+            f'<div class="nl-pitch"><span class="script">Good news, delivered!</span>'
+            f'<h2 class="nl-hed">Mansfield\'s good news, straight to your inbox.</h2>'
+            f'<p class="nl-sub"><b>{day}, free.</b> One short email with the best of Mansfield and Richland County.</p>'
             f'{form}<p class="nl-fine">We\'ll email you once to confirm. Unsubscribe anytime. '
-            f'<a href="{e(nl["page"])}" target="_blank" rel="noopener">See our newsletter page &rarr;</a></p></div>'
-            f'<div class="nl-side"><span class="nl-sun" aria-hidden="true"></span><span class="script">Inside every issue</span>'
+            f'<a class="link" href="{e(nl["page"])}" target="_blank" rel="noopener">Newsletter page</a></p></div>'
+            f'<div class="nl-side"><span class="script">Inside every issue</span>'
             f'<ul class="nl-list">{"".join(inside)}</ul></div></div></section>')
 
 
@@ -2013,7 +2017,8 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 {follow_links(cfg)}<nav class="legal towns">Good news in {" ".join(f'<a href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS)}</nav>
 <nav class="legal"><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a>{newsletter_link(cfg)}<a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
-Stories from other outlets belong to their publishers.</small></div></footer>"""
+Stories from other outlets belong to their publishers.</small>
+<small class="addr">{e(mailing_address(cfg, " · "))}</small></div></footer>"""
 
 
 SCRIPT = ("""<script>
@@ -3058,7 +3063,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 <div class="grid">{grid}<p class="empty" hidden>Nothing here this week yet. Know a story? <a class="link" href="{e(site)}/submit.html">Submit it</a></p></div>
 <div class="more-row"><button class="btn" type="button" id="more" hidden>Show more stories</button></div></section>
 {memories(cfg)}
-{newsletter_band(cfg, top, dog_of_the_day(dogs))}
+{newsletter_band(cfg, top)}
 {submit_band(cfg, site)}
 <div class="stripes" aria-hidden="true"></div>
 </main>
@@ -3596,7 +3601,9 @@ def render_legal(cfg, stories, kind):
         extra = ([("Google ads and measurement", GOOGLE_PRIVACY)] if cfg.get("google_tag") else []) + \
                 ([("Ads on this site", ADSENSE_PRIVACY)] if adsense_pub(cfg) else [])
         parts[2:2] = extra
-    body = "".join(f'<h2 class="hed">{e(h)}</h2><p>{e(t).replace("{email}", email)}</p>' for h, t in parts)
+    parts = list(parts) + [("Contact us", "Email {email}, or write to us at {address}.")]
+    body = "".join(f'<h2 class="hed">{e(h)}</h2><p>{e(t).replace("{address}", mailing_address(cfg)).replace("{email}", email)}</p>'
+                   for h, t in parts)
     inner = f"""{page_title("The fine print", title, desc)}
 <section class="wrap legaltext">{body}<p class="hint">Last updated October 23, 2026.</p></section>"""
     return shell(cfg, f"{title} · {cfg['site_name']}", desc, f"{site}/{kind}.html", inner, stories)
