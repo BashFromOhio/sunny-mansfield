@@ -64,7 +64,7 @@ People answer Free Stuff and job posts through a form, and the poster gets the m
 4. Go to **Edge Functions > Secrets** and add `RESEND_API_KEY`. Paste your Resend API key there, and only there.
 5. Test it: open a Free Stuff post on the site, press **Message the giver**, and send yourself a note.
 
-Replies come from `replies@sunnymansfield.com` (your Resend domain), with Reply-To set to the person writing. Each person can send 8 replies an hour, 2 a day to the same post, and a post takes at most 40 a day.
+Replies come from `hello@sunnymansfield.com` (sent through Resend), with Reply-To set to the person writing. Each person can send 8 replies an hour, 2 a day to the same post, and a post takes at most 40 a day.
 
 ## 8. Turn on birthday shout-outs (about 5 minutes)
 
@@ -114,3 +114,10 @@ Ads are paused (`"ads_open": false` in `config.json`), so each ad spot shows a S
 ```
 
 Note: Supabase's built-in email only sends a few sign-in emails per hour. After you sign in, you stay signed in on that device. The site checks the database every 15 minutes, which also keeps the free project from pausing.
+
+## Homes for Rent or Sale (added November 2026)
+
+Home listings use the same private replies as Free Stuff and jobs. After this change is live, do these two things once:
+
+1. In Supabase, open **SQL Editor**, paste all of `supabase/schema.sql` again and click **Run**. Editors then review every home listing, even from verified contributors, and the poster's email is erased after 60 days.
+2. Go to **Edge Functions**, open `reply`, paste all of the new `supabase/functions/reply/index.ts` over the old code and deploy. Until then, the "Ask about it" button on home listings shows an error.

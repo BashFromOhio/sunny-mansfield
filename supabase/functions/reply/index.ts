@@ -1,14 +1,14 @@
-// Private replies for Free Stuff and job posts, Craigslist style: the person replying never sees the poster's email.
+// Private replies for Free Stuff, job and home posts, Craigslist style: the person replying never sees the poster's email.
 // The site sends { post_id, name, email, message }. We look up the poster's email with the service key (which Supabase
 // gives this function on its own), email them through Resend with Reply-To set to the sender, and log a hashed record
 // to stop spam. Setup is in BACKEND.md, step 7. The only secret to add is RESEND_API_KEY.
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const SITE = Deno.env.get("SITE_URL") ?? "https://sunnymansfield.com";
-const FROM = Deno.env.get("RELAY_FROM") ?? "Sunny Mansfield <replies@sunnymansfield.com>";
+const FROM = Deno.env.get("RELAY_FROM") ?? "Sunny Mansfield <hello@sunnymansfield.com>";
 const REPORT = Deno.env.get("REPORT_EMAIL") ?? "hello@sunnymansfield.com";
 const ORIGINS = [SITE, SITE.replace("https://", "https://www.")];
-const SECTIONS = ["Free Stuff", "Job"];
+const SECTIONS = ["Free Stuff", "Job", "Home for Rent or Sale"];
 const OPEN_DAYS = 31; // posts come off the site after 30 days
 const LIMITS = { perIpHour: 8, perSenderPostDay: 2, perPostDay: 40 };
 
@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
   }
 
   const title = oneLine(p.title).slice(0, 120);
-  const what = p.section === "Job" ? "your job post" : "your Free Stuff post";
+  const what = p.section === "Job" ? "your job post" : p.section === "Home for Rent or Sale" ? "your home listing" : "your Free Stuff post";
   const text = [
     `${name} replied to ${what} on Sunny Mansfield: "${title}"`,
     "",

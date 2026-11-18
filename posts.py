@@ -604,11 +604,128 @@ def make_community_feed(cfg, stories, flyers, funds, businesses, out, page_url, 
     note(f"Community feed: {len(items)} posts")
 
 
+# ---- Daily series for the Facebook Page: Happy Tails, Comeback Buildings, Race Night ----
+SERIES_SLOTS = [  # key, hour (Eastern), label on the image, script word, hashtag, page, weekly ask day (Monday = 0)
+    ("pets", 10, "Dog of the day", "Happy tails!", "#AdoptDontShop", "pets.html", 6),
+    ("homes", 12, "Home of the day", "Home sweet home!", "#MansfieldHomes", "homes.html", None),
+    ("comebacks", 14, "Comeback Buildings", "New life!", "#ComebackBuildings", "comebacks.html", 2),
+    ("racing", 18, "Race Night", "Race night!", "#MansfieldSpeedway", "racing.html", 5),
+]
+SERIES_ASKS = {
+    "pets": ("Adopted a shelter dog?", "Adopted a dog from the Richland County Dog Shelter? We'd love to share your happy tail. Send us a photo and a few lines about how they're doing."),
+    "comebacks": ("Know a comeback building?", "Know an old building in Richland County getting a second life? A restored storefront, a reopened theater, a church saved by its neighbors. Tell us about it."),
+    "racing": ("Got race night news?", "Race results, a local driver's big night, a pit crew that deserves a shout-out? Send it in and we'll share it."),
+}
+
+
+def dog_post(dog, photo, credit):
+    fake = {"title": f"Meet {dog['name']}", "source": dog.get("breed") or "Richland County Dog Shelter"}
+    if photo is None:
+        return text_post(fake, "Dog of the day", credit, "Happy tails!")
+    label = " · ".join(x for x in ("Dog of the day", dog.get("age"), dog.get("sex")) if x)
+    return photo_post({**fake, "source": "Richland County Dog Shelter"}, label, photo, credit)
+
+
+def home_post(h, photo, credit):
+    """Price first: the price is the headline, the kind, beds, baths and town sit above it."""
+    label = f"{h.get('kind') or 'Home'} · {h['facts']}"[:46]
+    fake = {"title": h["price_label"], "source": h["title"][:60]}
+    if photo is not None:
+        return photo_post({**fake, "source": h.get("by") or "the owner"}, label, photo, credit)
+    return text_post(fake, label, credit, "Home sweet home!")
+
+
+def series_pick(pool, day, at):
+    """Something new since yesterday's slot when there is one (so it posts once, the day it arrives); otherwise go
+    round the recent ones, each at most once a week."""
+    fresh = [s for s in pool if at - timedelta(days=1) < s["date"] <= at]
+    if fresh:
+        return max(fresh, key=lambda s: s["date"])
+    pool = sorted((s for s in pool if s["date"] <= at), key=lambda s: s["id"])
+    if not pool:
+        return None
+    n = day.toordinal()
+    if len(pool) < 7 and n % 7 >= len(pool):
+        return None
+    return pool[n % len(pool)]
+
+
+def make_series_feed(cfg, series, dogs, out, page_url, ua, credit, dog_of_the_day, note=print, homes=()):
+    """series.xml: up to three posts a day for the Facebook Page, one per series: the shelter's dog of the day at 10 a.m.,
+    a comeback building at 2 p.m. and race news at 6 p.m. Eastern. A series with nothing to share skips the day, and asks
+    people to send something in once a week instead. Like social.xml, each item's link is the framed image."""
+    from datetime import datetime, timedelta
+    from email.utils import format_datetime
+    from html import escape as e
+    from zoneinfo import ZoneInfo
+    try:
+        site = cfg["site_url"].rstrip("/")
+        folder = Path(out) / "social"
+        folder.mkdir(parents=True, exist_ok=True)
+        now = datetime.now(ZoneInfo("America/New_York"))
+        items = []
+        for back in range(3):  # today and the two days before, so a missed run still gets posted
+            day = (now - timedelta(days=back)).date()
+            for key, hour, label, script, tag, page, ask_day in SERIES_SLOTS:
+                at = datetime(day.year, day.month, day.day, hour, tzinfo=now.tzinfo)
+                if at > now:
+                    continue
+                name = f"series-{key}-{day:%Y-%m-%d}.jpg"
+                im = title = text = link = None
+                if key == "pets" and dogs:
+                    d = dog_of_the_day(dogs, day)
+                    photo = load_photo(d.get("big"), ua)
+                    if photo is None or min(photo.size) < 400:
+                        photo = None  # a 136-pixel thumbnail would look blurry framed, so use the text card instead
+                    im = dog_post(d, photo, credit)
+                    line = " · ".join(x for x in (d.get("age"), d.get("sex"), d.get("breed")) if x)
+                    title, link = f"Dog of the day: {d['name']}", d["url"]
+                    text = (f"🐾 Dog of the day: meet {d['name']}!" + (f"\n{line}" if line else "")
+                            + f"\n\n{d['name']} is waiting at the Richland County Dog Shelter for a family. "
+                            f"Can't adopt? A share might reach the right home.\n\nMeet {d['name']}: {d['url']}\n"
+                            f"Every adoptable dog: {site}/{page}")
+                elif key == "homes":
+                    h = series_pick(list(homes), day, at)
+                    if h:
+                        im = home_post(h, load_photo(h.get("image"), ua), credit)
+                        title, link = f"{h['price_label']}: {h['title']}", h["url"]
+                        text = (f"🏡 {h.get('kind') or 'Home'}: {h['price_label']}\n{h['facts']}\n\n{h['title']}"
+                                f"\n\nAsk about it privately: {link}\nMore homes: {site}/{page}")
+                else:
+                    s = series_pick(series.get(key) or [], day, at)
+                    if s:
+                        im = text_post(s, label, credit, script)
+                        title, link = s["title"], page_url(s)
+                        text = f"{script} {s['title']}. {s.get('summary') or ''}".strip() + f"\n\nRead more: {link}\nMore {label}: {site}/{page}"
+                    elif ask_day is not None and day.weekday() == ask_day:
+                        head, body = SERIES_ASKS[key]
+                        im = text_post({"title": head, "source": ""}, label, credit, script)
+                        title, link = head, f"{site}/submit.html"
+                        text = f"{body}\n\nSend it in: {link}"
+                if im is None:
+                    continue
+                im.save(folder / name, quality=86, optimize=True, progressive=False)
+                image = f"{site}/social/{name}"
+                caption = f"{text}\n\n{TAGS} {tag}"
+                items.append((at, f"""<item><title>{e(title)}</title><link>{e(image)}</link>
+<guid isPermaLink="false">sunny-series-{key}-{day:%Y-%m-%d}</guid><pubDate>{format_datetime(at)}</pubDate>
+<description>{e(caption)}</description><enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>"""))
+        items.sort(key=lambda x: x[0], reverse=True)
+        (Path(out) / "series.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>{e(cfg['site_name'])} daily series</title><link>{e(site)}/</link>
+<description>Dog of the day, Comeback Buildings and Race Night, ready for Facebook</description>
+{"".join(x for _, x in items)}
+</channel></rss>""")
+        note(f"Series feed: {len(items)} posts in the last 3 days")
+    except Exception as exc:  # the site still builds if a post image fails
+        note(f"Series feed: skipped ({exc})")
+
+
 def fill_enclosure_lengths(out, site):
     """Give each enclosure its real file size. Some RSS readers, Zapier among them, skip enclosures with length 0."""
     import re
     site = site.rstrip("/")
-    for name in ("social.xml", "community.xml", "top.xml", "quotes.xml", "feed.xml"):
+    for name in ("social.xml", "community.xml", "top.xml", "quotes.xml", "series.xml", "feed.xml"):
         path = Path(out) / name
         if not path.exists():
             continue

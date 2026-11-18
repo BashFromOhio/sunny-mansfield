@@ -65,7 +65,7 @@ begin
   new.verified_at := null;  -- only the "verify" Edge Function can mark an email as confirmed
   if signed_in is not null then
     new.email := signed_in;  -- a signed-in sender can't claim someone else's address
-    if new.section not in ('Join the team', 'Advertise', 'Fundraiser', 'Job', 'Birthday', 'Bracket', 'Headline', 'Link')
+    if new.section not in ('Join the team', 'Advertise', 'Fundraiser', 'Job', 'Home for Rent or Sale', 'Birthday', 'Bracket', 'Headline', 'Link')
        and confirmed = signed_in
        and exists (select 1 from verified where lower(email) = confirmed) then
       new.status := 'approved';
@@ -144,14 +144,14 @@ create index if not exists email_codes_ip_idx on public.email_codes (ip_hash, se
 alter table public.email_codes enable row level security;  -- no policies: closed to the public
 
 -- Housekeeping: declined posts go after 30 days, reply records after 30 days, and the poster's email comes off
--- Free Stuff and job posts after 60 days (replies stop at 30). Birthday shout-outs go a year and a month after
+-- Free Stuff, job and home posts after 60 days (replies stop at 30). Birthday shout-outs go a year and a month after
 -- they were sent (they run once), or after 2 days if nobody confirmed the email. The consent record stays as proof of permission.
 create or replace function public.tidy_up() returns void
 language sql security definer set search_path = public as $$
   delete from submissions where status = 'rejected' and created_at < now() - interval '30 days';
   delete from relay_log where created_at < now() - interval '30 days';
   update submissions set email = null
-    where section in ('Free Stuff', 'Job', 'Buy & Sell') and email is not null and created_at < now() - interval '60 days';
+    where section in ('Free Stuff', 'Job', 'Home for Rent or Sale', 'Buy & Sell') and email is not null and created_at < now() - interval '60 days';
   delete from submissions where section = 'Birthday' and created_at < now() - interval '400 days';
   delete from submissions where section = 'Birthday' and verified_at is null and created_at < now() - interval '2 days';
 $$;

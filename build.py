@@ -270,6 +270,143 @@ def collect(config, sample):
     return stories
 
 
+# ---- Daily series: Happy Tails (shelter dogs), Comeback Buildings (old places getting new life), Race Night ----
+SERIES = [  # key, page, name, script word, what the page is about
+    ("pets", "pets.html", "Happy Tails", "Happy tails!",
+     "Adoptable dogs at the Richland County Dog Shelter, a new dog of the day every morning, and the happy endings that follow."),
+    ("comebacks", "comebacks.html", "Comeback Buildings", "New life!",
+     "Old Mansfield and Richland County buildings getting a second life: restorations, reopenings and landmarks coming back."),
+    ("racing", "racing.html", "Race Night", "Start your engines!",
+     "Mansfield Speedway and Richland County racing: race nights, results, drivers and the track's comeback."),
+]
+SERIES_NAMES = {k: name for k, _, name, _, _ in SERIES}
+SERIES_RX = {
+    "pets": rx(r"\b(dog shelter|animal shelter|dog warden|humane society|happy tails?|forever homes?|fur-?ever homes?|for adoption|adoption (events?|fees?|days?|specials?)|"
+               r"(adopt\w*|rescue[ds]?|foster\w*|shelter) (a |an |the |your |their |our )?(dogs?|cats?|pets?|pupp(y|ies)|kittens?|animals?)|"
+               r"(dogs?|cats?|pets?|pupp(y|ies)|kittens?|animals?) (adoption|rescue|shelter)s?)\b"),
+    "racing": rx(r"\b(speedway|motorsports?|race ?track|sprint cars?|late models?|dirt (track|oval)|monster trucks?|"
+                 r"demolition derby|demo derby|motocross|arenacross|drag (race|racing|strip)|world of outlaws|nascar|go-?karts?|"
+                 r"checkered flag|mid-ohio sports car)\b"),
+}
+COMEBACK_DO = rx(r"\b(restor\w*|renovat\w*|rehab(bed|bing|ilitat\w*)?|revitaliz\w*|redevelop\w*|reopen\w*|repurpos\w*|"
+                 r"new life|second life|preserv\w*|facelift|makeover|historic tax credits?|brought back|comeback|transform\w*)\b")
+COMEBACK_PLACE = rx(r"\b(buildings?|theat(er|re)s?|church(es)?|schoolhouse|mill|factory|block|storefronts?|landmarks?|historic|"
+                    r"hotel|depot|mansion|house|warehouse|courthouse|downtown|carrou?sel|reformatory|fountain|bank building|"
+                    r"opera house|armory|station|plant|barn|bridge|library)\b")
+
+
+def series_of(s):
+    text = f"{s['title']} {s['summary']}"
+    keys = [k for k in ("pets", "racing") if SERIES_RX[k].search(text)]
+    if COMEBACK_DO.search(text) and COMEBACK_PLACE.search(text):
+        keys.append("comebacks")
+    if s.get("series") and s.get("trusted") and s["series"] not in keys:
+        keys.append(s["series"])  # a series' own source (the Speedway's news) counts whatever its words
+    return keys
+
+
+def series_ok(s):
+    """The same skip rules as the front page (no crime, crashes, obituaries, politics, other Mansfields), without
+    needing an upbeat word: a race schedule or a restoration update is still good news for its page."""
+    text = f"{s['title']} {s['summary']}"
+    if LIFE.search(s["title"]) or OBIT_TEXT.search(text) or OBIT_TAG.search(" | ".join(s.get("tags") or [])):
+        return False
+    if NEG.search(text) or VOTE.search(text) or AWAY.search(f"{text} {s.get('source', '')}"):
+        return False
+    return bool(s.get("local") or NEAR.search(text))
+
+
+def collect_series(cfg, stories, sample):
+    """Stories for the three series pages: front-page stories that fit, plus the series' own feeds, kept longer
+    (series_max_age_days) because these topics move slower than the front page."""
+    raw = []
+    if not sample:
+        for feed in cfg.get("series_feeds", []):
+            try:
+                got = fetch_feed(feed)
+                for g in got:
+                    g["series"], g["trusted"] = feed.get("series"), feed.get("trusted", False)
+                raw += got
+                print(f"  {feed['name']}: {len(got)} items", file=sys.stderr)
+            except Exception as exc:
+                note(f"{feed['name']}: skipped ({exc})")
+    cutoff = datetime.now(timezone.utc) - timedelta(days=cfg.get("series_max_age_days", 60))
+    skip = [x.lower() for x in cfg.get("skip_sources", [])]
+    seen = {re.sub(r"\W+", "", s["title"].lower())[:60] for s in stories}
+    extra = []
+    for s in sorted(raw, key=lambda s: s["date"], reverse=True):
+        key = re.sub(r"\W+", "", s["title"].lower())[:60]
+        if key in seen or s["date"] < cutoff or any(x in s["source"].lower() or x in s["link"].lower() for x in skip):
+            continue
+        if not series_ok(s) or not series_of(s):
+            continue
+        seen.add(key)
+        s["section"] = next((k for k, p in RULES if p.search(f"{s['title']} {s['summary']}")), "good")
+        s["id"] = hashlib.sha1((s["link"] + s["title"]).encode()).hexdigest()[:10]
+        extra.append(s)
+    out = {k: [] for k in SERIES_NAMES}
+    for s in sorted([s for s in stories if s["section"] != "life"] + extra, key=lambda s: s["date"], reverse=True):
+        for k in series_of(s):
+            out[k].append(s)
+    note("Series: " + ", ".join(f"{SERIES_NAMES[k]} {len(v)}" for k, v in out.items()))
+    return out, extra
+
+
+SAMPLE_DOGS = [
+    {"id": "1", "name": "Biscuit", "breed": "Labrador Retriever Mix", "age": "Young", "sex": "Female", "image": "", "url": "https://www.adoptapet.com/"},
+    {"id": "2", "name": "Moose", "breed": "Pit Bull Terrier Mix", "age": "Adult", "sex": "Male", "image": "", "url": "https://www.adoptapet.com/"},
+    {"id": "3", "name": "Pepper", "breed": "Beagle Mix", "age": "Senior", "sex": "Female", "image": "", "url": "https://www.adoptapet.com/"},
+]
+
+
+def fetch_shelter_dogs(cfg, sample):
+    """Adoptable dogs from the shelter's Adopt-a-Pet list (the same list the county's Adoptable Dogs page shows)."""
+    shelter = cfg.get("shelter") or {}
+    if sample:
+        return SAMPLE_DOGS
+    if not shelter.get("adoptapet_id"):
+        return []
+    url = ("https://searchtools.adoptapet.com/cgi-bin/searchtools.cgi/portable_pet_list?"
+           + urllib.parse.urlencode({"shelter_id": shelter["adoptapet_id"], "clan_name": "dog", "sort_by": "pet_name"}))
+    try:
+        _, page = fetch(url, limit=3_000_000)
+    except Exception as exc:
+        note(f"Shelter dogs: skipped ({exc})")
+        return []
+    dogs, seen = [], set()
+    for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", page, re.S | re.I):  # every other row has no class
+        link = re.search(r'href="(?:https://[^"/]+)?(/pet/(\d+)-[\w-]+)"', row)
+        name = re.search(r'class="name[^"]*"[^>]*>\s*<p>\s*<a[^>]*>(.*?)</a>', row, re.S)
+        if not (link and name) or link.group(2) in seen:
+            continue
+        seen.add(link.group(2))
+        cells = [clean(c, 80) for c in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+        breed = re.search(r'class="[^"]*breed[^"]*"[^>]*>(.*?)</td>', row, re.S)
+        img = re.search(r'<img[^>]+src="(https://pet-uploads\.adoptapet\.com/[^"]+)"', row)
+        dogs.append({"id": link.group(2), "name": clean(name.group(1), 60), "url": "https://www.adoptapet.com" + link.group(1),
+                     "breed": clean(breed.group(1), 60) if breed else "", "age": cells[-2] if len(cells) >= 5 else "",
+                     "sex": cells[-1] if len(cells) >= 5 else "", "image": img.group(1) if img else "",
+                     "big": big_dog_photo(img.group(1)) if img else ""})
+    note(f"Shelter dogs: {len(dogs)} adoptable")
+    return dogs
+
+
+def big_dog_photo(thumb, height=1000):
+    """The list only has 136-pixel thumbnails. Adopt-a-Pet stores each upload's full-size photo five numbers
+    before its thumbnail; callers fall back to the thumbnail if that ever stops being true."""
+    m = re.search(r"/(\d{6,})\.jpg$", thumb or "")
+    return f"https://media.adoptapet.com/image/upload/c_fit,h_{height}/f_jpg,q_auto/{int(m.group(1)) - 5}" if m else ""
+
+
+def dog_of_the_day(dogs, day=None):
+    """One dog a day, the same on the site and on Facebook. Goes through every dog before repeating."""
+    if not dogs:
+        return None
+    day = day or eastern().date()
+    ordered = sorted(dogs, key=lambda d: int(d["id"]) if str(d["id"]).isdigit() else 0)
+    return ordered[day.toordinal() % len(ordered)]
+
+
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
       "Chrome/128.0 Safari/537.36")
 STATS = {}
@@ -331,7 +468,7 @@ SUBMIT_COLS = ["when", "section", "title", "summary", "photo", "link", "name", "
 SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "cool research": "good",  # section retired; old posts go to Good News
                     "business spotlight": "spotlight",
                     "event flyer": "flyer", "free stuff": "market", "buy & sell": "market", "buy and sell": "market",
-                    "job": "job", "jobs": "job",
+                    "job": "job", "jobs": "job", "home for rent or sale": "home", "home": "home", "homes": "home",
                     "athlete spotlight": "athlete", "bracket": "bracket", "fundraiser": "fund",
                     "headline": "headline", "link": "link", "birthday": "birthday"}
 FUND_DAYS = 90  # fundraisers without an end date come down after this
@@ -375,7 +512,7 @@ EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 
 
 def scrub(text):
-    """Take phone numbers and email addresses out of Free Stuff and job posts. People reply through the site instead."""
+    """Take phone numbers and email addresses out of Free Stuff, job and home posts. People reply through the site instead."""
     return EMAIL.sub("[removed]", PHONE.sub("[removed]", text or ""))
 
 
@@ -448,7 +585,7 @@ def fetch_published(config):
 def load_submissions(config, sample):
     """Approved posts: from Supabase on the live site, from sample_submissions.csv in the preview."""
     got = {"stories": [], "spotlights": [], "flyers": [], "listings": [], "jobs": [], "brackets": [], "fundraisers": [],
-           "headlines": [], "links": [], "birthdays": []}
+           "headlines": [], "links": [], "birthdays": [], "homes": []}
     try:
         if sample:
             rows = list(csv.reader(io.StringIO((HERE / "sample_submissions.csv").read_text())))
@@ -512,6 +649,23 @@ def load_submissions(config, sample):
                                 "summary": scrub("\n".join(keep).strip()), "employer": row["business"].strip() or row["name"],
                                 "type": kind, "pay": scrub(row["price"]), "town": row["town"], "link": row["link"],
                                 "image": image, "date": date, "until": date + timedelta(days=JOB_DAYS)})
+            continue
+        if section == "home":
+            if date + timedelta(days=HOME_DAYS) < now:
+                continue
+            facts, keep = {}, []
+            for line in row["summary"].splitlines():
+                k, _, v = line.partition(": ")
+                if k in ("Listing", "Beds", "Baths") and v.strip():
+                    facts[k] = v.strip()
+                else:
+                    keep.append(line)
+            kind = facts.get("Listing") if facts.get("Listing") in HOME_KINDS else ""
+            got["homes"].append({"id": sid, "pid": row.get("id") or (sid if sample else ""), "title": scrub(row["title"]),
+                                 "summary": scrub("\n".join(keep).strip()), "kind": kind, "price": scrub(row["price"]),
+                                 "amount": home_price(row["price"]), "beds": facts.get("Beds", ""), "baths": facts.get("Baths", ""),
+                                 "town": row["town"], "link": row["link"], "image": image, "by": row["business"].strip() or row["name"],
+                                 "date": date})
             continue
         if section == "spotlight":
             name = row["business"] or row["title"]
@@ -768,6 +922,13 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .card .hed{font-size:24px;line-height:1.2;letter-spacing:-.01em}
 .card .dek{font-size:14px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .empty{grid-column:1/-1;margin:0;color:var(--text-2)}
+.home .photo{position:relative}.home .price{position:absolute;left:12px;bottom:12px;background:var(--secondary);color:var(--tertiary);font:700 20px/1 var(--sans);padding:8px 12px}
+#h-sort{font:inherit;padding:10px 12px;border:2px solid var(--border-strong);background:var(--tertiary);color:var(--text)}
+.dogs.grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:20px}
+.dog{padding:18px}.dog .photo{margin:-18px -18px 2px;width:calc(100% + 36px);aspect-ratio:1}.dog .hed{font-size:21px}
+.dogday{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:32px;align-items:center;background:var(--tertiary);border:2px solid var(--border-strong);padding:24px}
+.dogday .photo{aspect-ratio:1}.dogday .hed{font-size:clamp(30px,4vw,48px);line-height:1.05;margin:6px 0 12px}.dogday .dek{font-size:18px;line-height:1.6}
+@media (max-width:700px){.dogday{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}}
 .more-row{display:flex;justify-content:center;padding-top:32px}
 
 /* candy-stripe frame: the "Greetings from" postcard look, used for memories and the closing call to action */
@@ -1720,8 +1881,8 @@ def masthead(cfg, site, stories, quote=None, current=""):
 </div>
 <nav class="navbar" aria-label="Main"><div class="wrap strip caps">
 <div class="navgroup"><a href="{e(site)}/"{on("front")}>Front page</a><a href="{e(site)}/events.html">Events</a><a href="{e(site)}/watch.html"{on("watch")}>Watch Mansfield</a>
-<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/fundraisers.html">Donate</a>
-<a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/businesses.html">Businesses</a>
+<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/pets.html"{on("pets")}>Happy Tails</a><a href="{e(site)}/comebacks.html"{on("comebacks")}>Comebacks</a><a href="{e(site)}/racing.html"{on("racing")}>Race Night</a><a href="{e(site)}/fundraisers.html">Donate</a>
+<a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/homes.html">Homes</a><a href="{e(site)}/businesses.html">Businesses</a>
 <button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}</div>
 <a class="navcta" href="{e(site)}/submit.html">Submit news</a></div></nav>
@@ -1870,10 +2031,14 @@ FIRST_POST = {  # what an empty spot asks for: label, where the form is, button,
     "sales": ("Garage Sales", "submit.html", "Post your sale", "Garage, yard, porch and rummage sales around Richland County."),
     "seniors": ("Seniors", "submit.html", "Share a story", "A 100th birthday, a retiree who still volunteers, a veteran's story."),
     "free": ("Free Stuff", "submit.html#free", "Give something away", "A dresser you don't need, outgrown kids' clothes, extra garden tomatoes. Free only."),
+    "homes": ("Homes", "submit.html#home", "List a home free", "A house or apartment for rent or sale in Richland County. Price up front, replies stay private."),
     "jobs": ("Now hiring", "submit.html#job", "Post a job free", "Hiring at your shop, church, school or nonprofit? Neighbors are looking."),
     "funds": ("Fundraisers", "submit.html#fundraiser", "Share a fundraiser", "Medical bills, team trips, fire recovery and special causes."),
     "events": ("Local events", "submit.html#flyer", "Post your flyer", "Concerts, fish fries, festivals, games and church suppers."),
     "birthday": ("Birthdays", "birthdays.html#form", "Send a shout-out", "Know someone celebrating? We'll wish them a happy birthday here and on Facebook, free."),
+    "pets": ("Happy Tails", "submit.html", "Send your happy tail", "Adopted a dog from the Richland County shelter? Send us your happy tail and a photo."),
+    "comebacks": ("Comeback Buildings", "submit.html", "Tell us about it", "Know an old building getting new life? A restored storefront, a reopened theater, a church saved by its neighbors."),
+    "racing": ("Race Night", "submit.html", "Send it in", "Race results, a local driver's big night, a pit crew that deserves a shout-out."),
     "watch": ("Watch Mansfield", "submit.html", "Send us your video", "A podcast, a local show, a highlight reel. Mansfield made, Mansfield watched."),
 }
 
@@ -2863,8 +3028,8 @@ def shell(cfg, title, desc, url, inner, stories, image=None, extra="", data=None
 
 
 SB_JS = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"
-EXTRA_SECTIONS = ["Fundraiser", "Athlete Spotlight", "Business Spotlight", "Event Flyer", "Free Stuff", "Job"]
-PRIVATE_REPLY = ["Free Stuff", "Job"]  # people answer these through the reply form, so the poster's email is required
+EXTRA_SECTIONS = ["Fundraiser", "Athlete Spotlight", "Business Spotlight", "Event Flyer", "Free Stuff", "Job", "Home for Rent or Sale"]
+PRIVATE_REPLY = ["Free Stuff", "Job", "Home for Rent or Sale"]  # people answer these through the reply form, so the poster's email is required
 
 
 def field(name, label, kind="text", req=False, hint="", show=None, opts=None, extra=None, wide=False, consent=None, need=False):
@@ -2967,7 +3132,8 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
   const pub=[val('title'),val('summary')].join(' ');const pii=/(\(?\d{{3}}\)?[\s.-]?\d{{3}}[\s.-]?\d{{4}})|([\w.+-]+@[\w-]+\.[\w.-]+)/.test(pub);
   if(pii&&PRIVATE.includes(sec)){{msg.textContent='Please take your phone number or email out of the post. People reply through the site, so you stay private.';return}}
   if(pii&&!f.dataset.piiOk){{f.dataset.piiOk=1;msg.textContent='Heads up: there is a phone number or email in your post, and it will be public. Take it out, or press Send again to keep it.';return}}
-  if(sec==='Free Stuff'&&/\$\s?\d|\b(obo|or best offer|for sale|asking|venmo|cash ?app|zelle|paypal|wanted|wtb|iso)\b/i.test(pub)){{msg.textContent='Free Stuff is free only. Please take out any price, trade or payment app.';return}}
+  if(sec==='Home for Rent or Sale'&&/\\b(no (kids|children|families)|adults only|singles only|couples only|perfect for (a )?(single|couple)|(christians?|whites?|americans?) only|no (wheelchairs?|disabled)|english speakers? only)\\b/i.test(pub)){{msg.textContent='Fair housing laws don\u2019t allow preferences about who can live there (like no kids or adults only). Please describe the home instead.';return}}
+  if(sec==='Free Stuff'&&/\$\s?\d|\\b(obo|or best offer|for sale|asking|venmo|cash ?app|zelle|paypal|wanted|wtb|iso)\\b/i.test(pub)){{msg.textContent='Free Stuff is free only. Please take out any price, trade or payment app.';return}}
   if(val('minor')===''){{msg.textContent='Please tell us if the athlete is under 18.';f.minor.focus();return}}
   if(val('minor')==='Yes'&&(!val('guardian')||!val('guardian_ok'))){{msg.textContent='For an athlete under 18, add the parent or guardian name and check that they said OK.';f.guardian.focus();return}}
   const thanks=f.nextElementSibling;
@@ -3142,6 +3308,9 @@ def render_submit(cfg, stories):
          "People message you through the site, so your phone and email stay private. Up for 30 days.", "#form:Free Stuff", "Give something away", "free"),
         ("biz", "Post a job", "Hiring in Richland County? Post it free for 30 days. Applicants reply through Sunny Mansfield, "
          "so your email is never shown.", "#form:Job", "Post a job", "job"),
+        ("hoods", "List a home for rent or sale", "Renting out a house or apartment, or selling one in Richland County? List it "
+         "free for 30 days with the price up front. People ask about it through the site, so your phone and email stay private.",
+         "#form:Home for Rent or Sale", "List a home", "home"),
         ("seniors", "Send a birthday shout-out", "Just their name and birthday, plus a special message if you like. "
          "It shows on the front page and our Facebook page on their big day.", f"{site}/birthdays.html#form", "Send a shout-out", "birthday"),
         ("research", "Join the team", "Aspiring journalists, marketers, students, mentors and motivators. Get verified and "
@@ -3172,6 +3341,15 @@ def render_submit(cfg, stories):
         field("job_ok", "This is a real job in Richland County. Applying is free, it isn't commission-only or a "
               "\u201cbusiness opportunity\u201d, I follow equal-opportunity laws, and I'm 18 or older and allowed to hire for it.",
               "checkbox", show=["Job"], consent="Job rules OK", need=True),
+        field("listing", "For rent or for sale?", "select", show=[HOME_LABEL], opts=HOME_KINDS, extra="Listing", need=True),
+        field("price", "Price", show=[HOME_LABEL], need=True, hint="Like $950 a month or $149,900. Every listing shows its price."),
+        field("beds", "Bedrooms", "select", show=[HOME_LABEL], opts=["Studio", "1", "2", "3", "4", "5+"], extra="Beds"),
+        field("baths", "Bathrooms", "select", show=[HOME_LABEL], opts=["1", "1.5", "2", "2.5", "3+"], extra="Baths"),
+        field("business", "Listed by", show=[HOME_LABEL], hint="Optional: your name, property manager or real estate agency."),
+        field("home_ok", "This home is in Richland County and I own it or I'm allowed to list it. I follow fair housing laws "
+              "(no preferences about race, color, religion, sex, disability, family status, national origin, ancestry or military status), "
+              "I'll never ask for money before someone sees it in person, and I'm 18 or older.",
+              "checkbox", show=[HOME_LABEL], consent="Home rules OK", need=True),
         field("business", "Business name", show=["Business Spotlight"]),
         field("business", "Special cause", show=["Fundraiser"], hint="Optional. Fundraisers with the same cause, like \u201cBellville flood relief\u201d, are grouped together."),
         field("price", "Goal", show=["Fundraiser"], hint="Optional, like $5,000."),
@@ -3189,7 +3367,7 @@ def render_submit(cfg, stories):
         field("role", "You are a", "select", opts=["Neighbor", "Student reporter", "Business", "Mentor", "Organization"]),
         field("town", "Town or neighborhood"),
         field("email", "Your email", "email", hint="Never shown on the site. Editors use it if they have a question. "
-              "For Free Stuff and jobs it's required: replies are sent here."),
+              "For Free Stuff, jobs and homes it's required: replies are sent here."),
     ]
     inner = f"""{page_title("Hey neighbor!", "Got good news?", "Sunny Mansfield is written by the people who live here. Pick what you want to share. It takes about two minutes.")}
 <section class="wrap latest"><div class="grid">{cards}</div></section>
@@ -3274,7 +3452,7 @@ LEGAL = {
          "address, so only add photos you're happy to share. Before a photo leaves your device, our form redraws it to strip "
          "out hidden details phones save, like the GPS location where it was taken. Please keep phone numbers, emails and home "
          "addresses out of what you write, because it's public."),
-        ("Private replies", "Free Stuff and job posts never show the poster's email or phone. People answer through a form, "
+        ("Private replies", "Free Stuff, job and home posts never show the poster's email or phone. People answer through a form, "
          "and we email their name, email address and message to the poster. When the poster writes back, the other person "
          "sees the poster's email address, so only reply to people you're comfortable with. To stop spam we keep a scrambled "
          "(hashed) record of each reply for 30 days, not the message itself."),
@@ -3284,8 +3462,8 @@ LEGAL = {
          "sign-in emails and private replies are sent through Resend, and approved posts are shared to Facebook through Zapier. They process data "
          "only to provide those services. We never sell your information."),
         ("How long we keep it", "Approved posts stay up until they're taken down. Event flyers come down after the event, "
-         "Free Stuff and job posts after 30 days, and fundraisers after 90 days or their end date. We erase the email address "
-         "on Free Stuff and job posts 60 days after they're posted. Posts we decline are never published and are deleted "
+         "Free Stuff, job and home posts after 30 days, and fundraisers after 90 days or their end date. We erase the email address "
+         "on Free Stuff, job and home posts 60 days after they're posted. Posts we decline are never published and are deleted "
          "after 30 days. We keep the record of what you agreed to when you posted, as proof of permission."),
         ("Children", "Sunny Mansfield is for a general audience and isn't meant for children under 13 to use on their own. "
          "Posts about anyone under 18 need a parent or guardian's OK. A parent can ask us to remove a post or photo of their "
@@ -3317,6 +3495,11 @@ LEGAL = {
          "number, bank details or money before hiring them. Follow equal-opportunity laws: no preferences based on race, "
          "color, religion, sex, national origin, ancestry, age, disability, military status or other protected traits. "
          "The employer is responsible for the post and every hiring decision."),
+        ("Home listing rules", "Only homes in Richland County that you own or are allowed to list, with the real price. "
+         "Follow fair housing laws: no preferences or limits based on race, color, religion, sex, disability, family status, "
+         "national origin, ancestry or military status. Never ask for a deposit, fee or rent before someone has seen the home "
+         "in person. We don't check listings, handle money or act as a landlord or agent. The person listing is responsible "
+         "for the post."),
         ("Private replies", "Use the reply form only to answer the post. No spam, sales pitches or harassment. We may block "
          "anyone who misuses it, and we can't promise every message is delivered."),
         ("Stories from other outlets", "Headlines, short summaries and photos from other news outlets belong to their publishers "
@@ -3487,6 +3670,78 @@ def render_sports(cfg, stories, brackets):
 <section class="wrap latest"><h2 class="label">Sports news</h2><div class="grid">{grid}</div></section>"""
     return shell(cfg, f"Sports · {cfg['site_name']}", "Richland County athlete spotlights, tournament brackets and good sports news.",
                  f"{site}/sports.html", inner, stories)
+
+
+PAW = ('<circle cx="30" cy="36" r="8"/><circle cx="46" cy="24" r="8"/><circle cx="64" cy="26" r="8"/><circle cx="76" cy="42" r="8"/>'
+       '<path d="M52 46c-12 0-24 14-24 26 0 8 6 12 13 12 5 0 7-3 11-3s6 3 11 3c7 0 13-4 13-12 0-12-12-26-24-26z"/>')
+
+
+def dog_photo(d, size=500):
+    big = (d.get("big") or "").replace("h_1000", f"h_{size}")
+    inner = (f'<img src="{e(big or d["image"])}" alt="{e(d["name"])}, an adoptable {e(d["breed"] or "dog")}" loading="lazy" '
+             f'referrerpolicy="no-referrer"' + (f' onerror="this.onerror=null;this.src=\'{e(d["image"])}\'"' if big else "") + '>'
+             if d.get("image") else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{PAW}</svg></span>')
+    return f'<a class="photo" href="{e(d["url"])}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">{inner}</a>'
+
+
+def dog_line(d):
+    return " · ".join(x for x in (d.get("age"), d.get("sex"), d.get("breed")) if x)
+
+
+def dog_card(cfg, d):
+    return (f'<article class="card dog">{dog_photo(d)}<span class="caps kicker">{e(" · ".join(x for x in (d.get("age"), d.get("sex")) if x) or "Adoptable")}</span>'
+            f'<h3 class="hed"><a href="{e(d["url"])}" target="_blank" rel="noopener">{e(d["name"])}</a></h3>'
+            f'<p class="dek">{e(d.get("breed") or "")}</p>'
+            f'<div class="share"><a class="btn fb" href="{e(fb_share(d["url"]))}" target="_blank" rel="noopener">{FB_ICON}Share</a>'
+            f'<a class="textbtn" href="{e(d["url"])}" target="_blank" rel="noopener">Meet {e(d["name"])}</a></div></article>')
+
+
+def series_cta(cfg, key):
+    site = cfg["site_url"].rstrip("/")
+    label, href, button, examples = FIRST_POST[key]
+    return (f'<section class="wrap latest"><p class="note" style="text-align:center">{e(examples)} '
+            f'<a class="link" href="{e(site)}/{href}">{e(button)}</a></p></section>')
+
+
+def series_others(cfg, key):
+    site = cfg["site_url"].rstrip("/")
+    links = " · ".join(f'<a class="link" href="{e(site)}/{page}">{e(name)}</a>' for k, page, name, _, _ in SERIES if k != key)
+    return f'<section class="wrap latest"><p class="note" style="text-align:center">More daily series: {links}</p></section>'
+
+
+def render_series(cfg, key, items, stories, dogs=()):
+    site = cfg["site_url"].rstrip("/")
+    _, page, name, script, about = next(x for x in SERIES if x[0] == key)
+    grid = "".join(card(cfg, s) for s in items) or first_post(cfg, key, block=True)
+    top = ""
+    if key == "pets":
+        shelter = cfg.get("shelter") or {}
+        d = dog_of_the_day(dogs)
+        if d:
+            top = (f'<section class="wrap latest dogday-wrap"><h2 class="label">Dog of the day</h2><article class="dogday">{dog_photo(d, 900)}'
+                   f'<div><span class="caps kicker">{e(dog_line(d))}</span><h3 class="hed"><a href="{e(d["url"])}" target="_blank" rel="noopener">Meet {e(d["name"])}</a></h3>'
+                   f'<p class="dek">{e(d["name"])} is waiting at the {e(shelter.get("name", "Richland County Dog Shelter"))} for a family. '
+                   f'Share this post and you might help {e(d["name"])} find a home today.</p>'
+                   f'<div class="share"><a class="btn fb" href="{e(fb_share(d["url"]))}" target="_blank" rel="noopener">{FB_ICON}Share</a>'
+                   f'<a class="btn" href="{e(d["url"])}" target="_blank" rel="noopener">Meet {e(d["name"])} &rarr;</a></div></div></article></section>')
+            how = (f'Every dog here is at the {e(shelter.get("name", "Richland County Dog Shelter"))}. '
+                   + (f'<a class="link" href="{e(shelter["page"])}" target="_blank" rel="noopener">See the shelter\'s page</a> for visiting hours and how to adopt.'
+                      if shelter.get("page") else ""))
+            top += (f'<section class="wrap latest"><h2 class="label">Waiting for a home ({len(dogs)})</h2>'
+                    f'<p class="note">{how}</p><div class="grid dogs">{"".join(dog_card(cfg, x) for x in dogs)}</div></section>')
+    elif key == "racing" and cfg.get("racing_schedule"):
+        top = (f'<section class="wrap latest"><p class="note" style="text-align:center">Race dates, tickets and camping: '
+               f'<a class="link" href="{e(cfg["racing_schedule"])}" target="_blank" rel="noopener">Mansfield Speedway schedule</a></p></section>')
+    head_label = {"pets": "Happy endings and shelter news", "comebacks": "Buildings coming back", "racing": "Racing news"}[key]
+    inner = f"""{page_title(script, e(name), e(about))}
+{top}
+<section class="wrap latest"><h2 class="label">{head_label}</h2><div class="grid">{grid}</div></section>
+{series_cta(cfg, key)}
+{series_others(cfg, key)}"""
+    data = [{"@context": "https://schema.org", "@type": "CollectionPage", "name": name, "url": f"{site}/{page}",
+             "description": about, "isPartOf": {"@id": f"{site}/#site"}},
+            breadcrumbs([("Sunny Mansfield", f"{site}/"), (name, f"{site}/{page}")])]
+    return shell(cfg, f"{name} · {cfg['site_name']}", about, f"{site}/{page}", inner, stories, data=data)
 
 
 def render_fund_page(cfg, f, funds, stories):
@@ -3886,6 +4141,108 @@ document.querySelectorAll('[data-jt]').forEach(b=>b.addEventListener('click',()=
                  "Local jobs in Mansfield, Ontario, Lexington, Shelby, Bellville and Richland County, Ohio. Full-time, part-time "
                  "and seasonal work posted by local employers. Free to apply.", f"{site}/jobs.html", inner, stories, data=data,
                  extra=reply_box(cfg))
+
+
+# ---- Homes for rent or sale, posted by owners and agents through the submit form ----
+HOME_LABEL = "Home for Rent or Sale"
+HOME_DAYS = 30
+HOME_KINDS = ["For rent", "For sale"]
+HOME_SAFETY = ("Never pay a deposit, application fee or rent before you've seen the home in person and met the owner or agent. "
+               "Scammers copy real listings and ask for money by wire, gift card or payment app. Sunny Mansfield doesn't check "
+               "listings or handle any money.")
+FAIR_HOUSING = ("Every home here is offered under the Fair Housing Act: no listing may prefer or exclude anyone because of race, "
+                "color, religion, sex, disability, family status, national origin, ancestry or military status.")
+HOME_ART = '<path d="M10 52L50 16l40 36M20 44v42h60V44M42 86V62h16v24"/>'
+
+
+def home_price(text):
+    """The number in a typed price, for sorting: '$950 a month' -> 950, '$149,900' -> 149900, '150k' -> 150000."""
+    m = re.search(r"(\d[\d,]*(?:\.\d+)?)\s*(k\b)?", (text or "").replace("$", ""), re.I)
+    if not m:
+        return None
+    n = float(m.group(1).replace(",", ""))
+    return int(n * 1000 if m.group(2) else n)
+
+
+def home_price_label(h, short=False):
+    n = h.get("amount")
+    if not n:
+        return h.get("price") or "Ask"
+    monthly = h.get("kind") == "For rent"
+    return f"${n:,}" + (("/mo" if short else " a month") if monthly else "")
+
+
+def home_facts(h):
+    beds = h.get("beds")
+    beds = "Studio" if beds == "Studio" else (f"{beds} bed" if beds else "")
+    baths = f"{h['baths']} bath" if h.get("baths") else ""
+    return " · ".join(x for x in (beds, baths, h.get("town") or "Richland County") if x)
+
+
+def home_url(cfg, h):
+    return f'{cfg["site_url"].rstrip("/")}/homes/{h["id"]}.html'
+
+
+def home_card(cfg, h):
+    img = (f'<img src="{e(img_src(h["image"]))}" alt="" loading="lazy" referrerpolicy="no-referrer">' if h.get("image")
+           else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{HOME_ART}</svg></span>')
+    search = e(f'{h["title"]} {h["summary"]} {h.get("town") or ""}'.lower())
+    return (f'<article class="card home" id="h-{h["id"]}" data-kind="{slug(h.get("kind") or "other")}" data-price="{h.get("amount") or 0}" '
+            f'data-date="{int(h["date"].timestamp())}" data-q="{search}">'
+            f'<a class="photo" href="{e(home_url(cfg, h))}" tabindex="-1" aria-hidden="true">{img}<span class="price">{e(home_price_label(h, True))}</span></a>'
+            f'<span class="caps kicker">{e(h.get("kind") or "Home")} · {e(home_facts(h))}</span>'
+            f'<h3 class="hed"><a href="{e(home_url(cfg, h))}">{e(h["title"])}</a></h3>'
+            f'<div class="share">{reply_button(cfg, h, "Ask about it")}<a class="btn sm" href="{e(home_url(cfg, h))}">Details</a></div></article>')
+
+
+def render_homes(cfg, homes, stories):
+    site = cfg["site_url"].rstrip("/")
+    cards = "".join(home_card(cfg, h) for h in homes)
+    tabs = "".join(f'<button class="tab" type="button" data-hk="{slug(k)}" aria-pressed="false">{k}</button>' for k in HOME_KINDS)
+    inner = f"""{page_title("Home sweet home", "Homes for Rent or Sale", "Houses and apartments for rent or sale around Mansfield and Richland County, posted by local owners and agents. Free to post. Ask about a home privately: nobody's email or phone is shown.")}
+<section class="wrap jobs"><div class="mtools"><input type="search" id="h-search" placeholder="Search homes" aria-label="Search homes">
+<select id="h-sort" aria-label="Sort homes"><option value="new">Newest first</option><option value="low">Lowest price</option><option value="high">Highest price</option></select>
+<a class="btn solid" href="{e(site)}/submit.html#home">List a home</a></div>
+<div class="qtabs" role="group" aria-label="Rent or sale"><button class="tab" type="button" data-hk="all" aria-pressed="true">All homes</button>{tabs}</div>
+<div class="grid homes" id="h-list">{cards}</div>
+<div class="empty" id="h-empty"{" hidden" if homes else ""}>{first_post(cfg, "homes", block=True)}</div>
+<p class="note safenote">{SHIELD}<span>{e(HOME_SAFETY)} {e(FAIR_HOUSING)} Report a listing: {e(cfg['submit_email'])}</span></p></section>
+<script>(()=>{{const box=document.getElementById('h-list');const items=[...box.children];const q=document.getElementById('h-search');const so=document.getElementById('h-sort');let t='all';
+function go(){{const s=q.value.trim().toLowerCase();let n=0;const k=so.value;
+ items.sort((a,b)=>k==='new'?b.dataset.date-a.dataset.date:k==='low'?(+a.dataset.price||1e12)-(+b.dataset.price||1e12):b.dataset.price-a.dataset.price).forEach(el=>box.appendChild(el));
+ items.forEach(el=>{{const ok=(t==='all'||el.dataset.kind===t)&&(!s||el.dataset.q.includes(s));el.hidden=!ok;n+=ok}});
+ document.getElementById('h-empty').hidden=n>0||!items.length;document.querySelectorAll('[data-hk]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.hk===t))}}
+document.querySelectorAll('[data-hk]').forEach(b=>b.addEventListener('click',()=>{{t=b.dataset.hk;go()}}));q.addEventListener('input',go);so.addEventListener('change',go)}})();</script>"""
+    data = [{"@context": "https://schema.org", "@type": "ItemList", "name": "Homes for rent or sale in Richland County, Ohio", "itemListElement": [
+        {"@type": "ListItem", "position": i, "url": home_url(cfg, h), "name": h["title"]} for i, h in enumerate(homes[:30], 1)]},
+            breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Homes", f"{site}/homes.html")])]
+    return shell(cfg, f"Homes for Rent or Sale in Mansfield, Ohio · {cfg['site_name']}",
+                 "Houses and apartments for rent or sale in Mansfield, Ontario, Lexington, Shelby, Bellville and Richland County, "
+                 "Ohio, posted by local owners and agents.", f"{site}/homes.html", inner, stories, data=data, extra=reply_box(cfg))
+
+
+def render_home_page(cfg, h, stories):
+    site = cfg["site_url"].rstrip("/")
+    facts = "".join(f"<dt>{k}</dt><dd>{e(v)}</dd>" for k, v in (("Price", home_price_label(h)), ("Listing", h.get("kind")),
+                    ("Bedrooms", h.get("beds")), ("Bathrooms", h.get("baths")), ("Where", h.get("town") or "Richland County"),
+                    ("Listed by", h.get("by")), ("Posted", h["date"].strftime("%B %-d, %Y"))) if v)
+    more = (f'<a class="btn sm" href="{e(h["link"])}" target="_blank" rel="noopener nofollow ugc">See the full listing</a>'
+            if h.get("link") else "")
+    photo_html = (f'<span class="photo"><img src="{e(img_src(h["image"]))}" alt="{e(h["title"])}" referrerpolicy="no-referrer"></span>'
+                  if h.get("image") else "")
+    body = "".join(f"<p>{e(p)}</p>" for p in h["summary"].split("\n") if p.strip())
+    inner = f"""<section class="wrap pagehead"><span class="script">{e(h.get("kind") or "Home")}</span><h1 class="retro sm">{e(home_price_label(h))}</h1>
+<p class="intro">{e(h["title"])} · {e(home_facts(h))}</p></section>
+<section class="wrap jobpage"><div class="legaltext">{photo_html}{body}</div>
+<aside class="box"><dl class="facts">{facts}</dl><div class="share">{reply_button(cfg, h, "Ask about it")}{more}
+<a class="btn fb sm" href="{e(fb_share(home_url(cfg, h)))}" target="_blank" rel="noopener">{FB_ICON}Share</a></div>
+<p class="hint">{e(REPLY_NOTE)}</p></aside></section>
+<section class="wrap latest"><p class="note safenote">{SHIELD}<span>{e(HOME_SAFETY)} {e(FAIR_HOUSING)} <a class="link" href="{e(report_link(cfg, {"title": h["title"], "link": home_url(cfg, h)}))}">Report this listing</a> · <a class="link" href="{e(site)}/homes.html">All homes</a></span></p></section>"""
+    data = [breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Homes", f"{site}/homes.html"), (h["title"], home_url(cfg, h))])]
+    return shell(cfg, f"{home_price_label(h)}: {h['title']}, {h.get('town') or 'Richland County'} OH · {cfg['site_name']}",
+                 f"{h.get('kind') or 'Home'} in {h.get('town') or 'Richland County'}, Ohio: {home_price_label(h)}, {home_facts(h)}. {h['summary'][:100]}",
+                 home_url(cfg, h), inner, stories, image=img_src(h["image"]) if (h.get("image") or "").startswith("https://") else None,
+                 data=data, extra=reply_box(cfg))
 
 
 AD_RULES = [
@@ -4338,8 +4695,8 @@ def merge_community(cfg, stories, community):
     return sorted(stories + community, key=lambda s: s["date"], reverse=True)
 
 
-PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
-         ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"), ("watch.html", "daily", "0.7"),
+PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("pets.html", "daily", "0.8"), ("comebacks.html", "daily", "0.6"), ("racing.html", "daily", "0.6"), ("businesses.html", "weekly", "0.8"),
+         ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"), ("homes.html", "daily", "0.7"), ("watch.html", "daily", "0.7"),
          ("submit.html", "monthly", "0.6"), ("birthdays.html", "daily", "0.6"), ("rules.html", "monthly", "0.4"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
 
@@ -4401,10 +4758,14 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 - [Front page]({site}/): today's good news, the editor's headline, local business, causes, sports and events
 - [Events]({site}/events.html): things to do in Mansfield and Richland County this weekend and coming up
 - [Sports]({site}/sports.html): athlete spotlights, tournament brackets and good sports news
+- [Happy Tails]({site}/pets.html): adoptable dogs at the Richland County Dog Shelter, a dog of the day, and adoption stories
+- [Comeback Buildings]({site}/comebacks.html): old Richland County buildings getting restored and reopened
+- [Race Night]({site}/racing.html): Mansfield Speedway and local racing news
 - [Business spotlights]({site}/businesses.html): free pages for Richland County businesses
 - [Fundraisers]({site}/fundraisers.html): local causes posted by neighbors (not run or verified by Sunny Mansfield)
 - [Free Stuff]({site}/free.html): things neighbors are giving away, free only
 - [Jobs]({site}/jobs.html): local jobs posted by Richland County employers
+- [Homes]({site}/homes.html): houses and apartments for rent or sale, posted by local owners and agents
 
 ## Towns
 
@@ -4499,6 +4860,8 @@ def main():
     got = load_submissions(cfg, args.sample)
     stories = add_links(cfg, stories, got["links"], args.sample)
     stories = merge_community(cfg, stories, got["stories"])
+    series, series_extra = collect_series(cfg, stories, args.sample)
+    dogs = fetch_shelter_dogs(cfg, args.sample)
     flyers, listings = got["flyers"], got["listings"]
     # Newest spotlights first; the example businesses only fill in until real ones arrive.
     real = list(reversed(got["spotlights"])) + [b for b in businesses if not b.get("sample")]
@@ -4530,7 +4893,7 @@ def main():
     (out / "artifact.html").write_text(preview)
     try:
         from posts import (make_birthday_invite_image, make_community_feed, make_daily_post, make_post_images,
-                           make_quote_feed, make_quote_image, make_top_story_feed)
+                           make_quote_feed, make_quote_image, make_series_feed, make_top_story_feed)
         credit = "sunnymansfield.com"  # the line along the bottom of every post image
         make_post_images(stories, out, SECTION_NAMES, UA, credit, outlet_photos=cfg.get("frame_outlet_photos", False), note=note)
         make_daily_post(cfg, stories, businesses, flyers, got["fundraisers"], listings, out, SECTION_NAMES, UA, credit,
@@ -4540,10 +4903,14 @@ def main():
         make_quote_feed(cfg, quote, out, credit, birthdays=got["birthdays"], note=note)
         make_top_story_feed(cfg, stories, out, lambda s: page_url(cfg, s), note=note)
         make_community_feed(cfg, stories, flyers, got["fundraisers"], businesses, out, lambda s: page_url(cfg, s), UA, credit, note=note)
+        make_series_feed(cfg, series, dogs, out, lambda s: page_url(cfg, s), UA, credit, dog_of_the_day, note=note,
+                         homes=[{**h, "price_label": home_price_label(h), "facts": home_facts(h), "url": home_url(cfg, h)} for h in got["homes"]])
     except ImportError as exc:
         note(f"Post images: skipped ({exc})")
-    for s in stories:
+    for s in stories + series_extra:
         (out / "s" / f"{s['id']}.html").write_text(rebase(render_story_page(cfg, s, stories)))
+    for key, page, *_ in SERIES:
+        (out / page).write_text(rebase(render_series(cfg, key, series[key], stories, dogs)))
     videos = watch_entries(cfg.get("watch") or [])
     pics = make_watch_images(videos, out)
     for v in videos:
@@ -4582,6 +4949,10 @@ def main():
     (out / "jobs").mkdir(exist_ok=True)
     for j in got["jobs"]:
         (out / "jobs" / f"{j['id']}.html").write_text(rebase(render_job_page(cfg, j, stories)))
+    (out / "homes.html").write_text(rebase(render_homes(cfg, got["homes"], stories)))
+    (out / "homes").mkdir(exist_ok=True)
+    for h in got["homes"]:
+        (out / "homes" / f"{h['id']}.html").write_text(rebase(render_home_page(cfg, h, stories)))
     (out / "404.html").write_text(rebase(render_not_found(cfg, stories)))
     (out / "advertise.html").write_text(rebase(render_advertise(cfg, stories) if ads_open(cfg) else render_ads_soon(cfg, stories)))
     (out / "admin.html").write_text(rebase((render_admin(cfg, stories, pinned([s for s in stories if s["section"] != "life"], got["headlines"])))))

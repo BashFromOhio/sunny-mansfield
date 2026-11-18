@@ -62,3 +62,18 @@ Set up the quote Zap like the daily post one: RSS by Zapier, New Item in Feed, f
 then Facebook Pages, Create Page Photo, with Photo = the item's Link and Message = the item's Description.
 
 `/top.xml` (the best new story each day) is also there if you upgrade later or want it instead.
+
+## Daily series feed (`/series.xml`)
+
+Up to four posts a day for the Facebook Page, each with a framed image and a ready caption:
+
+| Time (Eastern) | Post | Where it comes from |
+|---|---|---|
+| 10 a.m. | Dog of the day | The Richland County Dog Shelter's adoptable dogs on Adopt-a-Pet (the list on the county's Adoptable Dogs page). A different dog every day until every dog has had a turn. |
+| Noon | Home of the day | Homes people list on the site, price first. Starts once the first home is approved. |
+| 2 p.m. | Comeback Buildings | News about old Richland County buildings being restored or reopened. |
+| 6 p.m. | Race Night | Mansfield Speedway's own news and racing news. |
+
+A new story posts the day after it arrives. When nothing is new, the series goes round its recent stories, each at most once a week, and skips the day if it has none. Comeback Buildings (Wednesdays), Race Night (Saturdays) and Happy Tails (Sundays) ask people to send something in once a week when they have nothing to share.
+
+To post it: add a Zap like the daily post one. **Trigger:** RSS by Zapier → New Item in Feed → `https://sunnymansfield.com/series.xml`. **Action:** Facebook Pages → Create Page Photo, with the item's *Link* as the photo and its *Description* as the message. This adds up to about 120 posts a month, so it needs Zapier's paid Starter plan (or dlvr.it, IFTTT or Buffer with the same feed).
