@@ -921,7 +921,8 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
  border:2px solid var(--border-strong);border-top:6px solid var(--secondary)}
 .nl-pitch{padding:clamp(22px,3.5vw,40px);display:grid;gap:10px;align-content:center}
 .nl-pitch .script{font-size:30px;line-height:1.1;margin:0 0 8px}
-.nl-hed{font:700 clamp(28px,3.4vw,40px)/1.12 var(--serif);margin:0;color:var(--text)}
+.nl-logo{display:block;width:min(340px,100%);margin:0 0 4px}.nl-logo svg{display:block;width:100%;height:auto}
+.nl-hed{font:700 clamp(24px,2.6vw,32px)/1.15 var(--serif);margin:0;color:var(--text)}
 .nl-sub{font-size:clamp(16px,1.5vw,18px);line-height:1.55;margin:0 0 4px;color:var(--text-2)}.nl-sub b{color:var(--text)}
 .nl-pitch .nl-form{min-height:64px;margin:0 -8px}.nl-pitch .nl-form iframe{max-width:100%}
 .nl-fine{font-size:13px;line-height:1.6;margin:0;color:var(--text-2)}
@@ -1967,8 +1968,8 @@ def newsletter_band(cfg, top=None):
               '<li><span class="nl-ico" aria-hidden="true">&#9733;</span><span><b>Things to do this weekend</b>'
               '<span class="nl-ex">Local events, free stuff, jobs and birthday shout-outs</span></span></li>']
     return (f'<section class="wrap" id="newsletter"><div class="nl2">'
-            f'<div class="nl-pitch"><span class="script">Good news, delivered!</span>'
-            f'<h2 class="nl-hed">Mansfield\'s good news, straight to your inbox.</h2>'
+            f'<div class="nl-pitch"><span class="nl-logo" role="img" aria-label="{e(cfg["site_name"])}">{logo("logo-retro.svg")}</span>'
+            f'<h2 class="nl-hed">Good news, straight to your inbox.</h2>'
             f'<p class="nl-sub"><b>{day}, free.</b> One short email with the best of Mansfield and Richland County.</p>'
             f'{form}<p class="nl-fine">We\'ll email you once to confirm. Unsubscribe anytime. '
             f'<a class="link" href="{e(nl["page"])}" target="_blank" rel="noopener">Newsletter page</a></p></div>'
