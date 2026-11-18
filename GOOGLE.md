@@ -44,3 +44,10 @@ realistic first wins are searches like "Sunny Mansfield", "things to do in Mansf
    "mansfield ohio news", "sunny mansfield". Headlines: "Good News From Mansfield", "Things To Do This Weekend",
    "Free Local Events & Shout-Outs". Send people to `https://sunnymansfield.com/events.html` or the front page.
 5. For a goal Google can count, use **page view** of `events.html` or a visit longer than one minute.
+
+## AdSense (earning from ads on the site)
+
+1. Sign up at adsense.google.com with the site `sunnymansfield.com`.
+2. Put the publisher ID in `config.json` as `"adsense_client": "ca-pub-…"`.
+3. The next build adds the AdSense Auto ads script to every page, writes `/ads.txt`, and adds an "Ads on this site" section to the privacy page. With the setting empty, none of that appears.
+4. In AdSense, request a review of the site. Turn on a consent message under Privacy & messaging for visitors from Europe.
