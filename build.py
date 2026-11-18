@@ -920,13 +920,12 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 /* the newsletter pop-up: opens once for returning readers, and from the footer link. Same look as the welcome email. */
 .nlpop{padding:0;border:0;background:transparent;width:min(460px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 32px);overflow:auto}
 .nlpop::backdrop{background:rgba(46,26,16,.6)}
-.nl2{position:relative;background:var(--tertiary);border:2px solid var(--border-strong);text-align:center}
-.nl2 .close{position:absolute;top:6px;right:8px;z-index:2;font:400 30px/1 var(--sans);background:none;border:0;cursor:pointer;color:var(--tertiary);padding:4px 8px}
-.nl-top{background:linear-gradient(135deg,#e5652b 0%,var(--secondary) 55%,var(--secondary-dk) 100%);padding:30px 24px 20px;color:var(--tertiary)}
+.nl2{position:relative;background:var(--tertiary);border:2px solid var(--border-strong);border-top:6px solid var(--secondary);text-align:center}
+.nl2 .close{position:absolute;top:6px;right:8px;z-index:2;font:400 30px/1 var(--sans);background:none;border:0;cursor:pointer;color:var(--text-2);padding:4px 8px}
+.nl-top{padding:30px 24px 0}
 .nl-logo{display:block;width:min(250px,72%);margin:0 auto}.nl-logo svg{display:block;width:100%;height:auto}
-.nl-top g path{fill:var(--secondary);stroke:var(--tertiary)}
-.nl-top .script{display:block;font-size:26px;line-height:1.1;color:var(--tertiary);margin-top:10px}
-.nl-body{padding:24px clamp(18px,6vw,30px) 16px;display:grid;gap:14px}
+.nl-top .script{display:block;font-size:26px;line-height:1.1;color:var(--secondary);margin-top:10px}
+.nl-body{padding:16px clamp(18px,6vw,30px) 16px;display:grid;gap:14px}
 .nl-hed{font:700 clamp(23px,6vw,28px)/1.15 var(--serif);margin:0;color:var(--text)}
 .nl-hed:focus,.nl-hed:focus-visible{outline:none;box-shadow:none}
 .nl-sub{font-size:16px;line-height:1.5;margin:0;color:var(--text-2)}
@@ -1955,7 +1954,7 @@ def civic(cfg, businesses):
 
 
 def newsletter_pop(cfg):
-    """The weekly email sign-up as a pop-up, in the same look as the welcome email: an orange header with the logo,
+    """The weekly email sign-up as a pop-up, in the same look as the welcome email: the full-color logo,
     then the pitch and beehiiv's form (people confirm by email before they're added).
     beehiiv's form only loads when the pop-up opens, so pages stay fast."""
     nl = cfg.get("newsletter") or {}
@@ -1966,7 +1965,7 @@ def newsletter_pop(cfg):
     day = f'every {e(nl["day"])}' if nl.get("day") else "a week"
     return (f'<dialog class="nlpop" id="nlpop" aria-labelledby="nl-h"><div class="nl2">'
             f'<button class="close" type="button" data-nl-close aria-label="Close">&times;</button>'
-            f'<div class="nl-top"><span class="nl-logo" role="img" aria-label="{e(cfg["site_name"])}">{logo("logo-retro-reverse.svg")}</span>'
+            f'<div class="nl-top"><span class="nl-logo" role="img" aria-label="{e(cfg["site_name"])}">{logo("logo-retro.svg")}</span>'
             f'<span class="script">Good news is on the way</span></div>'
             f'<div class="nl-body"><h2 class="nl-hed" id="nl-h" tabindex="-1" autofocus>Good news, straight to your inbox.</h2>'
             f'<p class="nl-sub">One short, free email {day} with the best of Mansfield and Richland County.</p>'
