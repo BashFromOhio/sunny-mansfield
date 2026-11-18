@@ -270,9 +270,9 @@ def collect(config, sample):
     return stories
 
 
-# ---- Daily series: Happy Tails (shelter dogs and their happy endings) ----
+# ---- Daily series: Tyger Paws (shelter dogs and their happy endings) ----
 SERIES = [  # key, page, name, script word, what the page is about
-    ("pets", "pets.html", "Happy Tails", "Happy tails!",
+    ("pets", "pets.html", "Tyger Paws", "Tyger Paws!",
      "Adoptable dogs at the Richland County Dog Shelter, a new dog of the day every morning, and the happy endings that follow."),
 ]
 SERIES_NAMES = {k: name for k, _, name, _, _ in SERIES}
@@ -917,7 +917,24 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .dogcard .photo img{object-position:50% 25%}.give .listing.dogcard .photo{aspect-ratio:1}
 .dogcard .goal-v{font-size:17px}.give .dogcard .goal-v{font-size:14px}
 .give-note svg.paw{fill:var(--secondary);stroke:none}
-.nl{margin-bottom:48px}.nl .nl-form{min-height:72px}.nl .nl-form iframe{max-width:100%}.nl .nl-alt{margin:8px 0 0;font-size:13px;color:var(--text-2)}
+.nl2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);margin-bottom:56px;background:var(--tertiary);
+ border:2px solid var(--border-strong);border-top:6px solid var(--secondary)}
+.nl-pitch{padding:clamp(22px,3.5vw,40px);display:grid;gap:10px;align-content:center}
+.nl-pitch .script{font-size:30px;line-height:1.1;margin:0 0 8px}
+.nl-logo{display:block;width:min(340px,100%);margin:0 0 4px}.nl-logo svg{display:block;width:100%;height:auto}
+.nl-hed{font:700 clamp(24px,2.6vw,32px)/1.15 var(--serif);margin:0;color:var(--text)}
+.nl-sub{font-size:clamp(16px,1.5vw,18px);line-height:1.55;margin:0 0 4px;color:var(--text-2)}.nl-sub b{color:var(--text)}
+.nl-pitch .nl-form{min-height:64px;margin:0 -8px}.nl-pitch .nl-form iframe{max-width:100%}
+.nl-fine{font-size:13px;line-height:1.6;margin:0;color:var(--text-2)}
+.nl-side{position:relative;overflow:hidden;background:linear-gradient(135deg,#e5652b 0%,var(--secondary) 55%,var(--secondary-dk) 100%);color:var(--tertiary);
+ padding:clamp(22px,3.5vw,40px);display:flex;flex-direction:column;justify-content:center}
+.nl-side .script{color:var(--tertiary);font-size:clamp(28px,3vw,36px);margin-bottom:26px;position:relative}
+.nl-list{list-style:none;margin:0;padding:0;display:grid;gap:18px;position:relative}
+.nl-list li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;align-items:center}
+.nl-list b{display:block;font:700 15px/1.3 var(--caps);letter-spacing:.06em;text-transform:uppercase}
+.nl-ex{display:block;font-size:15px;line-height:1.45;color:var(--tertiary);opacity:.92;margin-top:3px}
+.nl-ico{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.75);display:grid;place-items:center;font-size:24px}
+@media (max-width:820px){.nl2{grid-template-columns:minmax(0,1fr)}}
 .dogday{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:32px;align-items:center;background:var(--tertiary);border:2px solid var(--border-strong);padding:24px}
 .dogday .photo{aspect-ratio:1}.dogday .hed{font-size:clamp(30px,4vw,48px);line-height:1.05;margin:6px 0 12px}.dogday .dek{font-size:18px;line-height:1.6}
 @media (max-width:700px){.dogday{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}}
@@ -1723,12 +1740,26 @@ def jsonld(data):
 ALT_NAMES = ["SunnyMansfield", "SunnyMansfield.com", "Sunny Mansfield Ohio"]
 
 
+def mailing_address(cfg, sep=", "):
+    """The publisher's mailing address from config.json, on one line (or joined by sep)."""
+    return sep.join(cfg.get("mailing_address") or ["Ofgeneration, LLC", "Mansfield, OH"])
+
+
+def mailing_postal(cfg):
+    lines = cfg.get("mailing_address") or []
+    m = re.match(r"(.+),\s*([A-Z]{2})\s+(\d{5})", lines[-1]) if len(lines) >= 3 else None
+    if not m:
+        return {"@type": "PostalAddress", "addressLocality": "Mansfield", "addressRegion": "OH", "addressCountry": "US"}
+    return {"@type": "PostalAddress", "streetAddress": ", ".join(lines[1:-1]), "addressLocality": m.group(1),
+            "addressRegion": m.group(2), "postalCode": m.group(3), "addressCountry": "US"}
+
+
 def publisher(cfg):
     site = cfg["site_url"].rstrip("/")
     org = {"@type": "NewsMediaOrganization", "@id": f"{site}/#org", "name": cfg["site_name"], "alternateName": ALT_NAMES,
            "url": f"{site}/", "logo": {"@type": "ImageObject", "url": f"{site}/brand/icon-512.png", "width": 512, "height": 512},
            "image": f"{site}/og.png",
-           "address": {"@type": "PostalAddress", "addressLocality": "Mansfield", "addressRegion": "OH", "addressCountry": "US"},
+           "address": mailing_postal(cfg),
            "description": "Curated positive local news from Mansfield and Richland County, Ohio, written by the people who live here.",
            "areaServed": [{"@type": "City", "name": "Mansfield, Ohio"}, {"@type": "AdministrativeArea", "name": "Richland County, Ohio"}],
            "publishingPrinciples": f"{site}/rules.html#rules", "correctionsPolicy": f"{site}/terms.html",
@@ -1876,7 +1907,7 @@ def masthead(cfg, site, stories, quote=None, current=""):
 </div>
 <nav class="navbar" aria-label="Main"><div class="wrap strip caps">
 <div class="navgroup"><a href="{e(site)}/"{on("front")}>Front page</a><a href="{e(site)}/events.html">Events</a><a href="{e(site)}/watch.html"{on("watch")}>Watch Mansfield</a>
-<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/pets.html"{on("pets")}>Happy Tails</a><a href="{e(site)}/fundraisers.html">Donate</a>
+<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/pets.html"{on("pets")}>Tyger Paws</a><a href="{e(site)}/fundraisers.html">Donate</a>
 <a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/homes.html">Homes</a><a href="{e(site)}/businesses.html">Businesses</a>
 <button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}</div>
@@ -1922,20 +1953,28 @@ def civic(cfg, businesses):
     return rail("Shop local", cards + more, f'<a class="link" href="{e(site)}/businesses.html">See all</a>', rid="shops", kind="sec")
 
 
-def newsletter_band(cfg):
-    """The weekly email sign-up: beehiiv's embedded form (people confirm by email before they're added)."""
+def newsletter_band(cfg, top=None):
+    """The weekly email sign-up, styled like the About pop-out: the pitch and beehiiv's embedded form on the left
+    (people confirm by email before they're added), and a sunny panel on the right showing what's inside."""
     nl = cfg.get("newsletter") or {}
     if not nl.get("page"):
         return ""
     form = (f'<div class="nl-form"><script async src="https://subscribe-forms.beehiiv.com/v3/loader.js" '
-            f'data-beehiiv-form="{e(nl["beehiiv_form"])}"></script></div>') if nl.get("beehiiv_form") else ""
-    day = f'Every {e(nl["day"])}, free' if nl.get("day") else "Free"
-    return (f'<section class="wrap" id="newsletter"><div class="give nl"><div class="give-top"><div>'
-            f'<span class="script">Good news, delivered!</span><h2 class="retro sm">Get it by email</h2>'
-            f'<p>{day}: the week\'s best good news, events and Happy Tails from Mansfield and Richland County. '
-            f'We\'ll email you once to confirm. Unsubscribe anytime.</p></div></div>{form}'
-            f'<p class="nl-alt">Form not showing? <a class="link" href="{e(nl["page"])}" target="_blank" rel="noopener">Sign up on our newsletter page</a></p>'
-            f'</div></section>')
+            f'data-beehiiv-form="{e(nl["beehiiv_form"])}"></script></div>') if nl.get("beehiiv_form") else (
+            f'<a class="btn solid" href="{e(nl["page"])}" target="_blank" rel="noopener">Subscribe</a>')
+    day = f'Every {e(nl["day"])}' if nl.get("day") else "Weekly"
+    example = f'<span class="nl-ex">Like: {e(top["title"])}</span>' if top else ""
+    inside = [f'<li><span class="nl-ico" aria-hidden="true">&#9728;</span><span><b>The week\'s best good news</b>{example}</span></li>',
+              '<li><span class="nl-ico" aria-hidden="true">&#9733;</span><span><b>Things to do this weekend</b>'
+              '<span class="nl-ex">Local events, free stuff, jobs and birthday shout-outs</span></span></li>']
+    return (f'<section class="wrap" id="newsletter"><div class="nl2">'
+            f'<div class="nl-pitch"><span class="nl-logo" role="img" aria-label="{e(cfg["site_name"])}">{logo("logo-retro.svg")}</span>'
+            f'<h2 class="nl-hed">Good news, straight to your inbox.</h2>'
+            f'<p class="nl-sub"><b>{day}, free.</b> One short email with the best of Mansfield and Richland County.</p>'
+            f'{form}<p class="nl-fine">We\'ll email you once to confirm. Unsubscribe anytime. '
+            f'<a class="link" href="{e(nl["page"])}" target="_blank" rel="noopener">Newsletter page</a></p></div>'
+            f'<div class="nl-side"><span class="script">Inside every issue</span>'
+            f'<ul class="nl-list">{"".join(inside)}</ul></div></div></section>')
 
 
 def submit_band(cfg, site):
@@ -1979,7 +2018,8 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 {follow_links(cfg)}<nav class="legal towns">Good news in {" ".join(f'<a href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS)}</nav>
 <nav class="legal"><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a>{newsletter_link(cfg)}<a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
-Stories from other outlets belong to their publishers.</small></div></footer>"""
+Stories from other outlets belong to their publishers.</small>
+<small class="addr">{e(mailing_address(cfg, " · "))}</small></div></footer>"""
 
 
 SCRIPT = ("""<script>
@@ -2052,7 +2092,7 @@ FIRST_POST = {  # what an empty spot asks for: label, where the form is, button,
     "funds": ("Fundraisers", "submit.html#fundraiser", "Share a fundraiser", "Medical bills, team trips, fire recovery and special causes."),
     "events": ("Local events", "submit.html#flyer", "Post your flyer", "Concerts, fish fries, festivals, games and church suppers."),
     "birthday": ("Birthdays", "birthdays.html#form", "Send a shout-out", "Know someone celebrating? We'll wish them a happy birthday here and on Facebook, free."),
-    "pets": ("Happy Tails", "submit.html", "Send your happy tail", "Adopted a dog from the Richland County shelter? Send us your happy tail and a photo."),
+    "pets": ("Tyger Paws", "submit.html", "Send your adoption story", "Adopted a dog from the Richland County shelter? Send us your adoption story and a photo."),
     "watch": ("Watch Mansfield", "submit.html", "Send us your video", "A podcast, a local show, a highlight reel. Mansfield made, Mansfield watched."),
 }
 
@@ -3024,7 +3064,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 <div class="grid">{grid}<p class="empty" hidden>Nothing here this week yet. Know a story? <a class="link" href="{e(site)}/submit.html">Submit it</a></p></div>
 <div class="more-row"><button class="btn" type="button" id="more" hidden>Show more stories</button></div></section>
 {memories(cfg)}
-{newsletter_band(cfg)}
+{newsletter_band(cfg, top)}
 {submit_band(cfg, site)}
 <div class="stripes" aria-hidden="true"></div>
 </main>
@@ -3562,7 +3602,9 @@ def render_legal(cfg, stories, kind):
         extra = ([("Google ads and measurement", GOOGLE_PRIVACY)] if cfg.get("google_tag") else []) + \
                 ([("Ads on this site", ADSENSE_PRIVACY)] if adsense_pub(cfg) else [])
         parts[2:2] = extra
-    body = "".join(f'<h2 class="hed">{e(h)}</h2><p>{e(t).replace("{email}", email)}</p>' for h, t in parts)
+    parts = list(parts) + [("Contact us", "Email {email}, or write to us at {address}.")]
+    body = "".join(f'<h2 class="hed">{e(h)}</h2><p>{e(t).replace("{address}", mailing_address(cfg)).replace("{email}", email)}</p>'
+                   for h, t in parts)
     inner = f"""{page_title("The fine print", title, desc)}
 <section class="wrap legaltext">{body}<p class="hint">Last updated October 23, 2026.</p></section>"""
     return shell(cfg, f"{title} · {cfg['site_name']}", desc, f"{site}/{kind}.html", inner, stories)
@@ -3746,17 +3788,17 @@ def shelter_note(cfg):
 
 
 def happy_tails_box(cfg, dogs):
-    """The front page's Happy Tails spot, laid out like the Donate box: the shelter's dogs on a shelf, dog of the day first."""
+    """The front page's Tyger Paws spot, laid out like the Donate box: the shelter's dogs on a shelf, dog of the day first."""
     site = cfg["site_url"].rstrip("/")
     if not dogs:
         return ""
     cards = "".join(dog_card(cfg, d, day=i == 0) for i, d in enumerate(dogs_in_order(dogs)[:12]))
-    return (f'<section class="wrap givebox" id="happy-tails"><div class="rail-head"><h2 class="label">Happy Tails</h2>'
+    return (f'<section class="wrap givebox" id="happy-tails"><div class="rail-head"><h2 class="label">Tyger Paws</h2>'
             f'<a class="link" href="{e(site)}/pets.html">See all</a></div><div class="give"><div class="give-top">'
-            f'<div><span class="script">Happy tails!</span><h2 class="retro sm">Adopt a shelter dog</h2>'
+            f'<div><span class="script">Tyger Paws!</span><h2 class="retro sm">Adopt a shelter dog</h2>'
             f'<p>A new dog of the day every morning from the Richland County Dog Shelter. Can\'t adopt? A share might reach the right home.</p></div>'
             f'<div class="share"><a class="btn solid sm" href="{e(site)}/pets.html">See all {len(dogs)}</a>'
-            f'<a class="btn sm" href="{e(site)}/submit.html">Share a happy tail</a></div></div>'
+            f'<a class="btn sm" href="{e(site)}/submit.html">Share an adoption story</a></div></div>'
             + rail("Waiting for a home", cards).replace('class="wrap railbox ', 'class="railbox ')
             + shelter_note(cfg) + '</div></section>')
 
@@ -4818,7 +4860,7 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 - [Front page]({site}/): today's good news, the editor's headline, local business, causes, sports and events
 - [Events]({site}/events.html): things to do in Mansfield and Richland County this weekend and coming up
 - [Sports]({site}/sports.html): athlete spotlights, tournament brackets and good sports news
-- [Happy Tails]({site}/pets.html): adoptable dogs at the Richland County Dog Shelter, a dog of the day, and adoption stories
+- [Tyger Paws]({site}/pets.html): adoptable dogs at the Richland County Dog Shelter, a dog of the day, and adoption stories
 - [Business spotlights]({site}/businesses.html): free pages for Richland County businesses
 - [Fundraisers]({site}/fundraisers.html): local causes posted by neighbors (not run or verified by Sunny Mansfield)
 - [Free Stuff]({site}/free.html): things neighbors are giving away, free only

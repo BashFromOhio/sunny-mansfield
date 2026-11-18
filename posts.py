@@ -604,20 +604,20 @@ def make_community_feed(cfg, stories, flyers, funds, businesses, out, page_url, 
     note(f"Community feed: {len(items)} posts")
 
 
-# ---- Daily series for the Facebook Page: Happy Tails (dog of the day) and Home of the day ----
+# ---- Daily series for the Facebook Page: Tyger Paws (dog of the day) and Home of the day ----
 SERIES_SLOTS = [  # key, hour (Eastern), label on the image, script word, hashtag, page, weekly ask day (Monday = 0)
-    ("pets", 10, "Dog of the day", "Happy tails!", "#AdoptDontShop", "pets.html", 6),
+    ("pets", 10, "Dog of the day", "Tyger Paws!", "#TygerPaws #AdoptDontShop", "pets.html", 6),
     ("homes", 12, "Home of the day", "Home sweet home!", "#MansfieldHomes", "homes.html", None),
 ]
 SERIES_ASKS = {
-    "pets": ("Adopted a shelter dog?", "Adopted a dog from the Richland County Dog Shelter? We'd love to share your happy tail. Send us a photo and a few lines about how they're doing."),
+    "pets": ("Adopted a shelter dog?", "Adopted a dog from the Richland County Dog Shelter? We'd love to share your adoption story. Send us a photo and a few lines about how they're doing."),
 }
 
 
 def dog_post(dog, photo, credit):
     fake = {"title": f"Meet {dog['name']}", "source": dog.get("breed") or "Richland County Dog Shelter"}
     if photo is None:
-        return text_post(fake, "Dog of the day", credit, "Happy tails!")
+        return text_post(fake, "Dog of the day", credit, "Tyger Paws!")
     label = " · ".join(x for x in ("Dog of the day", dog.get("age"), dog.get("sex")) if x)
     return photo_post({**fake, "source": "Richland County Dog Shelter"}, label, photo, credit)
 
@@ -677,7 +677,7 @@ def make_series_feed(cfg, series, dogs, out, page_url, ua, credit, dog_of_the_da
                     im = dog_post(d, photo, credit)
                     line = " · ".join(x for x in (d.get("age"), d.get("sex"), d.get("breed")) if x)
                     title, link = f"Dog of the day: {d['name']}", d["url"]
-                    text = (f"🐾 Dog of the day: meet {d['name']}!" + (f"\n{line}" if line else "")
+                    text = (f"🐾 Tyger Paws dog of the day: meet {d['name']}!" + (f"\n{line}" if line else "")
                             + f"\n\n{d['name']} is waiting at the Richland County Dog Shelter for a family. "
                             f"Can't adopt? A share might reach the right home.\n\nMeet {d['name']}: {d['url']}\n"
                             f"Every adoptable dog: {site}/{page}")
