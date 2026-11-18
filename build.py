@@ -2000,9 +2000,11 @@ def make_newsletter_issue(cfg, out, stories, flyers=(), funds=(), listings=(), j
             {"title": x["title"], "url": utm(canon + f"/s/{x['id']}.html"), "text": short(" ".join((x.get("summary") or "").split())),
              "image": absu(x.get("image") or "") if i == 0 else "", "kicker": x.get("source") or ""} for i, x in enumerate(news[:5])]))
     dayof = lambda f: f["day"].date() if isinstance(f["day"], datetime) else f["day"]
-    soon = sorted((f for f in flyers if f.get("day") and today <= dayof(f) <= today + timedelta(days=9)), key=dayof)
+    called_off = lambda f: re.match(r"\W*(cancel|postpone|call(ed)? off)", (f.get("title") or "") + " " + (f.get("summary") or ""), re.I) or \
+        re.match(r"\W*(cancel|postpone)", f.get("summary") or "", re.I)
+    soon = sorted((f for f in flyers if f.get("day") and today <= dayof(f) <= today + timedelta(days=9) and not called_off(f)), key=dayof)
     if soon:
-        sections.append(("Things to do this weekend", [
+        sections.append(("Coming up around town", [
             {"title": f["title"], "url": utm(canon + event_url(f)), "kicker": f["day"].strftime("%a, %b %-d") + (" · " + f["town"] if f.get("town") else ""),
              "text": short(" ".join((f.get("summary") or "").split()), 140)} for f in soon[:5]]))
     dog = dog_of_the_day(dogs)
@@ -2097,8 +2099,13 @@ def make_newsletter_issue(cfg, out, stories, flyers=(), funds=(), listings=(), j
     doc += [{"type": "horizontalRule"}, {"type": "heading", "attrs": {"level": 2, "textAlign": "center"}, "content": [txt("Got good news?")]},
             {"type": "paragraph", "attrs": {"textAlign": "center"}, "content": [txt("Tell us about a neighbor, a new shop or a big win. It's free.")]},
             button("Share good news", utm(canon + "/submit.html"))]
-    first = news[0]["title"] if news else "Good news from Mansfield"
-    meta = {"subject": f"This week in Mansfield: {short(first, 70)}", "preview": intro, "week_of": week_of,
+    bits = [{"This week's good news": "The week's good news", "Coming up around town": "things to do",
+             "Neighbors helping neighbors": "neighbors helping neighbors", "Now hiring": "local jobs"}.get(h, "") for h, _ in sections]
+    if dog:
+        bits.insert(2, f"{dog['name']} from Tyger Paws")
+    bits = [b for b in bits if b]
+    preview = (", ".join(bits[:3]) + " and more.") if bits else intro
+    meta = {"subject": f"Good news from Mansfield: week of {week_of.rsplit(',', 1)[0]}", "preview": preview[:1].upper() + preview[1:], "week_of": week_of,
             "sections": [h for h, _ in sections], "doc": {"type": "doc", "content": doc}}
     folder = out / "newsletter"
     folder.mkdir(parents=True, exist_ok=True)
