@@ -36,6 +36,9 @@ To use real ones, put image files in a `postcards/` folder and list them in `con
 Use postcards published before 1929 (public domain in the U.S.), ones you own the rights to, or library
 images that allow reuse. Avoid images from eBay sellers, Alamy and similar sites, which are sold or licensed.
 
+## Google
+How the site shows up in Google search, plus Search Console, Business Profile and Google Ads setup: [GOOGLE.md](GOOGLE.md). Paste the Search Console code into `google_site_verification` and the Google Ads/Analytics ID into `google_tag` in `config.json`. Both are blank by default (no tag, no cookies).
+
 ## Logo
 `brand/` holds the logo with all lettering converted to outlines, so it looks the same everywhere:
 horizontal, stacked, one-color, reversed (for dark backgrounds), the mark on its own (favicon), a

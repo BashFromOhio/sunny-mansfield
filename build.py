@@ -1565,10 +1565,16 @@ def jsonld(data):
             + "</script>")
 
 
+# Other ways people type the name, so Google shows "Sunny Mansfield" as the site name in results.
+ALT_NAMES = ["SunnyMansfield", "SunnyMansfield.com", "Sunny Mansfield Ohio"]
+
+
 def publisher(cfg):
     site = cfg["site_url"].rstrip("/")
-    org = {"@type": "NewsMediaOrganization", "@id": f"{site}/#org", "name": cfg["site_name"], "url": f"{site}/",
-           "logo": {"@type": "ImageObject", "url": f"{site}/brand/post-logo.png"},
+    org = {"@type": "NewsMediaOrganization", "@id": f"{site}/#org", "name": cfg["site_name"], "alternateName": ALT_NAMES,
+           "url": f"{site}/", "logo": {"@type": "ImageObject", "url": f"{site}/brand/icon-512.png", "width": 512, "height": 512},
+           "image": f"{site}/og.png",
+           "address": {"@type": "PostalAddress", "addressLocality": "Mansfield", "addressRegion": "OH", "addressCountry": "US"},
            "description": "Curated positive local news from Mansfield and Richland County, Ohio, written by the people who live here.",
            "areaServed": [{"@type": "City", "name": "Mansfield, Ohio"}, {"@type": "AdministrativeArea", "name": "Richland County, Ohio"}],
            "publishingPrinciples": f"{site}/rules.html#rules", "correctionsPolicy": f"{site}/terms.html",
@@ -1583,6 +1589,21 @@ def publisher(cfg):
 PHOTO_FALLBACK = ("""document.addEventListener('error',ev=>{const i=ev.target;if(i.tagName!=='IMG'||!i.closest('.photo'))return;
  const a=document.createElement('span');a.className='art';a.innerHTML='<svg viewBox="0 0 100 100" aria-hidden="true">"""
                   + ART["good"] + """</svg>';i.replaceWith(a)},true);""")
+
+
+def google_head(cfg):
+    """Search Console's ownership tag, and the Google tag for Google Ads and Analytics, when config.json has them.
+    google_tag can hold several IDs separated by commas, like "G-XXXX, AW-1234"."""
+    out = ""
+    if cfg.get("google_site_verification"):
+        out += f'\n<meta name="google-site-verification" content="{e(cfg["google_site_verification"])}">'
+    ids = [x.strip() for x in (cfg.get("google_tag") or "").split(",") if x.strip()]
+    if ids:
+        configs = "".join(f"gtag('config',{json.dumps(i)});" for i in ids)
+        out += (f'\n<script async src="https://www.googletagmanager.com/gtag/js?id={e(ids[0])}"></script>'
+                f"<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}"
+                f"gtag('js',new Date());{configs}</script>")
+    return out
 
 
 def head(cfg, title, desc, url, image=None, kind="website", data=None, index=True):
@@ -1600,7 +1621,8 @@ def head(cfg, title, desc, url, image=None, kind="website", data=None, index=Tru
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{e(title)}">
 <meta name="twitter:description" content="{e(desc)}"><meta name="twitter:image" content="{e(image)}">
 {jsonld(data) if data else ""}
-<link rel="icon" type="image/svg+xml" href="/brand/mark.svg">
+<link rel="icon" type="image/svg+xml" href="/brand/mark.svg"><link rel="icon" type="image/png" sizes="192x192" href="/brand/icon-192.png">
+<link rel="apple-touch-icon" href="/brand/apple-touch-icon.png">{google_head(cfg)}
 <link rel="alternate" type="application/rss+xml" title="{e(cfg['site_name'])}" href="{e(cfg['site_url'].rstrip('/'))}/feed.xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="{FONTS}">
@@ -2778,14 +2800,17 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     market += funds_rail  # Donate sits under Now hiring, near the bottom
     home = {"@context": "https://schema.org", "@graph": [
         publisher(cfg),
-        {"@type": "WebSite", "@id": f"{site}/#site", "name": cfg["site_name"], "url": f"{site}/", "inLanguage": "en-US",
+        {"@type": "WebSite", "@id": f"{site}/#site", "name": cfg["site_name"], "alternateName": ALT_NAMES, "url": f"{site}/",
+         "inLanguage": "en-US", "description": "Good news, events and things to do in Mansfield and Richland County, Ohio.",
+         "about": [{"@type": "City", "name": "Mansfield", "containedInPlace": {"@type": "State", "name": "Ohio"}},
+                   {"@type": "AdministrativeArea", "name": "Richland County, Ohio"}],
          "publisher": {"@id": f"{site}/#org"}},
         {"@type": "ItemList", "name": "Today's good news", "itemListElement": [
             {"@type": "ListItem", "position": i, "url": page_url(cfg, s), "name": s["title"]}
             for i, s in enumerate([s for s in news if s.get("community")][:10], 1)]}]}
-    return f"""{head(cfg, f"{cfg['site_name']}: Good News from Mansfield & Richland County, Ohio",
-                 "Positive local news from Mansfield, Ontario, Lexington, Shelby, Bellville and all of Richland County, Ohio: "
-                 "community wins, local business, high school sports, events, free stuff and local jobs.", site + '/', data=home)}
+    return f"""{head(cfg, f"{cfg['site_name']} | Good News & Things to Do in Mansfield, Ohio",
+                 "Good news from Mansfield, Ohio and Richland County: events and things to do, high school sports, "
+                 "shop-local spotlights, free stuff and jobs. Updated daily.", site + '/', data=home)}
 <div class="sheet"><div class="stripes" aria-hidden="true"></div>
 {masthead(cfg, site, stories, current="front")}
 <main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{ticker(news[:10])}{front}
@@ -3287,10 +3312,21 @@ LEGAL = {
 }
 
 
+GOOGLE_PRIVACY = ("We advertise Sunny Mansfield on Google and use the Google tag to learn which ads bring readers here. It "
+                  "sets cookies that tell Google you visited, which pages you opened and whether you came from one of our ads. "
+                  "We see only totals, never who you are, and we don't sell or share anything you type into our forms. Google's "
+                  "use of this data is covered by its privacy policy (policies.google.com/privacy). You can turn off "
+                  "personalized ads at adssettings.google.com, or block cookies in your browser and the site still works.")
+
+
 def render_legal(cfg, stories, kind):
     site = cfg["site_url"].rstrip("/")
     title, desc, parts = LEGAL[kind]
     email = f'<a class="link" href="mailto:{e(cfg["submit_email"])}">{e(cfg["submit_email"])}</a>'
+    if kind == "privacy" and cfg.get("google_tag"):
+        parts = [(h, t.replace("We don't use tracking cookies, ads trackers or analytics.",
+                               "We use Google's measurement tag, described below, and no other trackers.")) for h, t in parts]
+        parts.insert(2, ("Google ads and measurement", GOOGLE_PRIVACY))
     body = "".join(f'<h2 class="hed">{e(h)}</h2><p>{e(t).replace("{email}", email)}</p>' for h, t in parts)
     inner = f"""{page_title("The fine print", title, desc)}
 <section class="wrap legaltext">{body}<p class="hint">Last updated October 23, 2026.</p></section>"""
@@ -4444,6 +4480,8 @@ def main():
         shutil.copytree(HERE / folder, out / folder, dirs_exist_ok=True)
     if (HERE / "brand" / "og.png").exists():
         shutil.copy(HERE / "brand" / "og.png", out / "og.png")
+    if (HERE / "brand" / "favicon.ico").exists():
+        shutil.copy(HERE / "brand" / "favicon.ico", out / "favicon.ico")  # browsers and Google ask for /favicon.ico
     if (HERE / "postcards").is_dir():
         shutil.copytree(HERE / "postcards", out / "postcards", dirs_exist_ok=True)
     # The private preview can't load files, so inline every /assets image and drop the favicon link.
