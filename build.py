@@ -1592,7 +1592,7 @@ PHOTO_FALLBACK = ("""document.addEventListener('error',ev=>{const i=ev.target;if
 
 
 def google_head(cfg):
-    """Search Console's ownership tag, and the Google tag for Google Ads and Analytics, when config.json has them.
+    """Search Console's ownership tag, the Google tag for Google Ads and Analytics, and the AdSense script, when config.json has them.
     google_tag can hold several IDs separated by commas, like "G-XXXX, AW-1234"."""
     out = ""
     if cfg.get("google_site_verification"):
@@ -1603,7 +1603,18 @@ def google_head(cfg):
         out += (f'\n<script async src="https://www.googletagmanager.com/gtag/js?id={e(ids[0])}"></script>'
                 f"<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}"
                 f"gtag('js',new Date());{configs}</script>")
+    pub = adsense_pub(cfg)
+    if pub:
+        out += (f'\n<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-{e(pub)}" '
+                f'crossorigin="anonymous"></script>')
     return out
+
+
+def adsense_pub(cfg):
+    """The AdSense publisher ID from config.json ("ca-pub-123..." or "pub-123..."), as "pub-123...", or "" when unset or malformed."""
+    raw = (cfg.get("adsense_client") or "").strip()
+    m = re.fullmatch(r"(?:ca-)?(pub-\d{10,20})", raw)
+    return m.group(1) if m else ""
 
 
 def head(cfg, title, desc, url, image=None, kind="website", data=None, index=True):
@@ -3319,14 +3330,25 @@ GOOGLE_PRIVACY = ("We advertise Sunny Mansfield on Google and use the Google tag
                   "personalized ads at adssettings.google.com, or block cookies in your browser and the site still works.")
 
 
+ADSENSE_PRIVACY = ("To help keep Sunny Mansfield free, we show ads from Google AdSense. Google and its partners use cookies to "
+                   "show ads, including ads based on your visits to this and other websites. You can turn off personalized ads at "
+                   "adssettings.google.com. Google's use of advertising cookies is explained at "
+                   "policies.google.com/technologies/ads. Ads from Google are labeled, and we don't pick or endorse them. "
+                   "Local ads you see in our Advertise spots are sold by us and don't track you.")
+
+
 def render_legal(cfg, stories, kind):
     site = cfg["site_url"].rstrip("/")
     title, desc, parts = LEGAL[kind]
     email = f'<a class="link" href="mailto:{e(cfg["submit_email"])}">{e(cfg["submit_email"])}</a>'
-    if kind == "privacy" and cfg.get("google_tag"):
+    if kind == "privacy" and (cfg.get("google_tag") or adsense_pub(cfg)):
+        what = ("Google's measurement and advertising cookies, described below," if adsense_pub(cfg)
+                else "Google's measurement tag, described below,")
         parts = [(h, t.replace("We don't use tracking cookies, ads trackers or analytics.",
-                               "We use Google's measurement tag, described below, and no other trackers.")) for h, t in parts]
-        parts.insert(2, ("Google ads and measurement", GOOGLE_PRIVACY))
+                               f"We use {what} and no other trackers.")) for h, t in parts]
+        extra = ([("Google ads and measurement", GOOGLE_PRIVACY)] if cfg.get("google_tag") else []) + \
+                ([("Ads on this site", ADSENSE_PRIVACY)] if adsense_pub(cfg) else [])
+        parts[2:2] = extra
     body = "".join(f'<h2 class="hed">{e(h)}</h2><p>{e(t).replace("{email}", email)}</p>' for h, t in parts)
     inner = f"""{page_title("The fine print", title, desc)}
 <section class="wrap legaltext">{body}<p class="hint">Last updated October 23, 2026.</p></section>"""
@@ -4336,6 +4358,8 @@ def write_search_files(cfg, stories, businesses, out, towns=(), flyers=(), jobs=
                   f"</news:publication_date><news:title>{e(s['title'])}</news:title></news:news></url>\n" for s in fresh)
         + "</urlset>\n")
     welcome = "".join(f"User-agent: {b}\nAllow: /\nDisallow: /admin.html\n\n" for b in AI_BOTS)
+    if adsense_pub(cfg):  # AdSense checks /ads.txt to confirm which ad sellers may sell space on this site
+        (out / "ads.txt").write_text(f"google.com, {adsense_pub(cfg)}, DIRECT, f08c47fec0942fa0\n")
     (out / "robots.txt").write_text(f"""# Everyone is welcome to read, index and cite Sunny Mansfield, including AI assistants.
 # Neighbors' good news should be easy to find wherever people ask.
 {welcome}User-agent: *
