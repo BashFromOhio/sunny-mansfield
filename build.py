@@ -270,38 +270,24 @@ def collect(config, sample):
     return stories
 
 
-# ---- Daily series: Happy Tails (shelter dogs), Comeback Buildings (old places getting new life), Race Night ----
+# ---- Daily series: Happy Tails (shelter dogs and their happy endings) ----
 SERIES = [  # key, page, name, script word, what the page is about
     ("pets", "pets.html", "Happy Tails", "Happy tails!",
      "Adoptable dogs at the Richland County Dog Shelter, a new dog of the day every morning, and the happy endings that follow."),
-    ("comebacks", "comebacks.html", "Comeback Buildings", "New life!",
-     "Old Mansfield and Richland County buildings getting a second life: restorations, reopenings and landmarks coming back."),
-    ("racing", "racing.html", "Race Night", "Start your engines!",
-     "Mansfield Speedway and Richland County racing: race nights, results, drivers and the track's comeback."),
 ]
 SERIES_NAMES = {k: name for k, _, name, _, _ in SERIES}
 SERIES_RX = {
     "pets": rx(r"\b(dog shelter|animal shelter|dog warden|humane society|happy tails?|forever homes?|fur-?ever homes?|for adoption|adoption (events?|fees?|days?|specials?)|"
                r"(adopt\w*|rescue[ds]?|foster\w*|shelter) (a |an |the |your |their |our )?(dogs?|cats?|pets?|pupp(y|ies)|kittens?|animals?)|"
                r"(dogs?|cats?|pets?|pupp(y|ies)|kittens?|animals?) (adoption|rescue|shelter)s?)\b"),
-    "racing": rx(r"\b(speedway|motorsports?|race ?track|sprint cars?|late models?|dirt (track|oval)|monster trucks?|"
-                 r"demolition derby|demo derby|motocross|arenacross|drag (race|racing|strip)|world of outlaws|nascar|go-?karts?|"
-                 r"checkered flag|mid-ohio sports car)\b"),
 }
-COMEBACK_DO = rx(r"\b(restor\w*|renovat\w*|rehab(bed|bing|ilitat\w*)?|revitaliz\w*|redevelop\w*|reopen\w*|repurpos\w*|"
-                 r"new life|second life|preserv\w*|facelift|makeover|historic tax credits?|brought back|comeback|transform\w*)\b")
-COMEBACK_PLACE = rx(r"\b(buildings?|theat(er|re)s?|church(es)?|schoolhouse|mill|factory|block|storefronts?|landmarks?|historic|"
-                    r"hotel|depot|mansion|house|warehouse|courthouse|downtown|carrou?sel|reformatory|fountain|bank building|"
-                    r"opera house|armory|station|plant|barn|bridge|library)\b")
 
 
 def series_of(s):
     text = f"{s['title']} {s['summary']}"
-    keys = [k for k in ("pets", "racing") if SERIES_RX[k].search(text)]
-    if COMEBACK_DO.search(text) and COMEBACK_PLACE.search(text):
-        keys.append("comebacks")
-    if s.get("series") and s.get("trusted") and s["series"] not in keys:
-        keys.append(s["series"])  # a series' own source (the Speedway's news) counts whatever its words
+    keys = [k for k in SERIES_RX if SERIES_RX[k].search(text)]
+    if s.get("series") in SERIES_NAMES and s.get("trusted") and s["series"] not in keys:
+        keys.append(s["series"])  # a series' own trusted source counts whatever its words
     return keys
 
 
@@ -925,7 +911,10 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .home .photo{position:relative}.home .price{position:absolute;left:12px;bottom:12px;background:var(--secondary);color:var(--tertiary);font:700 20px/1 var(--sans);padding:8px 12px}
 #h-sort{font:inherit;padding:10px 12px;border:2px solid var(--border-strong);background:var(--tertiary);color:var(--text)}
 .dogs.grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:20px}
-.dog{padding:18px}.dog .photo{margin:-18px -18px 2px;width:calc(100% + 36px);aspect-ratio:1}.dog .hed{font-size:21px}
+.dogs .dogcard .photo{aspect-ratio:1}.dogs .dogcard .hed{font-size:21px}
+.dogcard .photo img{object-position:50% 25%}.give .listing.dogcard .photo{aspect-ratio:1}
+.dogcard .goal-v{font-size:17px}.give .dogcard .goal-v{font-size:14px}
+.give-note svg.paw{fill:var(--secondary);stroke:none}
 .dogday{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:32px;align-items:center;background:var(--tertiary);border:2px solid var(--border-strong);padding:24px}
 .dogday .photo{aspect-ratio:1}.dogday .hed{font-size:clamp(30px,4vw,48px);line-height:1.05;margin:6px 0 12px}.dogday .dek{font-size:18px;line-height:1.6}
 @media (max-width:700px){.dogday{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}}
@@ -1881,7 +1870,7 @@ def masthead(cfg, site, stories, quote=None, current=""):
 </div>
 <nav class="navbar" aria-label="Main"><div class="wrap strip caps">
 <div class="navgroup"><a href="{e(site)}/"{on("front")}>Front page</a><a href="{e(site)}/events.html">Events</a><a href="{e(site)}/watch.html"{on("watch")}>Watch Mansfield</a>
-<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/pets.html"{on("pets")}>Happy Tails</a><a href="{e(site)}/comebacks.html"{on("comebacks")}>Comebacks</a><a href="{e(site)}/racing.html"{on("racing")}>Race Night</a><a href="{e(site)}/fundraisers.html">Donate</a>
+<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/pets.html"{on("pets")}>Happy Tails</a><a href="{e(site)}/fundraisers.html">Donate</a>
 <a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/homes.html">Homes</a><a href="{e(site)}/businesses.html">Businesses</a>
 <button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}</div>
@@ -2037,8 +2026,6 @@ FIRST_POST = {  # what an empty spot asks for: label, where the form is, button,
     "events": ("Local events", "submit.html#flyer", "Post your flyer", "Concerts, fish fries, festivals, games and church suppers."),
     "birthday": ("Birthdays", "birthdays.html#form", "Send a shout-out", "Know someone celebrating? We'll wish them a happy birthday here and on Facebook, free."),
     "pets": ("Happy Tails", "submit.html", "Send your happy tail", "Adopted a dog from the Richland County shelter? Send us your happy tail and a photo."),
-    "comebacks": ("Comeback Buildings", "submit.html", "Tell us about it", "Know an old building getting new life? A restored storefront, a reopened theater, a church saved by its neighbors."),
-    "racing": ("Race Night", "submit.html", "Send it in", "Race results, a local driver's big night, a pit crew that deserves a shout-out."),
     "watch": ("Watch Mansfield", "submit.html", "Send us your video", "A podcast, a local show, a highlight reel. Mansfield made, Mansfield watched."),
 }
 
@@ -2924,7 +2911,7 @@ def magazine(cfg, top, also, videos=(), tabs=""):
             f'<aside class="nf-side">{recent}</aside></section>{WATCH_JS if watch else ""}{TICKER_JS}')
 
 
-def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=(), birthdays=()):
+def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines=(), quote=None, jobs=(), birthdays=(), dogs=()):
     site = cfg["site_url"].rstrip("/")
     stories = [s for s in stories if s["section"] != "life"]  # Celebrations of Life live on their own page
     # The front page leads with the editor's pick, or else the newest story with a photo; the rest stay newest first.
@@ -3001,6 +2988,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 {masthead(cfg, site, stories, current="front")}
 <main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{ticker(news[:10])}{front}
 {birthday_rail(cfg, birthdays)}
+{happy_tails_box(cfg, dogs)}
 {civic(cfg, businesses)}
 <div id="shelves">{shelf_order(rails, "", events)}</div>
 {market}
@@ -3688,12 +3676,57 @@ def dog_line(d):
     return " · ".join(x for x in (d.get("age"), d.get("sex"), d.get("breed")) if x)
 
 
-def dog_card(cfg, d):
-    return (f'<article class="card dog">{dog_photo(d)}<span class="caps kicker">{e(" · ".join(x for x in (d.get("age"), d.get("sex")) if x) or "Adoptable")}</span>'
-            f'<h3 class="hed"><a href="{e(d["url"])}" target="_blank" rel="noopener">{e(d["name"])}</a></h3>'
-            f'<p class="dek">{e(d.get("breed") or "")}</p>'
-            f'<div class="share"><a class="btn fb" href="{e(fb_share(d["url"]))}" target="_blank" rel="noopener">{FB_ICON}Share</a>'
-            f'<a class="textbtn" href="{e(d["url"])}" target="_blank" rel="noopener">Meet {e(d["name"])}</a></div></article>')
+def dog_card(cfg, d, day=False):
+    """An adoptable dog, built like a fundraiser card: photo (with a Dog of the day badge on today's dog), age and sex,
+    breed tag, name, a two-line note, Meet link, and Adopt and Share buttons."""
+    shelter = (cfg.get("shelter") or {}).get("name", "Richland County Dog Shelter")
+    big = (d.get("big") or "").replace("h_1000", "h_600")
+    img = (f'<img src="{e(big or d["image"])}" alt="{e(d["name"])}, an adoptable {e(d.get("breed") or "dog")}" loading="lazy" '
+           f'referrerpolicy="no-referrer"' + (f' onerror="this.onerror=null;this.src=\'{e(d["image"])}\'"' if big else "") + '>'
+           if d.get("image") else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{PAW}</svg></span>')
+    badge = ('<span class="goal"><span class="goal-k">Dog of</span><span class="goal-v">the day</span>'
+             '<span class="goal-k">Meet me!</span></span>') if day else ""
+    url = e(d["url"])
+    who = " · ".join(x for x in (d.get("age"), d.get("sex")) if x) or "Adoptable"
+    breed = f'<span class="cause">{e(d["breed"])}</span>' if d.get("breed") else ""
+    return (f'<article class="slide listing fund dogcard"><a class="photo" href="{url}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">{img}{badge}</a>'
+            f'<span class="caps kicker">{e(who)}</span>{breed}'
+            f'<h3 class="hed"><a href="{url}" target="_blank" rel="noopener">{e(d["name"])}</a></h3>'
+            f'<p class="dek">{e(d["name"])} is waiting at the {e(shelter)} for a family.</p>'
+            f'<a class="caps more-link" href="{url}" target="_blank" rel="noopener">Meet {e(d["name"])} <span aria-hidden="true">&rsaquo;</span></a>'
+            f'<span class="tagline">{e(shelter)}</span>'
+            f'<div class="share"><a class="btn solid sm" href="{url}" target="_blank" rel="noopener">Adopt</a>'
+            f'<a class="btn fb sm" href="{e(fb_share(d["url"]))}" target="_blank" rel="noopener">{FB_ICON}Share</a></div></article>')
+
+
+def dogs_in_order(dogs):
+    """Today's dog of the day first, then the rest in the shelter's order."""
+    d = dog_of_the_day(dogs)
+    return ([d] if d else []) + [x for x in dogs if x is not d]
+
+
+def shelter_note(cfg):
+    shelter = cfg.get("shelter") or {}
+    link = (f' <a class="link" href="{e(shelter["page"])}" target="_blank" rel="noopener">See the shelter\'s page</a> for visiting hours and how to adopt.'
+            if shelter.get("page") else "")
+    return (f'<p class="give-note"><svg class="paw" viewBox="0 0 100 100" aria-hidden="true">{PAW}</svg><span><b>Every dog here is at the '
+            f'{e(shelter.get("name", "Richland County Dog Shelter"))}.</b> Photos and details come from the shelter\'s adoption listings.{link}</span></p>')
+
+
+def happy_tails_box(cfg, dogs):
+    """The front page's Happy Tails spot, laid out like the Donate box: the shelter's dogs on a shelf, dog of the day first."""
+    site = cfg["site_url"].rstrip("/")
+    if not dogs:
+        return rail("Happy Tails", first_post(cfg, "pets"), f'<a class="link" href="{e(site)}/pets.html">See all</a>', rid="happy-tails", kind="sec")
+    cards = "".join(dog_card(cfg, d, day=i == 0) for i, d in enumerate(dogs_in_order(dogs)[:12]))
+    return (f'<section class="wrap givebox" id="happy-tails"><div class="rail-head"><h2 class="label">Happy Tails</h2>'
+            f'<a class="link" href="{e(site)}/pets.html">See all</a></div><div class="give"><div class="give-top">'
+            f'<div><span class="script">Happy tails!</span><h2 class="retro sm">Adopt a shelter dog</h2>'
+            f'<p>A new dog of the day every morning from the Richland County Dog Shelter. Can\'t adopt? A share might reach the right home.</p></div>'
+            f'<div class="share"><a class="btn solid sm" href="{e(site)}/pets.html">See all {len(dogs)}</a>'
+            f'<a class="btn sm" href="{e(site)}/submit.html">Share a happy tail</a></div></div>'
+            + rail("Waiting for a home", cards).replace('class="wrap railbox ', 'class="railbox ')
+            + shelter_note(cfg) + '</div></section>')
 
 
 def series_cta(cfg, key):
@@ -3722,17 +3755,12 @@ def render_series(cfg, key, items, stories, dogs=()):
                    f'<div><span class="caps kicker">{e(dog_line(d))}</span><h3 class="hed"><a href="{e(d["url"])}" target="_blank" rel="noopener">Meet {e(d["name"])}</a></h3>'
                    f'<p class="dek">{e(d["name"])} is waiting at the {e(shelter.get("name", "Richland County Dog Shelter"))} for a family. '
                    f'Share this post and you might help {e(d["name"])} find a home today.</p>'
-                   f'<div class="share"><a class="btn fb" href="{e(fb_share(d["url"]))}" target="_blank" rel="noopener">{FB_ICON}Share</a>'
-                   f'<a class="btn" href="{e(d["url"])}" target="_blank" rel="noopener">Meet {e(d["name"])} &rarr;</a></div></div></article></section>')
-            how = (f'Every dog here is at the {e(shelter.get("name", "Richland County Dog Shelter"))}. '
-                   + (f'<a class="link" href="{e(shelter["page"])}" target="_blank" rel="noopener">See the shelter\'s page</a> for visiting hours and how to adopt.'
-                      if shelter.get("page") else ""))
-            top += (f'<section class="wrap latest"><h2 class="label">Waiting for a home ({len(dogs)})</h2>'
-                    f'<p class="note">{how}</p><div class="grid dogs">{"".join(dog_card(cfg, x) for x in dogs)}</div></section>')
-    elif key == "racing" and cfg.get("racing_schedule"):
-        top = (f'<section class="wrap latest"><p class="note" style="text-align:center">Race dates, tickets and camping: '
-               f'<a class="link" href="{e(cfg["racing_schedule"])}" target="_blank" rel="noopener">Mansfield Speedway schedule</a></p></section>')
-    head_label = {"pets": "Happy endings and shelter news", "comebacks": "Buildings coming back", "racing": "Racing news"}[key]
+                   f'<div class="share"><a class="btn solid" href="{e(d["url"])}" target="_blank" rel="noopener">Adopt {e(d["name"])}</a>'
+                   f'<a class="btn fb" href="{e(fb_share(d["url"]))}" target="_blank" rel="noopener">{FB_ICON}Share</a></div></div></article></section>')
+            top += (f'<section class="wrap givebox"><div class="give"><div class="give-top"><div><span class="script">Neighbors helping dogs</span>'
+                    f'<h2 class="retro sm">Waiting for a home ({len(dogs)})</h2></div></div>'
+                    f'<div class="grid dogs">{"".join(dog_card(cfg, x) for x in dogs)}</div>{shelter_note(cfg)}</div></section>')
+    head_label = "Happy endings and shelter news"
     inner = f"""{page_title(script, e(name), e(about))}
 {top}
 <section class="wrap latest"><h2 class="label">{head_label}</h2><div class="grid">{grid}</div></section>
@@ -4695,7 +4723,7 @@ def merge_community(cfg, stories, community):
     return sorted(stories + community, key=lambda s: s["date"], reverse=True)
 
 
-PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("pets.html", "daily", "0.8"), ("comebacks.html", "daily", "0.6"), ("racing.html", "daily", "0.6"), ("businesses.html", "weekly", "0.8"),
+PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("pets.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
          ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"), ("homes.html", "daily", "0.7"), ("watch.html", "daily", "0.7"),
          ("submit.html", "monthly", "0.6"), ("birthdays.html", "daily", "0.6"), ("rules.html", "monthly", "0.4"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
@@ -4759,8 +4787,6 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 - [Events]({site}/events.html): things to do in Mansfield and Richland County this weekend and coming up
 - [Sports]({site}/sports.html): athlete spotlights, tournament brackets and good sports news
 - [Happy Tails]({site}/pets.html): adoptable dogs at the Richland County Dog Shelter, a dog of the day, and adoption stories
-- [Comeback Buildings]({site}/comebacks.html): old Richland County buildings getting restored and reopened
-- [Race Night]({site}/racing.html): Mansfield Speedway and local racing news
 - [Business spotlights]({site}/businesses.html): free pages for Richland County businesses
 - [Fundraisers]({site}/fundraisers.html): local causes posted by neighbors (not run or verified by Sunny Mansfield)
 - [Free Stuff]({site}/free.html): things neighbors are giving away, free only
@@ -4872,7 +4898,7 @@ def main():
     (out / "s").mkdir(parents=True, exist_ok=True)
     quote = quote_of_the_day()
     page = render_index(cfg, stories, businesses, flyers, listings, got["fundraisers"], got["headlines"], quote, got["jobs"],
-                        got["birthdays"])
+                        got["birthdays"], dogs)
     (out / "index.html").write_text(rebase(
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
