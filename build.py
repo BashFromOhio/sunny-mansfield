@@ -369,11 +369,13 @@ def fetch_shelter_dogs(cfg, sample):
         cells = [clean(c, 80) for c in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
         breed = re.search(r'class="[^"]*breed[^"]*"[^>]*>(.*?)</td>', row, re.S)
         img = re.search(r'<img[^>]+src="(https://pet-uploads\.adoptapet\.com/[^"]+)"', row)
+        if not img:
+            continue  # no photo yet: leave the dog off the site and Facebook until the shelter adds one
         dogs.append({"id": link.group(2), "name": clean(name.group(1), 60), "url": "https://www.adoptapet.com" + link.group(1),
                      "breed": clean(breed.group(1), 60) if breed else "", "age": cells[-2] if len(cells) >= 5 else "",
                      "sex": cells[-1] if len(cells) >= 5 else "", "image": img.group(1) if img else "",
                      "big": big_dog_photo(img.group(1)) if img else ""})
-    note(f"Shelter dogs: {len(dogs)} adoptable")
+    note(f"Shelter dogs: {len(dogs)} adoptable with photos")
     return dogs
 
 
@@ -1737,7 +1739,10 @@ def publisher(cfg):
 
 
 # Swap any story photo that fails to load for the sunny drawing. It sits in <head> so it's listening before images load.
+# A shelter dog's big photo falls back to its thumbnail; a dog whose photo won't load at all is taken off the page.
 PHOTO_FALLBACK = ("""document.addEventListener('error',ev=>{const i=ev.target;if(i.tagName!=='IMG'||!i.closest('.photo'))return;
+ if(i.dataset.thumb&&!i.dataset.tried){i.dataset.tried=1;i.src=i.dataset.thumb;return}
+ const dog=i.closest('.dogcard,.dogday-wrap');if(dog){dog.remove();return}
  const a=document.createElement('span');a.className='art';a.innerHTML='<svg viewBox="0 0 100 100" aria-hidden="true">"""
                   + ART["good"] + """</svg>';i.replaceWith(a)},true);""")
 
@@ -3667,7 +3672,7 @@ PAW = ('<circle cx="30" cy="36" r="8"/><circle cx="46" cy="24" r="8"/><circle cx
 def dog_photo(d, size=500):
     big = (d.get("big") or "").replace("h_1000", f"h_{size}")
     inner = (f'<img src="{e(big or d["image"])}" alt="{e(d["name"])}, an adoptable {e(d["breed"] or "dog")}" loading="lazy" '
-             f'referrerpolicy="no-referrer"' + (f' onerror="this.onerror=null;this.src=\'{e(d["image"])}\'"' if big else "") + '>'
+             f'referrerpolicy="no-referrer"' + (f' data-thumb="{e(d["image"])}"' if big else "") + '>'
              if d.get("image") else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{PAW}</svg></span>')
     return f'<a class="photo" href="{e(d["url"])}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">{inner}</a>'
 
@@ -3682,7 +3687,7 @@ def dog_card(cfg, d, day=False):
     shelter = (cfg.get("shelter") or {}).get("name", "Richland County Dog Shelter")
     big = (d.get("big") or "").replace("h_1000", "h_600")
     img = (f'<img src="{e(big or d["image"])}" alt="{e(d["name"])}, an adoptable {e(d.get("breed") or "dog")}" loading="lazy" '
-           f'referrerpolicy="no-referrer"' + (f' onerror="this.onerror=null;this.src=\'{e(d["image"])}\'"' if big else "") + '>'
+           f'referrerpolicy="no-referrer"' + (f' data-thumb="{e(d["image"])}"' if big else "") + '>'
            if d.get("image") else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{PAW}</svg></span>')
     badge = ('<span class="goal"><span class="goal-k">Dog of</span><span class="goal-v">the day</span>'
              '<span class="goal-k">Meet me!</span></span>') if day else ""

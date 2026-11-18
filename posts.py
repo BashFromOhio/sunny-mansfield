@@ -672,7 +672,8 @@ def make_series_feed(cfg, series, dogs, out, page_url, ua, credit, dog_of_the_da
                     d = dog_of_the_day(dogs, day)
                     photo = load_photo(d.get("big"), ua)
                     if photo is None or min(photo.size) < 400:
-                        photo = None  # a 136-pixel thumbnail would look blurry framed, so use the text card instead
+                        note(f"Series feed: no usable photo for {d['name']} on {day}, so no dog post that day")
+                        continue  # never post a dog without its photo
                     im = dog_post(d, photo, credit)
                     line = " · ".join(x for x in (d.get("age"), d.get("sex"), d.get("breed")) if x)
                     title, link = f"Dog of the day: {d['name']}", d["url"]
