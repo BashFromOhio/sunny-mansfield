@@ -917,6 +917,7 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .dogcard .photo img{object-position:50% 25%}.give .listing.dogcard .photo{aspect-ratio:1}
 .dogcard .goal-v{font-size:17px}.give .dogcard .goal-v{font-size:14px}
 .give-note svg.paw{fill:var(--secondary);stroke:none}
+.nl{margin-bottom:48px}.nl .nl-form{min-height:72px}.nl .nl-form iframe{max-width:100%}.nl .nl-alt{margin:8px 0 0;font-size:13px;color:var(--text-2)}
 .dogday{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:32px;align-items:center;background:var(--tertiary);border:2px solid var(--border-strong);padding:24px}
 .dogday .photo{aspect-ratio:1}.dogday .hed{font-size:clamp(30px,4vw,48px);line-height:1.05;margin:6px 0 12px}.dogday .dek{font-size:18px;line-height:1.6}
 @media (max-width:700px){.dogday{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}}
@@ -1921,6 +1922,22 @@ def civic(cfg, businesses):
     return rail("Shop local", cards + more, f'<a class="link" href="{e(site)}/businesses.html">See all</a>', rid="shops", kind="sec")
 
 
+def newsletter_band(cfg):
+    """The weekly email sign-up: beehiiv's embedded form (people confirm by email before they're added)."""
+    nl = cfg.get("newsletter") or {}
+    if not nl.get("page"):
+        return ""
+    form = (f'<div class="nl-form"><script async src="https://subscribe-forms.beehiiv.com/v3/loader.js" '
+            f'data-beehiiv-form="{e(nl["beehiiv_form"])}"></script></div>') if nl.get("beehiiv_form") else ""
+    day = f'Every {e(nl["day"])}, free' if nl.get("day") else "Free"
+    return (f'<section class="wrap" id="newsletter"><div class="give nl"><div class="give-top"><div>'
+            f'<span class="script">Good news, delivered!</span><h2 class="retro sm">Get it by email</h2>'
+            f'<p>{day}: the week\'s best good news, events and Happy Tails from Mansfield and Richland County. '
+            f'We\'ll email you once to confirm. Unsubscribe anytime.</p></div></div>{form}'
+            f'<p class="nl-alt">Form not showing? <a class="link" href="{e(nl["page"])}" target="_blank" rel="noopener">Sign up on our newsletter page</a></p>'
+            f'</div></section>')
+
+
 def submit_band(cfg, site):
     return f"""<section class="wrap" id="submit"><div class="candy"><div class="candy-in submit">
 <div><span class="script">Hey neighbor!</span><h2 class="retro sm">Got good news?</h2>
@@ -1945,6 +1962,11 @@ def follow_links(cfg):
             "".join(f'<a href="{e(u)}" rel="me noopener" target="_blank">{e(n)}</a>' for n, u in links) + "</nav>\n")
 
 
+def newsletter_link(cfg):
+    page = (cfg.get("newsletter") or {}).get("page")
+    return f'<a href="{e(page)}" target="_blank" rel="noopener">Email newsletter</a>' if page else ""
+
+
 def footer(cfg):
     site = cfg["site_url"].rstrip("/")
     return f"""<footer>{skyline().replace('class="skyline"', 'class="sky"')}<div class="wrap">
@@ -1955,7 +1977,7 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 {sponsor_strip(cfg)}
 <div class="wrap credit"><span class="script">Made in Mansfield</span> <span>by Ofgeneration LLC</span>
 {follow_links(cfg)}<nav class="legal towns">Good news in {" ".join(f'<a href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS)}</nav>
-<nav class="legal"><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a><a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
+<nav class="legal"><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a>{newsletter_link(cfg)}<a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
 Stories from other outlets belong to their publishers.</small></div></footer>"""
 
@@ -2944,8 +2966,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     for i, (k, name) in enumerate(SECTIONS):
         items = [s for s in stories if s["section"] == k][:12]
         if not items:
-            rails.append((k, rail(e(name), first_post(cfg, k), kind="sec")))
-            continue
+            continue  # empty sections stay off the front page until their first post (their own pages still ask for one)
         slides = [slide(cfg, s) for s in items]
         if i % 3 == 1:
             slides.insert(min(3, len(slides)), ad_at(i))  # one sponsor spot every few shelves
@@ -2962,6 +2983,8 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
     events = rail("Local events", "".join(flyer_cards) + (
         f'<a class="slide flyer add" href="{e(site)}/submit.html#flyer"><span class="flyer-img"><span class="plus">+</span></span>'
         f'<span class="hed">Post your flyer</span><span class="dek">Free for community events</span></a>'), rid="events", kind="flyers")
+    if not flyers:
+        events = ""  # no flyers yet: leave the shelf off the front page
     funds_rail = (f'<section class="wrap givebox" id="donate"><div class="rail-head"><h2 class="label">Donate</h2>'
                   f'<a class="link" href="{e(site)}/fundraisers.html">See all</a></div><div class="give"><div class="give-top">'
                   f'<div><span class="script">Neighbors helping neighbors</span><h2 class="retro sm">Donate to local causes</h2>'
@@ -2970,11 +2993,11 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
                   f'<a class="btn sm" href="{e(site)}/submit.html#fundraiser">Share a fundraiser</a></div></div>'
                   + rail("Fundraisers", "".join(fund_card(cfg, f) for f in funds[:12])).replace('class="wrap railbox ', 'class="railbox ')
                   + f'<p class="give-note">{SHIELD}<span>{FUND_SHORT} <a class="link" href="{e(site)}/fundraisers.html#before-you-give">Read before you give</a></span></p>'
-                  f'</div></section>') if funds else rail("Donate", first_post(cfg, "funds"), rid="donate", kind="sec")
+                  f'</div></section>') if funds else ""
     market = rail("Free Stuff", "".join(listing_card(x, cfg) for x in listings[:12]) + ad_card(cfg, sale_ads[0] if sale_ads else None, "A7", i=1),
-                  f'<a class="link" href="{e(site)}/free.html">See all</a>', kind="sales") if listings else rail("Free Stuff", first_post(cfg, "free"), kind="sales")
+                  f'<a class="link" href="{e(site)}/free.html">See all</a>', kind="sales") if listings else ""
     market += rail("Now hiring", "".join(job_card(cfg, j, slide=True) for j in jobs[:12]),
-                   f'<a class="link" href="{e(site)}/jobs.html">See all</a>', kind="jobs") if jobs else rail("Now hiring", first_post(cfg, "jobs"), kind="jobs")
+                   f'<a class="link" href="{e(site)}/jobs.html">See all</a>', kind="jobs") if jobs else ""
     market += funds_rail  # Donate sits under Now hiring, near the bottom
     home = {"@context": "https://schema.org", "@graph": [
         publisher(cfg),
@@ -3001,6 +3024,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 <div class="grid">{grid}<p class="empty" hidden>Nothing here this week yet. Know a story? <a class="link" href="{e(site)}/submit.html">Submit it</a></p></div>
 <div class="more-row"><button class="btn" type="button" id="more" hidden>Show more stories</button></div></section>
 {memories(cfg)}
+{newsletter_band(cfg)}
 {submit_band(cfg, site)}
 <div class="stripes" aria-hidden="true"></div>
 </main>
@@ -3223,7 +3247,7 @@ def birthday_rail(cfg, birthdays, title="Birthdays", page=False):
              if birthdays else "")
     more = sponsor_tag(cfg, "birthday", site) + (share if page else f'<a class="link" href="{e(site)}/birthdays.html">See all</a>')
     if not birthdays:
-        return rail(e(title), first_post(cfg, "birthday"), more, rid="birthdays", kind="sec bdays")
+        return "" if not page else rail(e(title), first_post(cfg, "birthday"), more, rid="birthdays", kind="sec bdays")
     add = ('' if page else
            f'<a class="slide bday-card add" href="{e(site)}/birthdays.html#form"><span class="plus" aria-hidden="true">+</span>'
            f'<span class="caps kicker">Know a birthday?</span><span class="bday-name">Send a shout-out</span>'
@@ -3451,8 +3475,11 @@ LEGAL = {
          "(hashed) record of each reply for 30 days, not the message itself."),
         ("What stays private", "Your email address is never published. Only our editors can see it, and we use it only to ask "
          "about your post or reply to you. Team applications and advertising questions are never published."),
+        ("Email newsletter", "If you sign up for our weekly email, we collect your email address through beehiiv, our "
+         "newsletter service. We email you once to confirm, and every newsletter has an unsubscribe link. We use the address only "
+         "to send the newsletter and never sell or share it."),
         ("Who helps us run the site", "Our database and photo storage are hosted by Supabase, the site is hosted by GitHub Pages, "
-         "sign-in emails and private replies are sent through Resend, and approved posts are shared to Facebook through Zapier. They process data "
+         "sign-in emails and private replies are sent through Resend, the newsletter is sent through beehiiv, and approved posts are shared to Facebook through Zapier. They process data "
          "only to provide those services. We never sell your information."),
         ("How long we keep it", "Approved posts stay up until they're taken down. Event flyers come down after the event, "
          "Free Stuff, job and home posts after 30 days, and fundraisers after 90 days or their end date. We erase the email address "
@@ -3722,7 +3749,7 @@ def happy_tails_box(cfg, dogs):
     """The front page's Happy Tails spot, laid out like the Donate box: the shelter's dogs on a shelf, dog of the day first."""
     site = cfg["site_url"].rstrip("/")
     if not dogs:
-        return rail("Happy Tails", first_post(cfg, "pets"), f'<a class="link" href="{e(site)}/pets.html">See all</a>', rid="happy-tails", kind="sec")
+        return ""
     cards = "".join(dog_card(cfg, d, day=i == 0) for i, d in enumerate(dogs_in_order(dogs)[:12]))
     return (f'<section class="wrap givebox" id="happy-tails"><div class="rail-head"><h2 class="label">Happy Tails</h2>'
             f'<a class="link" href="{e(site)}/pets.html">See all</a></div><div class="give"><div class="give-top">'
