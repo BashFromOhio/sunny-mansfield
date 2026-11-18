@@ -270,9 +270,9 @@ def collect(config, sample):
     return stories
 
 
-# ---- Daily series: Happy Tails (shelter dogs and their happy endings) ----
+# ---- Daily series: Tyger Paws (shelter dogs and their happy endings) ----
 SERIES = [  # key, page, name, script word, what the page is about
-    ("pets", "pets.html", "Happy Tails", "Happy tails!",
+    ("pets", "pets.html", "Tyger Paws", "Tyger Paws!",
      "Adoptable dogs at the Richland County Dog Shelter, a new dog of the day every morning, and the happy endings that follow."),
 ]
 SERIES_NAMES = {k: name for k, _, name, _, _ in SERIES}
@@ -1906,7 +1906,7 @@ def masthead(cfg, site, stories, quote=None, current=""):
 </div>
 <nav class="navbar" aria-label="Main"><div class="wrap strip caps">
 <div class="navgroup"><a href="{e(site)}/"{on("front")}>Front page</a><a href="{e(site)}/events.html">Events</a><a href="{e(site)}/watch.html"{on("watch")}>Watch Mansfield</a>
-<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/pets.html"{on("pets")}>Happy Tails</a><a href="{e(site)}/fundraisers.html">Donate</a>
+<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/pets.html"{on("pets")}>Tyger Paws</a><a href="{e(site)}/fundraisers.html">Donate</a>
 <a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/homes.html">Homes</a><a href="{e(site)}/businesses.html">Businesses</a>
 <button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}</div>
@@ -2091,7 +2091,7 @@ FIRST_POST = {  # what an empty spot asks for: label, where the form is, button,
     "funds": ("Fundraisers", "submit.html#fundraiser", "Share a fundraiser", "Medical bills, team trips, fire recovery and special causes."),
     "events": ("Local events", "submit.html#flyer", "Post your flyer", "Concerts, fish fries, festivals, games and church suppers."),
     "birthday": ("Birthdays", "birthdays.html#form", "Send a shout-out", "Know someone celebrating? We'll wish them a happy birthday here and on Facebook, free."),
-    "pets": ("Happy Tails", "submit.html", "Send your happy tail", "Adopted a dog from the Richland County shelter? Send us your happy tail and a photo."),
+    "pets": ("Tyger Paws", "submit.html", "Send your adoption story", "Adopted a dog from the Richland County shelter? Send us your adoption story and a photo."),
     "watch": ("Watch Mansfield", "submit.html", "Send us your video", "A podcast, a local show, a highlight reel. Mansfield made, Mansfield watched."),
 }
 
@@ -3787,17 +3787,17 @@ def shelter_note(cfg):
 
 
 def happy_tails_box(cfg, dogs):
-    """The front page's Happy Tails spot, laid out like the Donate box: the shelter's dogs on a shelf, dog of the day first."""
+    """The front page's Tyger Paws spot, laid out like the Donate box: the shelter's dogs on a shelf, dog of the day first."""
     site = cfg["site_url"].rstrip("/")
     if not dogs:
         return ""
     cards = "".join(dog_card(cfg, d, day=i == 0) for i, d in enumerate(dogs_in_order(dogs)[:12]))
-    return (f'<section class="wrap givebox" id="happy-tails"><div class="rail-head"><h2 class="label">Happy Tails</h2>'
+    return (f'<section class="wrap givebox" id="happy-tails"><div class="rail-head"><h2 class="label">Tyger Paws</h2>'
             f'<a class="link" href="{e(site)}/pets.html">See all</a></div><div class="give"><div class="give-top">'
-            f'<div><span class="script">Happy tails!</span><h2 class="retro sm">Adopt a shelter dog</h2>'
+            f'<div><span class="script">Tyger Paws!</span><h2 class="retro sm">Adopt a shelter dog</h2>'
             f'<p>A new dog of the day every morning from the Richland County Dog Shelter. Can\'t adopt? A share might reach the right home.</p></div>'
             f'<div class="share"><a class="btn solid sm" href="{e(site)}/pets.html">See all {len(dogs)}</a>'
-            f'<a class="btn sm" href="{e(site)}/submit.html">Share a happy tail</a></div></div>'
+            f'<a class="btn sm" href="{e(site)}/submit.html">Share an adoption story</a></div></div>'
             + rail("Waiting for a home", cards).replace('class="wrap railbox ', 'class="railbox ')
             + shelter_note(cfg) + '</div></section>')
 
@@ -4859,7 +4859,7 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 - [Front page]({site}/): today's good news, the editor's headline, local business, causes, sports and events
 - [Events]({site}/events.html): things to do in Mansfield and Richland County this weekend and coming up
 - [Sports]({site}/sports.html): athlete spotlights, tournament brackets and good sports news
-- [Happy Tails]({site}/pets.html): adoptable dogs at the Richland County Dog Shelter, a dog of the day, and adoption stories
+- [Tyger Paws]({site}/pets.html): adoptable dogs at the Richland County Dog Shelter, a dog of the day, and adoption stories
 - [Business spotlights]({site}/businesses.html): free pages for Richland County businesses
 - [Fundraisers]({site}/fundraisers.html): local causes posted by neighbors (not run or verified by Sunny Mansfield)
 - [Free Stuff]({site}/free.html): things neighbors are giving away, free only
