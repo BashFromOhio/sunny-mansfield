@@ -107,7 +107,7 @@ ELSE = [
     ("Nextdoor Business Page", "Must have", "The most local network there is. Post events and good news to Mansfield neighborhoods for free."),
     ("Facebook Group: \"Sunny Mansfield Neighbors\"", "Must have", "Groups get far more reach than Pages. Neighbors post their own good news, and you share the best to the Page and site. Use the group cover in 02-facebook."),
     ("Weekly email newsletter", "Must have", "\"The Sunny Weekend\" on Beehiiv or Kit, free to start. You own the list, unlike followers. Header image in 07-email-and-web."),
-    ("Your own email address", "Must have", "hello@sunnymansfield.com through Google Workspace (about $7 a month) or Zoho Mail (free). Looks trustworthy to sponsors."),
+    ("Your own email address", "Must have", "hello@sunnymansfield.com, set up on GoDaddy email. Looks trustworthy to sponsors."),
     ("TikTok and Instagram Reels", "Recommended", "15-second videos: walking through a new shop, a festival, a 100th birthday parade. Video gets the most reach on every platform today."),
     ("Threads", "Easy add", "Sign in with your Instagram account. Use the same bio and picture."),
     ("Canva (free) with a brand kit", "Recommended", "Upload the logo, the colors (#D9531E, #2E1A10, #FBF6EC) and the see-through frames so anyone on the team can make posts that match."),

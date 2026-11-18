@@ -5,7 +5,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const SITE = Deno.env.get("SITE_URL") ?? "https://sunnymansfield.com";
-const FROM = Deno.env.get("RELAY_FROM") ?? "Sunny Mansfield <replies@sunnymansfield.com>";
+const FROM = Deno.env.get("RELAY_FROM") ?? "Sunny Mansfield <hello@sunnymansfield.com>";
 const REPORT = Deno.env.get("REPORT_EMAIL") ?? "hello@sunnymansfield.com";
 const ORIGINS = [SITE, SITE.replace("https://", "https://www.")];
 const SECTIONS = ["Free Stuff", "Job", "Home for Rent or Sale"];

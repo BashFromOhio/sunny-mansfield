@@ -64,7 +64,7 @@ People answer Free Stuff and job posts through a form, and the poster gets the m
 4. Go to **Edge Functions > Secrets** and add `RESEND_API_KEY`. Paste your Resend API key there, and only there.
 5. Test it: open a Free Stuff post on the site, press **Message the giver**, and send yourself a note.
 
-Replies come from `replies@sunnymansfield.com` (your Resend domain), with Reply-To set to the person writing. Each person can send 8 replies an hour, 2 a day to the same post, and a post takes at most 40 a day.
+Replies come from `hello@sunnymansfield.com` (sent through Resend), with Reply-To set to the person writing. Each person can send 8 replies an hour, 2 a day to the same post, and a post takes at most 40 a day.
 
 ## 8. Turn on birthday shout-outs (about 5 minutes)
 
