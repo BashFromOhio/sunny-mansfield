@@ -917,8 +917,14 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .dogcard .photo img{object-position:50% 25%}.give .listing.dogcard .photo{aspect-ratio:1}
 .dogcard .goal-v{font-size:17px}.give .dogcard .goal-v{font-size:14px}
 .give-note svg.paw{fill:var(--secondary);stroke:none}
-.nl2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);margin-bottom:56px;background:var(--tertiary);
+/* the newsletter pop-up: opens once for returning readers, and from the footer link */
+.nlpop{padding:0;border:0;background:transparent;width:min(860px,calc(100vw - 32px));max-width:none;max-height:calc(100vh - 32px);overflow:auto}
+.nlpop::backdrop{background:rgba(46,26,16,.55)}
+.nl2{position:relative;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);background:var(--tertiary);
  border:2px solid var(--border-strong);border-top:6px solid var(--secondary)}
+.nl2 .close{position:absolute;top:8px;right:10px;z-index:2;font:400 30px/1 var(--sans);background:none;border:0;cursor:pointer;color:var(--tertiary);padding:4px 8px}
+.nl-no{justify-self:start;padding:6px 0;color:var(--text-2)}
+.nl-hed:focus{outline:none}
 .nl-pitch{padding:clamp(22px,3.5vw,40px);display:grid;gap:10px;align-content:center}
 .nl-pitch .script{font-size:30px;line-height:1.1;margin:0 0 8px}
 .nl-logo{display:block;width:min(340px,100%);margin:0 0 4px}.nl-logo svg{display:block;width:100%;height:auto}
@@ -934,7 +940,7 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .nl-list b{display:block;font:700 15px/1.3 var(--caps);letter-spacing:.06em;text-transform:uppercase}
 .nl-ex{display:block;font-size:15px;line-height:1.45;color:var(--tertiary);opacity:.92;margin-top:3px}
 .nl-ico{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.75);display:grid;place-items:center;font-size:24px}
-@media (max-width:820px){.nl2{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:820px){.nl2{grid-template-columns:minmax(0,1fr)}.nl-side{display:none}.nl2 .close{color:var(--text-2)}.nl-logo{width:min(260px,80%)}}
 .dogday{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:32px;align-items:center;background:var(--tertiary);border:2px solid var(--border-strong);padding:24px}
 .dogday .photo{aspect-ratio:1}.dogday .hed{font-size:clamp(30px,4vw,48px);line-height:1.05;margin:6px 0 12px}.dogday .dek{font-size:18px;line-height:1.6}
 @media (max-width:700px){.dogday{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}}
@@ -1923,7 +1929,7 @@ def masthead(cfg, site, stories, quote=None, current=""):
 <li><b>Written with neighbors.</b> Students, business owners, churches and mentors all add stories, and an editor reviews every post.</li>
 <li><b>Made to share.</b> Every story has a Share button. One share can make someone's day.</li></ul>
 <div class="share"><button class="btn solid" type="button" data-about-close>Start reading</button><a class="textbtn" href="{e(site)}/submit.html">Share good news</a></div>
-</aside>"""
+</aside>{newsletter_pop(cfg)}"""
 
 
 def memories(cfg):
@@ -1953,28 +1959,30 @@ def civic(cfg, businesses):
     return rail("Shop local", cards + more, f'<a class="link" href="{e(site)}/businesses.html">See all</a>', rid="shops", kind="sec")
 
 
-def newsletter_band(cfg, top=None):
-    """The weekly email sign-up, styled like the About pop-out: the pitch and beehiiv's embedded form on the left
-    (people confirm by email before they're added), and a sunny panel on the right showing what's inside."""
+def newsletter_pop(cfg):
+    """The weekly email sign-up as a pop-up, styled like the About pop-out: the pitch and beehiiv's form on the left
+    (people confirm by email before they're added), and a sunny panel on the right showing what's inside.
+    beehiiv's form only loads when the pop-up opens, so pages stay fast."""
     nl = cfg.get("newsletter") or {}
     if not nl.get("page"):
         return ""
-    form = (f'<div class="nl-form"><script async src="https://subscribe-forms.beehiiv.com/v3/loader.js" '
-            f'data-beehiiv-form="{e(nl["beehiiv_form"])}"></script></div>') if nl.get("beehiiv_form") else (
+    form = (f'<div class="nl-form" data-form="{e(nl["beehiiv_form"])}"></div>' if nl.get("beehiiv_form") else
             f'<a class="btn solid" href="{e(nl["page"])}" target="_blank" rel="noopener">Subscribe</a>')
     day = f'Every {e(nl["day"])}' if nl.get("day") else "Weekly"
-    example = f'<span class="nl-ex">Like: {e(top["title"])}</span>' if top else ""
-    inside = [f'<li><span class="nl-ico" aria-hidden="true">&#9728;</span><span><b>The week\'s best good news</b>{example}</span></li>',
+    inside = ['<li><span class="nl-ico" aria-hidden="true">&#9728;</span><span><b>The week\'s best good news</b>'
+              '<span class="nl-ex">Neighbors helping neighbors, new shops and big wins</span></span></li>',
               '<li><span class="nl-ico" aria-hidden="true">&#9733;</span><span><b>Things to do this weekend</b>'
               '<span class="nl-ex">Local events, free stuff, jobs and birthday shout-outs</span></span></li>']
-    return (f'<section class="wrap" id="newsletter"><div class="nl2">'
+    return (f'<dialog class="nlpop" id="nlpop" aria-labelledby="nl-h"><div class="nl2">'
+            f'<button class="close" type="button" data-nl-close aria-label="Close">&times;</button>'
             f'<div class="nl-pitch"><span class="nl-logo" role="img" aria-label="{e(cfg["site_name"])}">{logo("logo-retro.svg")}</span>'
-            f'<h2 class="nl-hed">Good news, straight to your inbox.</h2>'
+            f'<h2 class="nl-hed" id="nl-h" tabindex="-1" autofocus>Good news, straight to your inbox.</h2>'
             f'<p class="nl-sub"><b>{day}, free.</b> One short email with the best of Mansfield and Richland County.</p>'
             f'{form}<p class="nl-fine">We\'ll email you once to confirm. Unsubscribe anytime. '
-            f'<a class="link" href="{e(nl["page"])}" target="_blank" rel="noopener">Newsletter page</a></p></div>'
+            f'<a class="link" href="{e(nl["page"])}" target="_blank" rel="noopener">Newsletter page</a></p>'
+            f'<button class="textbtn nl-no" type="button" data-nl-close>No thanks</button></div>'
             f'<div class="nl-side"><span class="script">Inside every issue</span>'
-            f'<ul class="nl-list">{"".join(inside)}</ul></div></div></section>')
+            f'<ul class="nl-list">{"".join(inside)}</ul></div></div></dialog>')
 
 
 def submit_band(cfg, site):
@@ -2003,7 +2011,7 @@ def follow_links(cfg):
 
 def newsletter_link(cfg):
     page = (cfg.get("newsletter") or {}).get("page")
-    return f'<a href="{e(page)}" target="_blank" rel="noopener">Email newsletter</a>' if page else ""
+    return f'<a href="{e(page)}" target="_blank" rel="noopener" data-nl>Email newsletter</a>' if page else ""
 
 
 def footer(cfg):
@@ -2059,6 +2067,22 @@ if(about){const seen=store('aboutSeen');if(!seen&&!/admin\.html/.test(location.p
  document.addEventListener('click',ev=>{if(ev.target.closest('[data-about]')){about.hidden=false;about.querySelector('.btn').focus()}
   if(ev.target.closest('[data-about-close]')){about.hidden=true;store('aboutSeen','1')}});
  document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&!about.hidden){about.hidden=true;store('aboutSeen','1')}})}
+const nlpop=document.getElementById('nlpop');
+if(nlpop&&nlpop.showModal){const box=nlpop.querySelector('.nl-form');const DAY=864e5;
+ const load=()=>{if(!box||box.dataset.on)return;box.dataset.on=1;const sc=document.createElement('script');sc.async=true;
+  sc.src='https://subscribe-forms.beehiiv.com/v3/loader.js';sc.dataset.beehiivForm=box.dataset.form;box.appendChild(sc)};
+ const open=()=>{if(nlpop.open)return;load();nlpop.showModal();document.getElementById('nl-h').focus()};
+ const snooze=days=>store('nlSnooze',String(Date.now()+days*DAY));
+ if(/[?&]subscribed=1/.test(location.search)){snooze(3650);setTimeout(()=>say("You're subscribed! Watch your inbox for good news."),300)}
+ document.addEventListener('click',ev=>{const t=ev.target.closest('[data-nl]');if(t){ev.preventDefault();open();return}
+  if(ev.target.closest('[data-nl-close]')||ev.target===nlpop){nlpop.close();snooze(14)}});
+ nlpop.addEventListener('cancel',()=>snooze(14));
+ // Typing in beehiiv's form moves focus into its frame: count that as signed up (or trying), and don't ask again for a while.
+ addEventListener('blur',()=>{if(nlpop.open&&document.activeElement&&document.activeElement.tagName==='IFRAME')snooze(60)});
+ // Ask once on its own: only readers who have already met the About pop-out, after 20 seconds or halfway down the page.
+ const due=store('aboutSeen')&&!(+store('nlSnooze')>Date.now())&&!/admin\.html/.test(location.pathname);
+ if(due){let done=false;const go=()=>{if(done||document.querySelector('dialog[open]')||(about&&!about.hidden))return;done=true;open()};
+  setTimeout(go,20000);addEventListener('scroll',()=>{if(scrollY>(document.documentElement.scrollHeight-innerHeight)*.5)go()},{passive:true})}}
 const toast=document.getElementById('toast');let timer;
 function say(msg){if(!toast)return;toast.textContent=msg;toast.hidden=false;clearTimeout(timer);timer=setTimeout(()=>toast.hidden=true,3600)}
 function shared(){const now=new Date();const week=now.getFullYear()+'-'+Math.floor((now-new Date(now.getFullYear(),0,1))/6048e5);
@@ -3063,8 +3087,6 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 <section class="wrap latest" id="latest" hidden><h2 class="label">More good news</h2>
 <div class="grid">{grid}<p class="empty" hidden>Nothing here this week yet. Know a story? <a class="link" href="{e(site)}/submit.html">Submit it</a></p></div>
 <div class="more-row"><button class="btn" type="button" id="more" hidden>Show more stories</button></div></section>
-{memories(cfg)}
-{newsletter_band(cfg, top)}
 {submit_band(cfg, site)}
 <div class="stripes" aria-hidden="true"></div>
 </main>
