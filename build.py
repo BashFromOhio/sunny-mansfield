@@ -1975,6 +1975,138 @@ def newsletter_pop(cfg):
             f'<button class="textbtn nl-no" type="button" data-nl-close>No thanks</button></div></div></dialog>')
 
 
+NL_ORANGE, NL_INK, NL_CREAM, NL_MUTED = "#D9531E", "#2E1A10", "#FBF6EC", "#6B5A4E"
+
+
+def make_newsletter_issue(cfg, out, stories, flyers=(), funds=(), listings=(), jobs=(), birthdays=(), dogs=()):
+    """This week's newsletter, built from the site's own sections, in two forms:
+    newsletter/issue.html, a branded email-style page to read or paste into beehiiv, and
+    newsletter/issue.json, the same issue as beehiiv editor blocks so it can be loaded into a draft in one step.
+    Empty sections are left out."""
+    site = cfg["site_url"].rstrip("/")
+    canon = (cfg.get("canonical_url") or site).rstrip("/")
+    absu = lambda u: u if not u or u.startswith("http") else canon + ("" if u.startswith("/") else "/") + u
+    now = datetime.now(timezone.utc)
+    week = now - timedelta(days=7)
+    today = eastern().date()
+    utm = lambda u: u + ("&" if "?" in u else "?") + "utm_source=newsletter" if u.startswith(canon) else u
+    short = lambda t, n=170: t if len(t) <= n else t[:n - 10].rsplit(" ", 1)[0] + "…"
+    sections = []  # (heading, [items]); item = dict(title, url, text, image, kicker, button)
+
+    news = [x for x in stories if x["section"] != "life" and x["date"] >= week]
+    news.sort(key=lambda x: (not x.get("image"), -x["date"].timestamp()))
+    if news:
+        sections.append(("This week's good news", [
+            {"title": x["title"], "url": utm(canon + f"/s/{x['id']}.html"), "text": short(" ".join((x.get("summary") or "").split())),
+             "image": absu(x.get("image") or "") if i == 0 else "", "kicker": x.get("source") or ""} for i, x in enumerate(news[:5])]))
+    dayof = lambda f: f["day"].date() if isinstance(f["day"], datetime) else f["day"]
+    soon = sorted((f for f in flyers if f.get("day") and today <= dayof(f) <= today + timedelta(days=9)), key=dayof)
+    if soon:
+        sections.append(("Things to do this weekend", [
+            {"title": f["title"], "url": utm(canon + event_url(f)), "kicker": f["day"].strftime("%a, %b %-d") + (" · " + f["town"] if f.get("town") else ""),
+             "text": short(" ".join((f.get("summary") or "").split()), 140)} for f in soon[:5]]))
+    dog = dog_of_the_day(dogs)
+    if dog:
+        about = " · ".join(v for v in (dog.get("breed"), dog.get("age"), dog.get("sex")) if v)
+        sections.append(("Tyger Paws: dog of the week", [
+            {"title": f"Meet {dog['name']}", "url": dog["url"], "image": (dog.get("big") or dog.get("image") or "").replace("h_1000", "h_600"),
+             "text": (about + ". " if about else "") + f"{dog['name']} is waiting at the {(cfg.get('shelter') or {}).get('name', 'Richland County Dog Shelter')} for a family.",
+             "button": f"Meet {dog['name']}"}]))
+    if funds:
+        sections.append(("Neighbors helping neighbors", [
+            {"title": f["title"], "url": utm(canon + fund_url(f)), "kicker": f.get("town") or "Richland County",
+             "text": short(" ".join((f.get("summary") or "").split()), 140)} for f in list(funds)[:3]]))
+    fresh = [x for x in listings if x["date"] >= week][:4]
+    if fresh:
+        sections.append(("Free stuff", [
+            {"title": x["title"], "url": utm(canon + f"/free.html#l-{x['id']}"), "kicker": x.get("town") or "Richland County",
+             "text": short(x["summary"], 120)} for x in fresh]))
+    hiring = [j for j in jobs if j["date"] >= week][:4]
+    if hiring:
+        sections.append(("Now hiring", [
+            {"title": j["title"], "url": utm(canon + f"/jobs/{j['id']}.html"),
+             "kicker": " · ".join(v for v in (j["employer"], j.get("pay"), j.get("town")) if v), "text": ""} for j in hiring]))
+    cakes = [b for b in birthdays][:8]
+    if cakes:
+        sections.append(("Birthday shout-outs", [
+            {"title": "Happy birthday, " + ", ".join(b["name"] for b in cakes[:-1]) + (" and " if len(cakes) > 1 else "") + cakes[-1]["name"] + "!",
+             "url": utm(canon + "/birthdays.html"), "text": "Want to surprise someone? Send a free birthday shout-out.", "button": "Send a shout-out"}]))
+
+    header = canon + "/brand/email-weekly.png"
+    week_of = (today - timedelta(days=today.weekday())).strftime("%B %-d, %Y")
+    intro = "Hi neighbor! Here's the good news from around Mansfield and Richland County this week."
+    addr = mailing_address(cfg)
+
+    # 1. The email-style page (inline styles and tables, so it also pastes cleanly)
+    F = "font-family:Georgia,'Times New Roman',serif;"
+    S = "font-family:Helvetica,Arial,sans-serif;"
+    btn = lambda label, url: (f'<p style="margin:14px 0 4px"><a href="{e(url)}" style="{S}display:inline-block;background:{NL_ORANGE};color:#fff;'
+                              f'text-decoration:none;font-weight:700;font-size:15px;padding:12px 22px">{e(label)}</a></p>')
+    rows = []
+    for head, items in sections:
+        rows.append(f'<h2 style="{S}font-size:13px;letter-spacing:2px;text-transform:uppercase;color:{NL_ORANGE};margin:34px 0 4px;'
+                    f'padding-top:18px;border-top:2px solid {NL_INK}">{e(head)}</h2>')
+        for it in items:
+            img = (f'<a href="{e(it["url"])}"><img src="{e(it["image"])}" alt="{e(it["title"])}" width="560" '
+                   f'style="display:block;width:100%;max-width:560px;height:auto;margin:12px 0 4px;border:0"></a>') if it.get("image") else ""
+            kick = f'<p style="{S}font-size:12px;letter-spacing:1px;text-transform:uppercase;color:{NL_MUTED};margin:14px 0 2px">{e(it["kicker"])}</p>' if it.get("kicker") else ""
+            text = f'<p style="{S}font-size:15px;line-height:1.55;color:{NL_INK};margin:4px 0 0">{e(it["text"])}</p>' if it.get("text") else ""
+            title = f'<h3 style="{F}font-size:20px;line-height:1.25;margin:{"6px" if kick else "14px"} 0 0"><a href="{e(it["url"])}" style="color:{NL_INK};text-decoration:none">{e(it["title"])}</a></h3>'
+            rows.append(img + kick + title + text + (btn(it["button"], it["url"]) if it.get("button") else ""))
+    body = "\n".join(rows) or f'<p style="{S}">No new posts this week yet.</p>'
+    html = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>{e(cfg["site_name"])} weekly · Week of {e(week_of)}</title></head>
+<body style="margin:0;background:#efe7da"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:{NL_CREAM};border:2px solid {NL_INK}">
+<tr><td><a href="{e(utm(canon + '/'))}"><img src="{e(header)}" alt="{e(cfg['site_name'])}: good news, every week" width="600" style="display:block;width:100%;height:auto;border:0"></a></td></tr>
+<tr><td style="padding:8px 24px 28px">
+<p style="{S}font-size:12px;letter-spacing:2px;text-transform:uppercase;color:{NL_MUTED};margin:18px 0 6px">Week of {e(week_of)}</p>
+<p style="{S}font-size:16px;line-height:1.55;color:{NL_INK};margin:0">{e(intro)}</p>
+{body}
+<div style="margin-top:34px;padding:22px;background:{NL_ORANGE};color:#fff;text-align:center">
+<p style="{F}font-size:22px;margin:0 0 6px;color:#fff">Got good news?</p>
+<p style="{S}font-size:15px;margin:0 0 14px;color:#fff">Tell us about a neighbor, a new shop or a big win. It's free.</p>
+<a href="{e(utm(canon + '/submit.html'))}" style="{S}display:inline-block;background:#fff;color:{NL_ORANGE};font-weight:700;text-decoration:none;padding:12px 22px">Share good news</a></div>
+<p style="{S}font-size:12px;line-height:1.6;color:{NL_MUTED};text-align:center;margin:26px 0 0">{e(cfg["site_name"])} · {e(addr)}</p>
+</td></tr></table></td></tr></table></body></html>"""
+
+    # 2. The same issue as beehiiv editor blocks
+    txt = lambda t, **m: {"type": "text", "text": t, **({"marks": [{"type": k, "attrs": v} if v else {"type": k} for k, v in m.items()]} if m else {})}
+    para = lambda *c: {"type": "paragraph", "content": list(c)} if c else {"type": "paragraph"}
+    image = lambda src, url, alt: {"type": "imageBlock", "attrs": {"src": src, "url": url, "alt": alt, "width": "100%", "align": "center",
+                                                                   "isUploaded": False, "allowExternal": True, "source": "url"},
+                                   "content": [{"type": "figcaption"}]}
+    button = lambda label, url: {"type": "button", "attrs": {"href": url, "target": "_blank", "alignment": "center", "size": "large", "isCustom": True,
+                                                             "customBackgroundColor": NL_ORANGE, "customTextColor": "#FFFFFF"},
+                                 "content": [txt(label)]}
+    doc = [image(header, utm(canon + "/"), cfg["site_name"] + ": good news, every week"),
+           para(txt(f"Week of {week_of}", bold=None)), para(txt(intro))]
+    for head, items in sections:
+        doc.append({"type": "horizontalRule"})
+        doc.append({"type": "heading", "attrs": {"level": 2}, "content": [txt(head)]})
+        for it in items:
+            if it.get("image"):
+                doc.append(image(it["image"], it["url"], it["title"]))
+            if it.get("kicker"):
+                doc.append(para(txt(it["kicker"], italic=None)))
+            doc.append({"type": "heading", "attrs": {"level": 3}, "content": [txt(it["title"], link={"href": it["url"], "target": "_blank"})]})
+            if it.get("text"):
+                doc.append(para(txt(it["text"])))
+            if it.get("button"):
+                doc.append(button(it["button"], it["url"]))
+    doc += [{"type": "horizontalRule"}, {"type": "heading", "attrs": {"level": 2, "textAlign": "center"}, "content": [txt("Got good news?")]},
+            {"type": "paragraph", "attrs": {"textAlign": "center"}, "content": [txt("Tell us about a neighbor, a new shop or a big win. It's free.")]},
+            button("Share good news", utm(canon + "/submit.html"))]
+    first = news[0]["title"] if news else "Good news from Mansfield"
+    meta = {"subject": f"This week in Mansfield: {short(first, 70)}", "preview": intro, "week_of": week_of,
+            "sections": [h for h, _ in sections], "doc": {"type": "doc", "content": doc}}
+    folder = out / "newsletter"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "issue.html").write_text(html)
+    (folder / "issue.json").write_text(json.dumps(meta, ensure_ascii=False, default=str))
+    return meta
+
+
 def submit_band(cfg, site):
     return f"""<section class="wrap" id="submit"><div class="candy"><div class="candy-in submit">
 <div><span class="script">Hey neighbor!</span><h2 class="retro sm">Got good news?</h2>
@@ -4048,7 +4180,7 @@ def check_seo(out):
     """Flag pages search engines can't read well: broken structured data, a missing title, canonical or H1, or a
     sitemap pointing at pages that weren't built. The site still publishes; problems show as warnings on the run."""
     problems = []
-    pages = [p for p in out.rglob("*.html") if p.name != "artifact.html"]
+    pages = [p for p in out.rglob("*.html") if p.name != "artifact.html" and p.parent.name != "newsletter"]  # the email copy isn't for search
     for p in pages:
         t = p.read_text()
         for block in re.findall(r'<script type="application/ld\+json">(.*?)</script>', t, re.S):
@@ -4848,7 +4980,7 @@ def write_search_files(cfg, stories, businesses, out, towns=(), flyers=(), jobs=
                   f"<news:language>en</news:language></news:publication><news:publication_date>{s['date'].isoformat()}"
                   f"</news:publication_date><news:title>{e(s['title'])}</news:title></news:news></url>\n" for s in fresh)
         + "</urlset>\n")
-    welcome = "".join(f"User-agent: {b}\nAllow: /\nDisallow: /admin.html\n\n" for b in AI_BOTS)
+    welcome = "".join(f"User-agent: {b}\nAllow: /\nDisallow: /admin.html\nDisallow: /newsletter/\n\n" for b in AI_BOTS)
     if adsense_pub(cfg):  # AdSense checks /ads.txt to confirm which ad sellers may sell space on this site
         (out / "ads.txt").write_text(f"google.com, {adsense_pub(cfg)}, DIRECT, f08c47fec0942fa0\n")
     (out / "robots.txt").write_text(f"""# Everyone is welcome to read, index and cite Sunny Mansfield, including AI assistants.
@@ -4857,6 +4989,7 @@ def write_search_files(cfg, stories, businesses, out, towns=(), flyers=(), jobs=
 Allow: /
 Disallow: /admin.html
 Disallow: /artifact.html
+Disallow: /newsletter/
 
 Sitemap: {site}/sitemap.xml
 Sitemap: {site}/news-sitemap.xml
@@ -4991,6 +5124,10 @@ def main():
     quote = quote_of_the_day()
     page = render_index(cfg, stories, businesses, flyers, listings, got["fundraisers"], got["headlines"], quote, got["jobs"],
                         got["birthdays"], dogs)
+    try:
+        make_newsletter_issue(cfg, out, stories, flyers, got["fundraisers"], listings, got["jobs"], got["birthdays"], dogs)
+    except Exception as exc:  # the newsletter never stops the site from building
+        note(f"Newsletter issue: skipped ({exc})")
     (out / "index.html").write_text(rebase(
         "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
         "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
