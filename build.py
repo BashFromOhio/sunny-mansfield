@@ -1781,6 +1781,15 @@ def report_link(cfg, s=None):
     return f"mailto:{cfg['submit_email']}?subject={urllib.parse.quote(subject[:150])}&body={urllib.parse.quote(body)}"
 
 
+def follow_links(cfg):
+    """A "Follow us" line in the footer for the social pages config.json lists; nothing when none are set."""
+    links = [(n, cfg.get(k)) for n, k in (("Facebook", "facebook_page"), ("Instagram", "instagram")) if cfg.get(k)]
+    if not links:
+        return ""
+    return ('<nav class="legal follow">Follow us on ' +
+            "".join(f'<a href="{e(u)}" rel="me noopener" target="_blank">{e(n)}</a>' for n, u in links) + "</nav>\n")
+
+
 def footer(cfg):
     site = cfg["site_url"].rstrip("/")
     return f"""<footer>{skyline().replace('class="skyline"', 'class="sky"')}<div class="wrap">
@@ -1790,7 +1799,7 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 <span class="caps">Updated {datetime.now(timezone.utc).strftime('%b %-d, %Y')}</span></div>
 {sponsor_strip(cfg)}
 <div class="wrap credit"><span class="script">Made in Mansfield</span> <span>by Ofgeneration LLC</span>
-<nav class="legal towns">Good news in {" ".join(f'<a href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS)}</nav>
+{follow_links(cfg)}<nav class="legal towns">Good news in {" ".join(f'<a href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS)}</nav>
 <nav class="legal"><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a><a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
 Stories from other outlets belong to their publishers.</small></div></footer>"""
