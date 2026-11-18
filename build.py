@@ -917,30 +917,24 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .dogcard .photo img{object-position:50% 25%}.give .listing.dogcard .photo{aspect-ratio:1}
 .dogcard .goal-v{font-size:17px}.give .dogcard .goal-v{font-size:14px}
 .give-note svg.paw{fill:var(--secondary);stroke:none}
-/* the newsletter pop-up: opens once for returning readers, and from the footer link */
-.nlpop{padding:0;border:0;background:transparent;width:min(860px,calc(100vw - 32px));max-width:none;max-height:calc(100vh - 32px);overflow:auto}
-.nlpop::backdrop{background:rgba(46,26,16,.55)}
-.nl2{position:relative;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);background:var(--tertiary);
- border:2px solid var(--border-strong);border-top:6px solid var(--secondary)}
-.nl2 .close{position:absolute;top:8px;right:10px;z-index:2;font:400 30px/1 var(--sans);background:none;border:0;cursor:pointer;color:var(--tertiary);padding:4px 8px}
-.nl-no{justify-self:start;padding:6px 0;color:var(--text-2)}
-.nl-hed:focus{outline:none}
-.nl-pitch{padding:clamp(22px,3.5vw,40px);display:grid;gap:10px;align-content:center}
-.nl-pitch .script{font-size:30px;line-height:1.1;margin:0 0 8px}
-.nl-logo{display:block;width:min(340px,100%);margin:0 0 4px}.nl-logo svg{display:block;width:100%;height:auto}
-.nl-hed{font:700 clamp(24px,2.6vw,32px)/1.15 var(--serif);margin:0;color:var(--text)}
-.nl-sub{font-size:clamp(16px,1.5vw,18px);line-height:1.55;margin:0 0 4px;color:var(--text-2)}.nl-sub b{color:var(--text)}
-.nl-pitch .nl-form{min-height:64px;margin:0 -8px}.nl-pitch .nl-form iframe{max-width:100%}
-.nl-fine{font-size:13px;line-height:1.6;margin:0;color:var(--text-2)}
-.nl-side{position:relative;overflow:hidden;background:linear-gradient(135deg,#e5652b 0%,var(--secondary) 55%,var(--secondary-dk) 100%);color:var(--tertiary);
- padding:clamp(22px,3.5vw,40px);display:flex;flex-direction:column;justify-content:center}
-.nl-side .script{color:var(--tertiary);font-size:clamp(28px,3vw,36px);margin-bottom:26px;position:relative}
-.nl-list{list-style:none;margin:0;padding:0;display:grid;gap:18px;position:relative}
-.nl-list li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;align-items:center}
-.nl-list b{display:block;font:700 15px/1.3 var(--caps);letter-spacing:.06em;text-transform:uppercase}
-.nl-ex{display:block;font-size:15px;line-height:1.45;color:var(--tertiary);opacity:.92;margin-top:3px}
-.nl-ico{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.75);display:grid;place-items:center;font-size:24px}
-@media (max-width:820px){.nl2{grid-template-columns:minmax(0,1fr)}.nl-side{display:none}.nl2 .close{color:var(--text-2)}.nl-logo{width:min(260px,80%)}}
+/* the newsletter pop-up: opens once for returning readers, and from the footer link. Same look as the welcome email. */
+.nlpop{padding:0;border:0;background:transparent;width:min(460px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 32px);overflow:auto}
+.nlpop::backdrop{background:rgba(46,26,16,.6)}
+.nl2{position:relative;background:var(--tertiary);border:2px solid var(--border-strong);text-align:center}
+.nl2 .close{position:absolute;top:6px;right:8px;z-index:2;font:400 30px/1 var(--sans);background:none;border:0;cursor:pointer;color:var(--tertiary);padding:4px 8px}
+.nl-top{background:linear-gradient(135deg,#e5652b 0%,var(--secondary) 55%,var(--secondary-dk) 100%);padding:30px 24px 20px;color:var(--tertiary)}
+.nl-logo{display:block;width:min(250px,72%);margin:0 auto}.nl-logo svg{display:block;width:100%;height:auto}
+.nl-top .script{display:block;font-size:26px;line-height:1.1;color:var(--tertiary);margin-top:10px}
+.nl-body{padding:24px clamp(18px,6vw,30px) 16px;display:grid;gap:14px}
+.nl-hed{font:700 clamp(23px,6vw,28px)/1.15 var(--serif);margin:0;color:var(--text)}
+.nl-hed:focus,.nl-hed:focus-visible{outline:none;box-shadow:none}
+.nl-sub{font-size:16px;line-height:1.5;margin:0;color:var(--text-2)}
+.nl-list{list-style:none;margin:0;padding:0;display:grid;gap:10px;text-align:left;justify-self:center}
+.nl-list li{display:flex;gap:10px;align-items:center;font:700 13px/1.3 var(--caps);letter-spacing:.06em;text-transform:uppercase;color:var(--text)}
+.nl-ico{flex:none;width:30px;height:30px;border-radius:50%;background:var(--secondary);color:var(--tertiary);display:grid;place-items:center;font-size:15px;line-height:1}
+.nl-form{min-height:47px}.nl-form iframe{max-width:100%}
+.nl-fine{font-size:13px;line-height:1.5;margin:0;color:var(--text-2)}
+.nl-no{justify-self:center;padding:6px 8px;color:var(--text-2)}
 .dogday{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:32px;align-items:center;background:var(--tertiary);border:2px solid var(--border-strong);padding:24px}
 .dogday .photo{aspect-ratio:1}.dogday .hed{font-size:clamp(30px,4vw,48px);line-height:1.05;margin:6px 0 12px}.dogday .dek{font-size:18px;line-height:1.6}
 @media (max-width:700px){.dogday{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}}
@@ -1960,29 +1954,25 @@ def civic(cfg, businesses):
 
 
 def newsletter_pop(cfg):
-    """The weekly email sign-up as a pop-up, styled like the About pop-out: the pitch and beehiiv's form on the left
-    (people confirm by email before they're added), and a sunny panel on the right showing what's inside.
+    """The weekly email sign-up as a pop-up, in the same look as the welcome email: an orange header with the logo,
+    then the pitch and beehiiv's form (people confirm by email before they're added).
     beehiiv's form only loads when the pop-up opens, so pages stay fast."""
     nl = cfg.get("newsletter") or {}
     if not nl.get("page"):
         return ""
     form = (f'<div class="nl-form" data-form="{e(nl["beehiiv_form"])}"></div>' if nl.get("beehiiv_form") else
             f'<a class="btn solid" href="{e(nl["page"])}" target="_blank" rel="noopener">Subscribe</a>')
-    day = f'Every {e(nl["day"])}' if nl.get("day") else "Weekly"
-    inside = ['<li><span class="nl-ico" aria-hidden="true">&#9728;</span><span><b>The week\'s best good news</b>'
-              '<span class="nl-ex">Neighbors helping neighbors, new shops and big wins</span></span></li>',
-              '<li><span class="nl-ico" aria-hidden="true">&#9733;</span><span><b>Things to do this weekend</b>'
-              '<span class="nl-ex">Local events, free stuff, jobs and birthday shout-outs</span></span></li>']
+    day = f'every {e(nl["day"])}' if nl.get("day") else "a week"
     return (f'<dialog class="nlpop" id="nlpop" aria-labelledby="nl-h"><div class="nl2">'
             f'<button class="close" type="button" data-nl-close aria-label="Close">&times;</button>'
-            f'<div class="nl-pitch"><span class="nl-logo" role="img" aria-label="{e(cfg["site_name"])}">{logo("logo-retro.svg")}</span>'
-            f'<h2 class="nl-hed" id="nl-h" tabindex="-1" autofocus>Good news, straight to your inbox.</h2>'
-            f'<p class="nl-sub"><b>{day}, free.</b> One short email with the best of Mansfield and Richland County.</p>'
-            f'{form}<p class="nl-fine">We\'ll email you once to confirm. Unsubscribe anytime. '
-            f'<a class="link" href="{e(nl["page"])}" target="_blank" rel="noopener">Newsletter page</a></p>'
-            f'<button class="textbtn nl-no" type="button" data-nl-close>No thanks</button></div>'
-            f'<div class="nl-side"><span class="script">Inside every issue</span>'
-            f'<ul class="nl-list">{"".join(inside)}</ul></div></div></dialog>')
+            f'<div class="nl-top"><span class="nl-logo" role="img" aria-label="{e(cfg["site_name"])}">{logo("logo-retro-reverse.svg")}</span>'
+            f'<span class="script">Good news is on the way</span></div>'
+            f'<div class="nl-body"><h2 class="nl-hed" id="nl-h" tabindex="-1" autofocus>Good news, straight to your inbox.</h2>'
+            f'<p class="nl-sub">One short, free email {day} with the best of Mansfield and Richland County.</p>'
+            f'<ul class="nl-list"><li><span class="nl-ico" aria-hidden="true">&#9728;</span>The week\'s best good news</li>'
+            f'<li><span class="nl-ico" aria-hidden="true">&#9733;</span>Things to do this weekend</li></ul>'
+            f'{form}<p class="nl-fine">We\'ll email you once to confirm. Unsubscribe anytime.</p>'
+            f'<button class="textbtn nl-no" type="button" data-nl-close>No thanks</button></div></div></dialog>')
 
 
 def submit_band(cfg, site):
