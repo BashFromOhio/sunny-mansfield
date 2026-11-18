@@ -604,17 +604,13 @@ def make_community_feed(cfg, stories, flyers, funds, businesses, out, page_url, 
     note(f"Community feed: {len(items)} posts")
 
 
-# ---- Daily series for the Facebook Page: Happy Tails, Comeback Buildings, Race Night ----
+# ---- Daily series for the Facebook Page: Happy Tails (dog of the day) and Home of the day ----
 SERIES_SLOTS = [  # key, hour (Eastern), label on the image, script word, hashtag, page, weekly ask day (Monday = 0)
     ("pets", 10, "Dog of the day", "Happy tails!", "#AdoptDontShop", "pets.html", 6),
     ("homes", 12, "Home of the day", "Home sweet home!", "#MansfieldHomes", "homes.html", None),
-    ("comebacks", 14, "Comeback Buildings", "New life!", "#ComebackBuildings", "comebacks.html", 2),
-    ("racing", 18, "Race Night", "Race night!", "#MansfieldSpeedway", "racing.html", 5),
 ]
 SERIES_ASKS = {
     "pets": ("Adopted a shelter dog?", "Adopted a dog from the Richland County Dog Shelter? We'd love to share your happy tail. Send us a photo and a few lines about how they're doing."),
-    "comebacks": ("Know a comeback building?", "Know an old building in Richland County getting a second life? A restored storefront, a reopened theater, a church saved by its neighbors. Tell us about it."),
-    "racing": ("Got race night news?", "Race results, a local driver's big night, a pit crew that deserves a shout-out? Send it in and we'll share it."),
 }
 
 
@@ -651,8 +647,8 @@ def series_pick(pool, day, at):
 
 
 def make_series_feed(cfg, series, dogs, out, page_url, ua, credit, dog_of_the_day, note=print, homes=()):
-    """series.xml: up to three posts a day for the Facebook Page, one per series: the shelter's dog of the day at 10 a.m.,
-    a comeback building at 2 p.m. and race news at 6 p.m. Eastern. A series with nothing to share skips the day, and asks
+    """series.xml: up to two posts a day for the Facebook Page: the shelter's dog of the day (with its photo) at 10 a.m.
+    and a home listed on the site at noon Eastern. A series with nothing to share skips the day, and asks
     people to send something in once a week instead. Like social.xml, each item's link is the framed image."""
     from datetime import datetime, timedelta
     from email.utils import format_datetime
@@ -713,7 +709,7 @@ def make_series_feed(cfg, series, dogs, out, page_url, ua, credit, dog_of_the_da
         items.sort(key=lambda x: x[0], reverse=True)
         (Path(out) / "series.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel><title>{e(cfg['site_name'])} daily series</title><link>{e(site)}/</link>
-<description>Dog of the day, Comeback Buildings and Race Night, ready for Facebook</description>
+<description>Dog of the day and home of the day, ready for Facebook</description>
 {"".join(x for _, x in items)}
 </channel></rss>""")
         note(f"Series feed: {len(items)} posts in the last 3 days")

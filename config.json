@@ -49,28 +49,9 @@
   ],
   "series_feeds": [
     {
-      "name": "Mansfield Speedway",
-      "url": "https://thespeedway.com/blogs/news.atom",
-      "local": true,
-      "series": "racing",
-      "photos": false,
-      "trusted": true
-    },
-    {
-      "name": "Google News: Mansfield Speedway",
-      "url": "https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q=%22Mansfield+Speedway%22+OR+%22Mansfield+Motorsports%22+when:30d",
-      "series": "racing",
-      "local": true
-    },
-    {
       "name": "Google News: Richland County shelter dogs",
       "url": "https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q=(%22dog+shelter%22+OR+%22dog+warden%22+OR+%22humane+society%22+OR+adopt)+(Mansfield+OR+%22Richland+County%22)+Ohio+when:30d",
       "series": "pets"
-    },
-    {
-      "name": "Google News: Mansfield restorations",
-      "url": "https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q=(restored+OR+restoration+OR+renovation+OR+renovated+OR+reopens+OR+revitalization+OR+redevelopment+OR+historic)+(Mansfield+OR+%22Richland+County%22)+Ohio+when:30d",
-      "series": "comebacks"
     }
   ],
   "series_max_age_days": 60,
@@ -79,7 +60,6 @@
     "adoptapet_id": "99032",
     "page": "https://richlandcountyoh.gov/AdoptableDogs"
   },
-  "racing_schedule": "https://thespeedway.com/schedule",
   "skip_sources": [
     "Mansfield News Journal",
     "mansfieldnewsjournal.com"
