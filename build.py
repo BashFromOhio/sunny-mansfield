@@ -1961,7 +1961,7 @@ def newsletter_band(cfg, top=None):
     form = (f'<div class="nl-form"><script async src="https://subscribe-forms.beehiiv.com/v3/loader.js" '
             f'data-beehiiv-form="{e(nl["beehiiv_form"])}"></script></div>') if nl.get("beehiiv_form") else (
             f'<a class="btn solid" href="{e(nl["page"])}" target="_blank" rel="noopener">Subscribe</a>')
-    day = f'Every {e(nl["day"])}' if nl.get("day") else "Every week"
+    day = f'Every {e(nl["day"])}' if nl.get("day") else "Weekly"
     example = f'<span class="nl-ex">Like: {e(top["title"])}</span>' if top else ""
     inside = [f'<li><span class="nl-ico" aria-hidden="true">&#9728;</span><span><b>The week\'s best good news</b>{example}</span></li>',
               '<li><span class="nl-ico" aria-hidden="true">&#9733;</span><span><b>Things to do this weekend</b>'
