@@ -924,6 +924,7 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .nl2 .close{position:absolute;top:6px;right:8px;z-index:2;font:400 30px/1 var(--sans);background:none;border:0;cursor:pointer;color:var(--tertiary);padding:4px 8px}
 .nl-top{background:linear-gradient(135deg,#e5652b 0%,var(--secondary) 55%,var(--secondary-dk) 100%);padding:30px 24px 20px;color:var(--tertiary)}
 .nl-logo{display:block;width:min(250px,72%);margin:0 auto}.nl-logo svg{display:block;width:100%;height:auto}
+.nl-top g path{fill:var(--secondary);stroke:var(--tertiary)}
 .nl-top .script{display:block;font-size:26px;line-height:1.1;color:var(--tertiary);margin-top:10px}
 .nl-body{padding:24px clamp(18px,6vw,30px) 16px;display:grid;gap:14px}
 .nl-hed{font:700 clamp(23px,6vw,28px)/1.15 var(--serif);margin:0;color:var(--text)}
@@ -2069,10 +2070,16 @@ if(nlpop&&nlpop.showModal){const box=nlpop.querySelector('.nl-form');const DAY=8
  nlpop.addEventListener('cancel',()=>snooze(14));
  // Typing in beehiiv's form moves focus into its frame: count that as signed up (or trying), and don't ask again for a while.
  addEventListener('blur',()=>{if(nlpop.open&&document.activeElement&&document.activeElement.tagName==='IFRAME')snooze(60)});
- // Ask once on its own: only readers who have already met the About pop-out, after 20 seconds or halfway down the page.
- const due=store('aboutSeen')&&!(+store('nlSnooze')>Date.now())&&!/admin\.html/.test(location.pathname);
- if(due){let done=false;const go=()=>{if(done||document.querySelector('dialog[open]')||(about&&!about.hidden))return;done=true;open()};
-  setTimeout(go,20000);addEventListener('scroll',()=>{if(scrollY>(document.documentElement.scrollHeight-innerHeight)*.5)go()},{passive:true})}}
+ // Ask once on its own, after 20 seconds or halfway down the page. New visitors see the About pop-out first,
+ // so for them the clock starts when they close it (15 seconds later, or halfway down the page).
+ const due=!(+store('nlSnooze')>Date.now())&&!/admin\.html/.test(location.pathname);
+ if(due){let done=false,t0=store('aboutSeen')?Date.now()-5000:0;
+  const go=()=>{if(done||!t0||document.querySelector('dialog[open]')||(about&&!about.hidden))return;done=true;open()};
+  const met=()=>{if(t0)return;t0=Date.now();setTimeout(go,15000)};
+  document.addEventListener('click',ev=>{if(ev.target.closest('[data-about-close]'))met()});
+  document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&about&&!about.hidden)met()},true);
+  if(t0)setTimeout(go,20000);
+  addEventListener('scroll',()=>{if(t0&&Date.now()-t0>2000&&scrollY>(document.documentElement.scrollHeight-innerHeight)*.5)go()},{passive:true})}}
 const toast=document.getElementById('toast');let timer;
 function say(msg){if(!toast)return;toast.textContent=msg;toast.hidden=false;clearTimeout(timer);timer=setTimeout(()=>toast.hidden=true,3600)}
 function shared(){const now=new Date();const week=now.getFullYear()+'-'+Math.floor((now-new Date(now.getFullYear(),0,1))/6048e5);
