@@ -1762,7 +1762,8 @@ def publisher(cfg):
            "address": mailing_postal(cfg),
            "description": "Curated positive local news from Mansfield and Richland County, Ohio, written by the people who live here.",
            "areaServed": [{"@type": "City", "name": "Mansfield, Ohio"}, {"@type": "AdministrativeArea", "name": "Richland County, Ohio"}],
-           "publishingPrinciples": f"{site}/rules.html#rules", "correctionsPolicy": f"{site}/terms.html",
+           "publishingPrinciples": f"{site}/rules.html#rules", "correctionsPolicy": f"{site}/about.html#corrections",
+           "contactPoint": {"@type": "ContactPoint", "contactType": "editorial", "email": cfg["submit_email"], "url": f"{site}/contact.html"},
            "email": cfg["submit_email"], "parentOrganization": {"@type": "Organization", "name": "Ofgeneration LLC"}}
     same = [u for u in (cfg.get("facebook_page"), cfg.get("instagram")) if u]
     if same:
@@ -2153,7 +2154,7 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 {sponsor_strip(cfg)}
 <div class="wrap credit"><span class="script">Made in Mansfield</span> <span>by Ofgeneration LLC</span>
 {follow_links(cfg)}<nav class="legal towns">Good news in {" ".join(f'<a href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS)}</nav>
-<nav class="legal"><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a>{newsletter_link(cfg)}<a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
+<nav class="legal"><a href="{e(site)}/about.html">About</a><a href="{e(site)}/contact.html">Contact</a><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a>{newsletter_link(cfg)}<a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
 Stories from other outlets belong to their publishers.</small>
 <small class="addr">{e(mailing_address(cfg, " · "))}</small></div></footer>"""
@@ -2803,7 +2804,8 @@ def render_watch_index(cfg, videos, stories):
     data = {"@context": "https://schema.org", "@type": "CollectionPage", "name": "Watch Mansfield", "url": f"{site}/watch.html",
             "hasPart": [{"@type": "VideoObject", "name": v.get("title") or "", "url": watch_url(cfg, v)} for v in videos]}
     return shell(cfg, f"Watch Mansfield: local videos and podcasts · {cfg['site_name']}",
-                 "Podcasts, shows and videos from people in Mansfield and Richland County, Ohio.", f"{site}/watch.html", inner, stories, data=data)
+                 "Podcasts, shows and videos made by people in Mansfield and Richland County, Ohio. Local interviews, sports talk, "
+                 "music and stories from around town, all in one place.", f"{site}/watch.html", inner, stories, data=data)
 
 
 def watch_url(cfg, v):
@@ -3598,7 +3600,9 @@ def render_submit(cfg, stories):
 <li><span class="n">2</span><span>Use your own photos, or ones you have permission to share. Ask before posting people, and a parent for kids.</span></li>
 <li><span class="n">3</span><span>No attacks, gossip or campaigning. Keep phone numbers, emails and home addresses out of what you write: it's all public. <a class="link" href="{e(site)}/rules.html">All the rules</a></span></li>
 </ol></div></section>"""
-    return shell(cfg, f"Submit good news · {cfg['site_name']}", "Share good news, spotlight your business, or join the team.",
+    return shell(cfg, f"Submit Good News · {cfg['site_name']}",
+                 "Share good news from Mansfield and Richland County, Ohio: post an event flyer, spotlight a business or athlete, "
+                 "share a fundraiser or job. Free, and an editor reviews every post.",
                  f"{site}/submit.html", inner, stories, extra=form_script(cfg))
 
 
@@ -3688,6 +3692,9 @@ LEGAL = {
         ("Your choices", "Ask us to correct or remove anything you sent, or anything about you, by emailing {email} or using "
          "the \u201cReport or remove a post\u201d link at the bottom of every page. We act on removal requests as fast as we can, "
          "usually the same day, and remove the Facebook copy too."),
+        ("Your privacy rights", "We don't sell or share your personal information for money. Wherever you live, you can ask "
+         "us what we have about you, ask us to correct or delete it, and opt out of personalized ads as described above. "
+         "Email {email} and we'll answer within 30 days."),
         ("Changes", "If we change this policy we'll update this page and the date below."),
     ]),
     "terms": ("Terms of use", "The ground rules for reading and posting on Sunny Mansfield.", [
@@ -3743,8 +3750,93 @@ GOOGLE_PRIVACY = ("We advertise Sunny Mansfield on Google and use the Google tag
 ADSENSE_PRIVACY = ("To help keep Sunny Mansfield free, we show ads from Google AdSense. Google and its partners use cookies to "
                    "show ads, including ads based on your visits to this and other websites. You can turn off personalized ads at "
                    "adssettings.google.com. Google's use of advertising cookies is explained at "
-                   "policies.google.com/technologies/ads. Ads from Google are labeled, and we don't pick or endorse them. "
+                   "policies.google.com/technologies/ads. You can also opt out of many companies' personalized ads at "
+                   "optout.aboutads.info. Ads from Google are labeled, and we don't pick or endorse them. "
                    "Local ads you see in our Advertise spots are sold by us and don't track you.")
+
+
+def render_about(cfg, stories):
+    """about.html: who publishes Sunny Mansfield, what it covers, how stories get here, and how corrections work.
+    A real About page is one of the things Google's AdSense reviewers and searchers look for."""
+    site = cfg["site_url"].rstrip("/")
+    email = f'<a class="link" href="mailto:{e(cfg["submit_email"])}">{e(cfg["submit_email"])}</a>'
+    towns = ", ".join(t for t, _ in TOWNS[:-1]) + " and " + TOWNS[-1][0]
+    sections = [
+        ("What Sunny Mansfield is",
+         f"<p>Sunny Mansfield is a free local news site for Mansfield and Richland County, Ohio, that only shares good news. "
+         f"We cover {e(towns)}, and the places in between. Created for the people and written by the people, it's where neighbors "
+         f"find the wins, openings, events and helping hands that don't always make the headlines.</p>"),
+        ("What we cover",
+         f'<ul><li><a class="link" href="{e(site)}/">Good news</a> from around the county, every day.</li>'
+         f'<li><a class="link" href="{e(site)}/events.html">Events and things to do</a>, posted by the people putting them on.</li>'
+         f'<li><a class="link" href="{e(site)}/sports.html">High school sports</a>, athlete spotlights and tournament brackets.</li>'
+         f'<li><a class="link" href="{e(site)}/pets.html">Tyger Paws</a>, a dog of the day from the Richland County Dog Shelter.</li>'
+         f'<li><a class="link" href="{e(site)}/businesses.html">Local business spotlights</a>, '
+         f'<a class="link" href="{e(site)}/fundraisers.html">fundraisers</a>, '
+         f'<a class="link" href="{e(site)}/free.html">free stuff</a> and '
+         f'<a class="link" href="{e(site)}/jobs.html">local jobs</a>.</li>'
+         f'<li><a class="link" href="{e(site)}/birthdays.html">Birthday shout-outs</a> and a weekly email newsletter.</li></ul>'
+         f"<p>We skip crime, crashes and political arguments. There's plenty of that elsewhere.</p>"),
+        ("Where our stories come from",
+         f"<p>Two places. First, neighbors: students, parents, coaches, business owners, churches and nonprofits send posts through "
+         f'our <a class="link" href="{e(site)}/submit.html">submit form</a>, and an editor reads every one before it goes up. '
+         f"Second, other local outlets: when Richland Source, the Mansfield News Journal or another local newsroom reports good news, "
+         f"we share the headline and a short preview and link straight to their story, so they get the visit and the credit. "
+         f"We never copy whole articles. Please read and support them.</p>"),
+        ("Our standards",
+         f'<p>Every post follows the <a class="link" href="{e(site)}/rules.html#rules">Sunny rules</a>: keep it true, keep it kind, '
+         f"keep it local, and only share words and photos you have the right to share. Posts about anyone under 18 need a parent or "
+         f"guardian's OK. An editor gives every fundraiser a quick look before it appears, but we don't run or verify them, and "
+         f"each organizer is responsible for their own fundraiser.</p>"),
+        ("Corrections and takedowns",
+         f"<p>If we get something wrong, we fix it. If you're in a post and want it changed or taken down, we'll do that too, usually "
+         f'the same day. Use the "Report or remove a post" link at the bottom of any page, or email {email}.</p>'),
+        ("Advertising",
+         f"<p>Sunny Mansfield is free to read. To pay for it, we show ads from Google AdSense, which are labeled, and from time to time "
+         f"local sponsors. Advertisers never decide what we cover, and ads are always kept apart from stories. "
+         f'Our <a class="link" href="{e(site)}/privacy.html">privacy policy</a> explains how ads use cookies.</p>'),
+        ("Who we are",
+         f"<p>Sunny Mansfield is published by Ofgeneration LLC, a small company based in Richland County, Ohio. "
+         f'Questions, tips or ideas? <a class="link" href="{e(site)}/contact.html">Contact us</a>. '
+         f'Want to help? <a class="link" href="{e(site)}/rules.html#apply">Join the team</a> as an editor, student reporter or '
+         f"business correspondent.</p>"),
+    ]
+    body = "".join(f'<h2 class="hed" id="{slug(h)}">{e(h)}</h2>{t}' for h, t in sections).replace(
+        'id="corrections-and-takedowns"', 'id="corrections"')
+    inner = f"""{page_title("Welcome, neighbor!", "About Sunny Mansfield", "Good news from Mansfield and Richland County, Ohio. Created for the people. Written by the people.")}
+<section class="wrap legaltext">{body}</section>"""
+    data = [{"@context": "https://schema.org", "@type": "AboutPage", "name": "About Sunny Mansfield", "url": f"{site}/about.html",
+             "about": {"@id": f"{site}/#org"}, "isPartOf": {"@id": f"{site}/#site"}},
+            breadcrumbs([("Sunny Mansfield", f"{site}/"), ("About", f"{site}/about.html")])]
+    return shell(cfg, f"About Sunny Mansfield · Good News from Mansfield, Ohio",
+                 "Sunny Mansfield is a free, good-news-only local news site for Mansfield and Richland County, Ohio. "
+                 "Who we are, what we cover, where stories come from and how we fix mistakes.",
+                 f"{site}/about.html", inner, stories, data=data)
+
+
+def render_contact(cfg, stories):
+    """contact.html: one place for every way to reach the editors."""
+    site = cfg["site_url"].rstrip("/")
+    mail = cfg["submit_email"]
+    email = f'<a class="link" href="mailto:{e(mail)}">{e(mail)}</a>'
+    fb = (f'<li><b>Facebook.</b> Message us on our <a class="link" href="{e(cfg["facebook_page"])}" target="_blank" rel="noopener">'
+          f'Facebook Page</a>.</li>') if cfg.get("facebook_page") else ""
+    ads = (f'<a class="link" href="{e(site)}/advertise.html">See ad spots and prices</a>, or email' if ads_open(cfg) else "Email")
+    inner = f"""{page_title("Say hello", "Contact Sunny Mansfield", "Questions, tips, corrections or ideas: we read every message.")}
+<section class="wrap legaltext">
+<h2 class="hed">Email</h2><p>The fastest way to reach an editor is {email}.</p>
+<h2 class="hed">Share good news</h2><p>Have a story, an event, a fundraiser or a business to spotlight? <a class="link" href="{e(site)}/submit.html">Send it with our free form</a>. An editor reviews every post.</p>
+<h2 class="hed">Fix or remove a post</h2><p>Spot a mistake, or are you in a post and want it changed or taken down? <a class="link" href="{e(report_link(cfg))}">Tell an editor</a> and we'll fix it fast, usually the same day.</p>
+<h2 class="hed">Advertising and sponsorships</h2><p>{ads} {email} with "Advertising" in the subject.</p>
+<h2 class="hed">Other ways to reach us</h2><ul>{fb}<li><b>Mail.</b> {e(mailing_address(cfg))}</li></ul>
+<p class="hint">Sunny Mansfield is published by Ofgeneration LLC. <a class="link" href="{e(site)}/about.html">About us</a> · <a class="link" href="{e(site)}/privacy.html">Privacy</a> · <a class="link" href="{e(site)}/terms.html">Terms</a></p>
+</section>"""
+    data = [{"@context": "https://schema.org", "@type": "ContactPage", "name": "Contact Sunny Mansfield", "url": f"{site}/contact.html",
+             "about": {"@id": f"{site}/#org"}, "isPartOf": {"@id": f"{site}/#site"}},
+            breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Contact", f"{site}/contact.html")])]
+    return shell(cfg, f"Contact Us · {cfg['site_name']}",
+                 "Contact the Sunny Mansfield editors: email, mail and Facebook. Share good news, fix or remove a post, or ask about "
+                 "advertising in Mansfield and Richland County, Ohio.", f"{site}/contact.html", inner, stories, data=data)
 
 
 def render_legal(cfg, stories, kind):
@@ -3763,7 +3855,7 @@ def render_legal(cfg, stories, kind):
     body = "".join(f'<h2 class="hed">{e(h)}</h2><p>{e(t).replace("{address}", mailing_address(cfg)).replace("{email}", email)}</p>'
                    for h, t in parts)
     inner = f"""{page_title("The fine print", title, desc)}
-<section class="wrap legaltext">{body}<p class="hint">Last updated October 23, 2026.</p></section>"""
+<section class="wrap legaltext">{body}<p class="hint">Last updated November 18, 2026.</p></section>"""
     return shell(cfg, f"{title} · {cfg['site_name']}", desc, f"{site}/{kind}.html", inner, stories)
 
 
@@ -3781,9 +3873,14 @@ def render_businesses(cfg, businesses, stories):
     site = cfg["site_url"].rstrip("/")
     cards = "".join(biz_card(cfg, b) for b in businesses)
     inner = f"""{page_title("Shop local", "Business spotlights", "Every Richland County business can have a free page here. Share your favorites, and tell them you saw them on Sunny Mansfield.")}
+<section class="wrap"><p class="note">Money spent at a local shop stays in Richland County: it pays neighbors' wages, sponsors Little League
+teams and keeps Main Street lights on. These spotlights are free, written with the owners, and never paid placements. Know a business
+that deserves one? <a class="link" href="{e(site)}/submit.html#spotlight">Tell us about it</a>.</p></section>
 <section class="wrap latest"><div class="grid">{cards}</div>
 <div class="more-row"><a class="btn solid" href="{e(site)}/submit.html#spotlight">Spotlight your business</a></div></section>"""
-    return shell(cfg, f"Business spotlights · {cfg['site_name']}", "Free spotlights for Richland County businesses.",
+    return shell(cfg, f"Local Business Spotlights in Mansfield, Ohio · {cfg['site_name']}",
+                 "Free spotlights for local shops, restaurants and services in Mansfield and Richland County, Ohio. "
+                 "Find a new favorite and support your neighbors.",
                  f"{site}/businesses.html", inner, stories)
 
 
@@ -3887,7 +3984,9 @@ def render_sports(cfg, stories, brackets):
 {spot}
 <section class="wrap latest" id="brackets"><h2 class="label">Brackets</h2>{boxes}</section>
 <section class="wrap latest"><h2 class="label">Sports news</h2><div class="grid">{grid}</div></section>"""
-    return shell(cfg, f"Sports · {cfg['site_name']}", "Richland County athlete spotlights, tournament brackets and good sports news.",
+    return shell(cfg, f"Richland County High School Sports · {cfg['site_name']}",
+                 "Richland County, Ohio high school sports: athlete spotlights, signing days, playoff brackets and good sports news "
+                 "from Mansfield, Ontario, Lexington, Madison, Clear Fork and more.",
                  f"{site}/sports.html", inner, stories)
 
 
@@ -4067,7 +4166,9 @@ def render_fundraisers(cfg, funds, stories):
 <li><b>{FUND_FACTS[-1][0]}</b>{FUND_FACTS[-1][1]} Email <a class="link" href="mailto:{e(cfg['submit_email'])}">{e(cfg['submit_email'])}</a>.</li></ul>
 <p class="note">Sunny Mansfield is a publication of Ofgeneration LLC. Fundraiser listings are provided as a free community service, as is, with no warranty.
 Each organizer is responsible for their own fundraiser, its claims and its use of funds.</p></section>"""
-    return shell(cfg, f"Fundraisers · {cfg['site_name']}", "Fundraisers and special causes from Mansfield and Richland County neighbors.",
+    return shell(cfg, f"Local Fundraisers in Mansfield, Ohio · {cfg['site_name']}",
+                 "Fundraisers and special causes from Mansfield and Richland County neighbors: medical bills, team trips, fire "
+                 "recovery and school projects. Give if you can, share if you can't.",
                  f"{site}/fundraisers.html", inner, stories)
 
 
@@ -4956,7 +5057,7 @@ def merge_community(cfg, stories, community):
 
 PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("pets.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
          ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"), ("homes.html", "daily", "0.7"), ("watch.html", "daily", "0.7"),
-         ("submit.html", "monthly", "0.6"), ("birthdays.html", "daily", "0.6"), ("rules.html", "monthly", "0.4"),
+         ("submit.html", "monthly", "0.6"), ("birthdays.html", "daily", "0.6"), ("rules.html", "monthly", "0.4"), ("about.html", "monthly", "0.5"), ("contact.html", "yearly", "0.4"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
 
 
@@ -4975,6 +5076,9 @@ def write_search_files(cfg, stories, businesses, out, towns=(), flyers=(), jobs=
     urls += [(biz_url(cfg, b), day(now), "monthly", "0.6") for b in businesses if not b.get("sample")]
     urls += [(town_url(cfg, t), day(now), "daily", "0.8") for t in towns]
     urls += [(job_url(cfg, j), day(j["date"]), "weekly", "0.6") for j in jobs if j.get("pid")]
+    today = eastern().date()
+    dayof = lambda f: f["day"].date() if isinstance(f["day"], datetime) else f["day"]
+    urls += [(site + event_url(f), day(now), "daily", "0.6") for f in flyers if f.get("day") and dayof(f) >= today]
     (out / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join(
             f"<url><loc>{e(u)}</loc><lastmod>{m}</lastmod><changefreq>{f}</changefreq><priority>{p}</priority></url>\n"
@@ -5032,7 +5136,8 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 
 - [Submit good news]({site}/submit.html)
 - [Sunny rules and how verification works]({site}/rules.html)
-{f"- [Advertise]({site}/advertise.html)" + chr(10) if ads_open(cfg) else ""}- [Privacy policy]({site}/privacy.html) and [terms]({site}/terms.html)
+{f"- [Advertise]({site}/advertise.html)" + chr(10) if ads_open(cfg) else ""}- [About]({site}/about.html) and [contact]({site}/contact.html)
+- [Privacy policy]({site}/privacy.html) and [terms]({site}/terms.html)
 - Contact: {cfg['submit_email']}
 
 ## Feeds
@@ -5197,6 +5302,8 @@ def main():
     (out / "submit.html").write_text(rebase(render_submit(cfg, stories)))
     (out / "birthdays.html").write_text(rebase(render_birthdays(cfg, got["birthdays"], stories)))
     (out / "rules.html").write_text(rebase(render_rules(cfg, stories)))
+    (out / "about.html").write_text(rebase(render_about(cfg, stories)))
+    (out / "contact.html").write_text(rebase(render_contact(cfg, stories)))
     for kind in LEGAL:
         (out / f"{kind}.html").write_text(rebase(render_legal(cfg, stories, kind)))
     (out / "fundraisers.html").write_text(rebase(render_fundraisers(cfg, got["fundraisers"], stories)))
