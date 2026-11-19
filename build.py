@@ -1074,6 +1074,10 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .mlist.grid .listing>:not(.photo){grid-column:1;padding-inline:16px}
 .mlist.grid .listing .photo{grid-row:auto;aspect-ratio:4/3}
 .madwrap{max-width:360px;margin:24px 0}
+/* Free Stuff with nothing posted yet: the "Be the first" box and the house ad below it line up on the column's left edge, same width */
+.marketmain .first-wrap{max-width:520px;margin:20px 0 0}
+.marketmain .madwrap{max-width:520px}
+.marketmain .madwrap .slide{width:100%;box-sizing:border-box}
 .freehero{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:24px 48px;align-items:center;padding-block:48px 40px}
 .freehero .fcopy{display:grid;gap:4px;justify-items:start}
 .freehero .retro{margin:0}
