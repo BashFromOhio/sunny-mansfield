@@ -271,9 +271,9 @@ def collect(config, sample):
     return stories
 
 
-# ---- Daily series: Tyger Paws (shelter dogs and their happy endings) ----
+# ---- Daily series: Adopt-a-Paw (shelter dogs and their happy endings) ----
 SERIES = [  # key, page, name, script word, what the page is about
-    ("pets", "pets.html", "Tyger Paws", "Tyger Paws!",
+    ("pets", "pets.html", "Adopt-a-Paw", "Meet your new best friend!",
      "Adoptable dogs at the Richland County Dog Shelter, a new dog of the day every morning, and the happy endings that follow."),
 ]
 SERIES_NAMES = {k: name for k, _, name, _, _ in SERIES}
@@ -1596,10 +1596,10 @@ body{margin:0}
 .nf>*,.nf-col>*,.nf-side>*,.hero>*{min-width:0}
 .navbar .strip{border:0}
 .navbar .navgroup{flex-wrap:nowrap;justify-content:flex-start}
-.navbar .navgroup a,.navbar .navbtn{padding-inline:8px}
+.navbar .navgroup a,.navbar .navbtn{padding-inline:7.5px}
 /* the menu gets a wider band than the page so every section fits on one line on a laptop;
    it stays centered, and only scrolls (with a soft fade at the edge) on small screens */
-.navbar .wrap.strip{max-width:1440px;justify-content:center;gap:14px}
+.navbar .wrap.strip{max-width:1440px;justify-content:center;gap:10px}
 .navbar .navgroup{flex:0 1 auto;min-width:0}
 .navbar .navgroup>:first-child{margin-left:auto}.navbar .navgroup>:last-child{margin-right:auto}
 .navbar .navcta{flex:none}
@@ -1944,7 +1944,7 @@ def card(cfg, s, front=False):
 # then the community marketplace grouped together, then giving. About, Join the team and Advertise
 # sit in the top bar, where readers expect "about the paper" links; Submit news is the button.
 NAV = [("front", "Front page"), ("events.html", "Events"), ("sports.html", "Sports"), ("students.html", "Student Voices"),
-       ("watch.html", "Watch Mansfield"), ("pets.html", "Tyger Paws"), ("businesses.html", "Businesses"),
+       ("watch.html", "Watch Mansfield"), ("pets.html", "Adopt-a-Paw"), ("businesses.html", "Businesses"),
        ("jobs.html", "Jobs"), ("homes.html", "Homes"), ("free.html", "Free Stuff"), ("fundraisers.html", "Donate")]
 NAV_ALIAS = {"index.html": "front", "write.html": "students.html", "send-a-story.html": "students.html"}
 
@@ -2067,7 +2067,7 @@ def make_newsletter_issue(cfg, out, stories, flyers=(), funds=(), listings=(), j
     dog = dog_of_the_day(dogs)
     if dog:
         about = " · ".join(v for v in (dog.get("breed"), dog.get("age"), dog.get("sex")) if v)
-        sections.append(("Tyger Paws: dog of the week", [
+        sections.append(("Adopt-a-Paw: dog of the week", [
             {"title": f"Meet {dog['name']}", "url": dog["url"], "image": (dog.get("big") or dog.get("image") or "").replace("h_1000", "h_600"),
              "text": (about + ". " if about else "") + f"{dog['name']} is waiting at the {(cfg.get('shelter') or {}).get('name', 'Richland County Dog Shelter')} for a family.",
              "button": f"Meet {dog['name']}"}]))
@@ -2159,7 +2159,7 @@ def make_newsletter_issue(cfg, out, stories, flyers=(), funds=(), listings=(), j
     bits = [{"This week's good news": "The week's good news", "Coming up around town": "things to do",
              "Neighbors helping neighbors": "neighbors helping neighbors", "Now hiring": "local jobs"}.get(h, "") for h, _ in sections]
     if dog:
-        bits.insert(2, f"{dog['name']} from Tyger Paws")
+        bits.insert(2, f"{dog['name']} from Adopt-a-Paw")
     bits = [b for b in bits if b]
     preview = (", ".join(bits[:3]) + " and more.") if bits else intro
     meta = {"subject": f"Good news from Mansfield: week of {week_of.rsplit(',', 1)[0]}", "preview": preview[:1].upper() + preview[1:], "week_of": week_of,
@@ -2313,7 +2313,7 @@ FIRST_POST = {  # what an empty spot asks for: label, where the form is, button,
     "events": ("Local events", "submit.html#flyer", "Post your flyer", "Concerts, fish fries, festivals, games and church suppers."),
     "birthday": ("Birthdays", "birthdays.html#form", "Send a shout-out", "Know someone celebrating? We'll wish them a happy birthday here and on Facebook, free."),
     "students": ("Student Voices", "submit.html#student", "Write for Student Voices", "A CTE program spotlight, a yearbook throwback, a game from an athlete's eyes."),
-    "pets": ("Tyger Paws", "submit.html", "Send your adoption story", "Adopted a dog from the Richland County shelter? Send us your adoption story and a photo."),
+    "pets": ("Adopt-a-Paw", "submit.html", "Send your adoption story", "Adopted a dog from the Richland County shelter? Send us your adoption story and a photo."),
     "watch": ("Watch Mansfield", "submit.html", "Send us your video", "A podcast, a local show, a highlight reel. Mansfield made, Mansfield watched."),
 }
 
@@ -3852,7 +3852,7 @@ def render_about(cfg, stories):
          f'<li><a class="link" href="{e(site)}/events.html">Events and things to do</a>, posted by the people putting them on.</li>'
          f'<li><a class="link" href="{e(site)}/sports.html">High school sports</a>, athlete spotlights and tournament brackets.</li>'
          f'<li><a class="link" href="{e(site)}/students.html">Student Voices</a>, stories written by local students.</li>'
-         f'<li><a class="link" href="{e(site)}/pets.html">Tyger Paws</a>, a dog of the day from the Richland County Dog Shelter.</li>'
+         f'<li><a class="link" href="{e(site)}/pets.html">Adopt-a-Paw</a>, a dog of the day from the Richland County Dog Shelter.</li>'
          f'<li><a class="link" href="{e(site)}/businesses.html">Local business spotlights</a>, '
          f'<a class="link" href="{e(site)}/fundraisers.html">fundraisers</a>, '
          f'<a class="link" href="{e(site)}/free.html">free stuff</a> and '
@@ -4345,14 +4345,14 @@ def shelter_note(cfg):
 
 
 def happy_tails_box(cfg, dogs):
-    """The front page's Tyger Paws spot, laid out like the Donate box: the shelter's dogs on a shelf, dog of the day first."""
+    """The front page's Adopt-a-Paw spot, laid out like the Donate box: the shelter's dogs on a shelf, dog of the day first."""
     site = cfg["site_url"].rstrip("/")
     if not dogs:
         return ""
     cards = "".join(dog_card(cfg, d, day=i == 0) for i, d in enumerate(dogs_in_order(dogs)[:12]))
-    return (f'<section class="wrap givebox" id="happy-tails"><div class="rail-head"><h2 class="label">Tyger Paws</h2>'
+    return (f'<section class="wrap givebox" id="happy-tails"><div class="rail-head"><h2 class="label">Adopt-a-Paw</h2>'
             f'<a class="link" href="{e(site)}/pets.html">See all</a></div><div class="give"><div class="give-top">'
-            f'<div><span class="script">Tyger Paws!</span><h2 class="retro sm">Adopt a shelter dog</h2>'
+            f'<div><span class="script">Meet your new best friend!</span><h2 class="retro sm">Adopt a shelter dog</h2>'
             f'<p>A new dog of the day every morning from the Richland County Dog Shelter. Can\'t adopt? A share might reach the right home.</p></div>'
             f'<div class="share"><a class="btn solid sm" href="{e(site)}/pets.html">See all {len(dogs)}</a>'
             f'<a class="btn sm" href="{e(site)}/submit.html">Share an adoption story</a></div></div>'
@@ -5430,7 +5430,7 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 - [Events]({site}/events.html): things to do in Mansfield and Richland County this weekend and coming up
 - [Sports]({site}/sports.html): athlete spotlights, tournament brackets and good sports news
 - [Student Voices]({site}/students.html): stories written by Richland County students, and the [student writer guide]({site}/write.html)
-- [Tyger Paws]({site}/pets.html): adoptable dogs at the Richland County Dog Shelter, a dog of the day, and adoption stories
+- [Adopt-a-Paw]({site}/pets.html): adoptable dogs at the Richland County Dog Shelter, a dog of the day, and adoption stories
 - [Business spotlights]({site}/businesses.html): free pages for Richland County businesses
 - [Fundraisers]({site}/fundraisers.html): local causes posted by neighbors (not run or verified by Sunny Mansfield)
 - [Free Stuff]({site}/free.html): things neighbors are giving away, free only

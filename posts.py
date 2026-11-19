@@ -604,9 +604,9 @@ def make_community_feed(cfg, stories, flyers, funds, businesses, out, page_url, 
     note(f"Community feed: {len(items)} posts")
 
 
-# ---- Daily series for the Facebook Page: Tyger Paws (dog of the day) and Home of the day ----
+# ---- Daily series for the Facebook Page: Adopt-a-Paw (dog of the day) and Home of the day ----
 SERIES_SLOTS = [  # key, hour (Eastern), label on the image, script word, hashtag, page, weekly ask day (Monday = 0)
-    ("pets", 10, "Dog of the day", "Tyger Paws!", "#TygerPaws #AdoptDontShop", "pets.html", 6),
+    ("pets", 10, "Dog of the day", "Adopt-a-Paw!", "#AdoptAPaw #AdoptDontShop", "pets.html", 6),
     ("homes", 12, "Home of the day", "Home sweet home!", "#MansfieldHomes", "homes.html", None),
 ]
 SERIES_ASKS = {
@@ -617,7 +617,7 @@ SERIES_ASKS = {
 def dog_post(dog, photo, credit):
     fake = {"title": f"Meet {dog['name']}", "source": dog.get("breed") or "Richland County Dog Shelter"}
     if photo is None:
-        return text_post(fake, "Dog of the day", credit, "Tyger Paws!")
+        return text_post(fake, "Dog of the day", credit, "Adopt-a-Paw!")
     label = " · ".join(x for x in ("Dog of the day", dog.get("age"), dog.get("sex")) if x)
     return photo_post({**fake, "source": "Richland County Dog Shelter"}, label, photo, credit)
 
@@ -677,7 +677,7 @@ def make_series_feed(cfg, series, dogs, out, page_url, ua, credit, dog_of_the_da
                     im = dog_post(d, photo, credit)
                     line = " · ".join(x for x in (d.get("age"), d.get("sex"), d.get("breed")) if x)
                     title, link = f"Dog of the day: {d['name']}", d["url"]
-                    text = (f"🐾 Tyger Paws dog of the day: meet {d['name']}!" + (f"\n{line}" if line else "")
+                    text = (f"🐾 Adopt-a-Paw dog of the day: meet {d['name']}!" + (f"\n{line}" if line else "")
                             + f"\n\n{d['name']} is waiting at the Richland County Dog Shelter for a family. "
                             f"Can't adopt? A share might reach the right home.\n\nMeet {d['name']}: {d['url']}\n"
                             f"Every adoptable dog: {site}/{page}")
