@@ -1534,6 +1534,8 @@ html{background:#fff}html::before{display:none}
 .watch-meta{margin:0;color:var(--text-2)}
 .watch-head .share{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:6px}
 .watch-head .share .btn{padding:10px 16px 9px}.watch-head .share .textbtn{padding:0}
+.badgecode{display:block;width:100%;box-sizing:border-box;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;color:var(--ink,#2E1A10);background:#fff;border:1px solid #D8C2A0;padding:10px;resize:vertical;margin:4px 0 12px}
+.badgebox img{max-width:100%;height:auto}
 .wu-card{position:relative;background:var(--surface);border-left:4px solid var(--secondary);padding:22px 26px 18px}
 .wu-head{margin:0 0 12px;font:800 18px/1.2 var(--sans)}
 .wu-body{max-height:340px;overflow:hidden;position:relative;font-size:16px;line-height:1.7;color:var(--text)}
@@ -2214,7 +2216,7 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 {sponsor_strip(cfg)}
 <div class="wrap credit"><span class="script">Made in Mansfield</span> <span>by Ofgeneration LLC</span>
 {follow_links(cfg)}<nav class="legal towns">Good news in {" ".join(f'<a href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS)}</nav>
-<nav class="legal"><a href="{e(site)}/about.html">About</a><a href="{e(site)}/contact.html">Contact</a><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/write.html">Write for us</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a>{newsletter_link(cfg)}<a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
+<nav class="legal"><a href="{e(site)}/about.html">About</a><a href="{e(site)}/contact.html">Contact</a><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/write.html">Write for us</a><a href="{e(site)}/link.html">Link to us</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a>{newsletter_link(cfg)}<a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
 Stories from other outlets belong to their publishers.</small>
 <small class="addr">{e(mailing_address(cfg, " · "))}</small></div></footer>"""
@@ -2291,8 +2293,8 @@ function shared(){const now=new Date();const week=now.getFullYear()+'-'+Math.flo
 document.addEventListener('click',ev=>{
  if(ev.target.closest('.btn.fb')){say(shared());return}
  const b=ev.target.closest('[data-copy]');if(!b)return;
- const done=t=>{b.textContent=t;setTimeout(()=>b.textContent='Copy link',1800)};
- if(navigator.clipboard){navigator.clipboard.writeText(b.dataset.copy).then(()=>{done('Copied');say('Link copied. Paste it into a post, a text or a group chat.')},()=>done('Copy failed'))}});
+ const label=b.textContent;const done=t=>{b.textContent=t;setTimeout(()=>b.textContent=label,1800)};
+ if(navigator.clipboard){navigator.clipboard.writeText(b.dataset.copy).then(()=>{done('Copied');say(b.dataset.said||'Link copied. Paste it into a post, a text or a group chat.')},()=>done('Copy failed'))}});
 })();
 </script>""")
 
@@ -3900,6 +3902,57 @@ def render_about(cfg, stories):
                  f"{site}/about.html", inner, stories, data=data)
 
 
+BADGES = {"featured": ("badge-featured.png", "Featured on Sunny Mansfield"),
+          "friend": ("badge-friend.png", "Find good news on Sunny Mansfield")}
+
+
+def badge_code(cfg, target, kind):
+    """The copy-and-paste HTML for a badge that links to target. Absolute URLs, since it lives on other people's sites."""
+    site = (cfg.get("canonical_url") or cfg["site_url"]).rstrip("/")
+    img, alt = BADGES[kind]
+    return (f'<a href="{target}" title="{alt}"><img src="{site}/brand/{img}" alt="{alt}" width="300" height="100"></a>')
+
+
+def badge_box(cfg, target, kind, intro, more=True):
+    site = cfg["site_url"].rstrip("/")
+    code = badge_code(cfg, target, kind)
+    return f"""<section class="wrap latest badgebox"><div class="wu-card open"><h2 class="wu-head">{intro}</h2><div class="wu-body">
+<p><img src="/brand/{BADGES[kind][0]}" alt="{BADGES[kind][1]}" width="300" height="100" loading="lazy"></p>
+<p>Paste this code anywhere on your website, like the footer or an "As seen on" section. Not sure how? Send it to whoever runs your site.</p>
+<textarea class="badgecode" readonly rows="3" aria-label="Badge code" onclick="this.select()">{e(code)}</textarea>
+<div class="share"><button class="btn solid" type="button" data-copy="{e(code)}" data-said="Badge code copied. Paste it into your website.">Copy badge code</button>
+{f'<a class="textbtn" href="{e(site)}/link.html">More badges</a>' if more else ""}</div></div></div></section>"""
+
+
+def render_link(cfg, stories):
+    """link.html: badges and a plain text link anyone can put on their website. Every one of these is a vote for the
+    site in Google's eyes, so local businesses, schools and groups linking here is how Sunny Mansfield gets found."""
+    site = cfg["site_url"].rstrip("/")
+    home = (cfg.get("canonical_url") or site).rstrip("/") + "/"
+    text = f'<a href="{home}">Sunny Mansfield: good news from Mansfield, Ohio</a>'
+    inner = f"""{page_title("Spread the sunshine", "Link to Sunny Mansfield", "Put a badge or a link on your website and help neighbors find the good news in Richland County. It's free, and it takes two minutes.")}
+<section class="wrap legaltext">
+<h2 class="hed">Who it's for</h2>
+<ul><li><b>Businesses we've spotlighted.</b> Use the “Featured on” badge. For a badge that goes straight to your own spotlight, open <a class="link" href="{e(site)}/businesses.html">your business page</a> and copy the code at the bottom.</li>
+<li><b>Schools, teams, churches, clubs and nonprofits.</b> Add us to your “Community links” or “Local resources” page with the “Find good news on” badge or the text link.</li>
+<li><b>Organizers whose event, fundraiser or story we shared.</b> Link to that page so supporters can find it and share it.</li></ul>
+</section>
+{badge_box(cfg, home, "featured", "Featured on Sunny Mansfield", more=False)}
+{badge_box(cfg, home, "friend", "Find good news on Sunny Mansfield", more=False)}
+<section class="wrap latest badgebox"><div class="wu-card open"><h2 class="wu-head">Just a text link</h2><div class="wu-body">
+<p>No picture, just words. Works in a footer, a blog post or a “Links” page.</p>
+<textarea class="badgecode" readonly rows="2" aria-label="Text link code" onclick="this.select()">{e(text)}</textarea>
+<div class="share"><button class="btn solid" type="button" data-copy="{e(text)}" data-said="Link code copied. Paste it into your website.">Copy link code</button></div></div></div></section>
+<section class="wrap legaltext"><h2 class="hed">Telling us helps</h2>
+<p>Linked to us? <a class="link" href="mailto:{e(cfg['submit_email'])}?subject={urllib.parse.quote('We linked to Sunny Mansfield')}">Let us know</a> and we'll give you a shout-out. Want a free spotlight first? <a class="link" href="{e(site)}/submit.html#spotlight">Tell us about your business</a>.</p></section>"""
+    data = [{"@context": "https://schema.org", "@type": "WebPage", "name": "Link to Sunny Mansfield", "url": f"{site}/link.html",
+             "isPartOf": {"@id": f"{site}/#site"}},
+            breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Link to us", f"{site}/link.html")])]
+    return shell(cfg, f"Link to Us: Badges for Your Website · {cfg['site_name']}",
+                 "Free \u201cFeatured on Sunny Mansfield\u201d badges and links for Mansfield and Richland County businesses, schools "
+                 "and groups. Copy the code, paste it on your site and help neighbors find good news.", f"{site}/link.html", inner, stories, data=data)
+
+
 def render_contact(cfg, stories):
     """contact.html: one place for every way to reach the editors."""
     site = cfg["site_url"].rstrip("/")
@@ -4183,7 +4236,7 @@ that deserves one? <a class="link" href="{e(site)}/submit.html#spotlight">Tell u
     return shell(cfg, f"Local Business Spotlights in Mansfield, Ohio · {cfg['site_name']}",
                  "Free spotlights for local shops, restaurants and services in Mansfield and Richland County, Ohio. "
                  "Find a new favorite and support your neighbors.",
-                 f"{site}/businesses.html", inner, stories)
+                 f"{site}/businesses.html", inner, stories, data=hub_data(cfg, "Business spotlights", "businesses.html"))
 
 
 def render_business(cfg, b, businesses, stories):
@@ -4198,7 +4251,8 @@ def render_business(cfg, b, businesses, stories):
 <p class="dek">{e(b["what"])}</p>{by}
 <div class="share"><a class="btn fb" href="{e(fb_share(biz_url(cfg, b)))}" target="_blank" rel="noopener">{FB_ICON}Share this business</a>{visit}</div></article></section>
 <section class="wrap latest">{f'<h2 class="label">More local businesses</h2><div class="grid">{others}</div>' if others else ""}
-<div class="more-row"><a class="btn" href="{e(site)}/businesses.html">See all businesses</a></div></section>"""
+<div class="more-row"><a class="btn" href="{e(site)}/businesses.html">See all businesses</a></div></section>
+{"" if b.get("sample") else badge_box(cfg, biz_url(cfg, b), "featured", f"Is {e(b['name'])} yours? Add this badge to your website so customers can read your spotlight.")}"""
     image = b["image"] if (b.get("image") or "").startswith("https://") else None
     place = {"@context": "https://schema.org", "@type": "LocalBusiness", "name": b["name"], "description": b["what"],
              "url": b.get("link") or biz_url(cfg, b), "image": image or f"{site}/og.png",
@@ -4292,7 +4346,7 @@ def render_sports(cfg, stories, brackets):
     return shell(cfg, f"Richland County High School Sports · {cfg['site_name']}",
                  "Richland County, Ohio high school sports: athlete spotlights, signing days, playoff brackets and good sports news "
                  "from Mansfield, Ontario, Lexington, Madison, Clear Fork and more.",
-                 f"{site}/sports.html", inner, stories)
+                 f"{site}/sports.html", inner, stories, data=hub_data(cfg, "High school sports", "sports.html"))
 
 
 PAW = ('<circle cx="30" cy="36" r="8"/><circle cx="46" cy="24" r="8"/><circle cx="64" cy="26" r="8"/><circle cx="76" cy="42" r="8"/>'
@@ -4444,7 +4498,8 @@ Something wrong? <a class="link" href="{e(report)}">Report this fundraiser</a>.<
     desc = desc if len(desc) <= 200 else desc[:197].rsplit(" ", 1)[0] + "\u2026"
     image = f["image"] if (f.get("image") or "").startswith("https://") else None
     title = f"{f['title']}{' · Goal ' + money(f['goal']) if f.get('goal') else ''} · {cfg['site_name']}"
-    return shell(cfg, title, desc, url, inner, stories, image=image)
+    data = [breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Local fundraisers", f"{site}/fundraisers.html"), (f["title"], url)])]
+    return shell(cfg, title, desc, url, inner, stories, image=image, data=data)
 
 
 def render_fundraisers(cfg, funds, stories):
@@ -4474,7 +4529,7 @@ Each organizer is responsible for their own fundraiser, its claims and its use o
     return shell(cfg, f"Local Fundraisers in Mansfield, Ohio · {cfg['site_name']}",
                  "Fundraisers and special causes from Mansfield and Richland County neighbors: medical bills, team trips, fire "
                  "recovery and school projects. Give if you can, share if you can't.",
-                 f"{site}/fundraisers.html", inner, stories)
+                 f"{site}/fundraisers.html", inner, stories, data=hub_data(cfg, "Local fundraisers", "fundraisers.html"))
 
 
 def town_items(name, stories, businesses, funds):
@@ -4611,6 +4666,14 @@ def check_seo(out):
         path = html.unescape(loc)[len(base):].lstrip("/") or "index.html"
         if not (out / urllib.parse.urlparse(path).path).exists():
             problems.append(f"sitemap lists {loc}, which wasn't built")
+    listed = {urllib.parse.urlparse(html.unescape(l)).path.lstrip("/") or "index.html" for l in re.findall(r"<loc>([^<]+)</loc>", (out / "sitemap.xml").read_text())}
+    prefix = urllib.parse.urlparse(base).path.strip("/")
+    for p in pages:
+        rel = str(p.relative_to(out))
+        if p.name == "404.html" or re.search(r'name="robots" content="noindex', p.read_text()):
+            continue
+        if (f"{prefix}/{rel}" if prefix else rel) not in listed:
+            problems.append(f"{rel} can be found by search engines but isn't in the sitemap")
     for p in problems[:40]:
         print(("::warning::" if os.environ.get("GITHUB_ACTIONS") else "  SEO: ") + p, file=sys.stderr)
     if not problems:
@@ -4671,7 +4734,7 @@ document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',(
  document.querySelectorAll('[data-view]').forEach(x=>x.setAttribute('aria-pressed',x===b))}}));}})();</script>"""
     return shell(cfg, f"Free Stuff in Mansfield, Ohio · {cfg['site_name']}",
                  "Free furniture, clothes, firewood, tools and more from neighbors in Mansfield and Richland County, Ohio. Everything is free.",
-                 f"{site}/free.html", inner, stories, extra=reply_box(cfg))
+                 f"{site}/free.html", inner, stories, extra=reply_box(cfg), data=hub_data(cfg, "Free Stuff", "free.html"))
 
 
 # Line drawings for the Free Stuff header, in the same style as ART.
@@ -5291,6 +5354,14 @@ def story_data(cfg, s, image):
     return [art, breadcrumbs(crumbs)]
 
 
+def hub_data(cfg, name, path, about=""):
+    """CollectionPage and breadcrumbs for a section page, so search engines see how the site is organized."""
+    site = cfg["site_url"].rstrip("/")
+    return [{"@context": "https://schema.org", "@type": "CollectionPage", "name": name, "url": f"{site}/{path}",
+             "description": about, "isPartOf": {"@id": f"{site}/#site"}, "about": {"@type": "Place", "name": "Richland County, Ohio"}},
+            breadcrumbs([("Sunny Mansfield", f"{site}/"), (name, f"{site}/{path}")])]
+
+
 def breadcrumbs(items):
     return {"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
         {"@type": "ListItem", "position": i, "name": n, "item": u} for i, (n, u) in enumerate(items, 1)]}
@@ -5368,7 +5439,7 @@ def merge_community(cfg, stories, community):
 
 PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("students.html", "daily", "0.7"), ("write.html", "monthly", "0.5"), ("send-a-story.html", "monthly", "0.4"), ("pets.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
          ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"), ("homes.html", "daily", "0.7"), ("watch.html", "daily", "0.7"),
-         ("submit.html", "monthly", "0.6"), ("birthdays.html", "daily", "0.6"), ("rules.html", "monthly", "0.4"), ("about.html", "monthly", "0.5"), ("contact.html", "yearly", "0.4"),
+         ("submit.html", "monthly", "0.6"), ("birthdays.html", "daily", "0.6"), ("rules.html", "monthly", "0.4"), ("about.html", "monthly", "0.5"), ("contact.html", "yearly", "0.4"), ("link.html", "monthly", "0.4"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
 
 
@@ -5377,7 +5448,7 @@ AI_BOTS = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-Searc
            "Amazonbot", "Meta-ExternalAgent", "MistralAI-User", "YouBot", "CCBot"]
 
 
-def write_search_files(cfg, stories, businesses, out, towns=(), flyers=(), jobs=()):
+def write_search_files(cfg, stories, businesses, out, towns=(), flyers=(), jobs=(), funds=(), homes=(), videos=()):
     """robots.txt, sitemap.xml, news-sitemap.xml and llms.txt: how search engines and AI assistants find the paper."""
     site = cfg["site_url"].rstrip("/")
     now = datetime.now(timezone.utc)
@@ -5390,6 +5461,9 @@ def write_search_files(cfg, stories, businesses, out, towns=(), flyers=(), jobs=
     today = eastern().date()
     dayof = lambda f: f["day"].date() if isinstance(f["day"], datetime) else f["day"]
     urls += [(site + event_url(f), day(now), "daily", "0.6") for f in flyers if f.get("day") and dayof(f) >= today]
+    urls += [(site + fund_url(f), day(now), "weekly", "0.6") for f in funds if not f.get("day") or dayof(f) >= today]
+    urls += [(home_url(cfg, h), day(now), "weekly", "0.5") for h in homes]
+    urls += [(watch_url(cfg, v), day(now), "monthly", "0.6") for v in videos]
     (out / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join(
             f"<url><loc>{e(u)}</loc><lastmod>{m}</lastmod><changefreq>{f}</changefreq><priority>{p}</priority></url>\n"
@@ -5449,6 +5523,7 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 - [Submit good news]({site}/submit.html)
 - [Sunny rules and how verification works]({site}/rules.html)
 {f"- [Advertise]({site}/advertise.html)" + chr(10) if ads_open(cfg) else ""}- [About]({site}/about.html) and [contact]({site}/contact.html)
+- [Link to us: badges for local websites]({site}/link.html)
 - [Privacy policy]({site}/privacy.html) and [terms]({site}/terms.html)
 - Contact: {cfg['submit_email']}
 
@@ -5616,6 +5691,7 @@ def main():
     (out / "rules.html").write_text(rebase(render_rules(cfg, stories)))
     (out / "about.html").write_text(rebase(render_about(cfg, stories)))
     (out / "contact.html").write_text(rebase(render_contact(cfg, stories)))
+    (out / "link.html").write_text(rebase(render_link(cfg, stories)))
     (out / "students.html").write_text(rebase(render_students(cfg, stories)))
     (out / "write.html").write_text(rebase(render_write_guide(cfg, stories)))
     (out / "send-a-story.html").write_text(rebase(render_send_pictures(cfg, stories)))
@@ -5647,7 +5723,7 @@ def main():
         if any(town_items(name, stories, businesses, got["fundraisers"])):
             live_towns.append(name)
     (out / "events.html").write_text(rebase(render_events(cfg, flyers, stories)))
-    write_search_files(cfg, stories, businesses, out, live_towns, flyers, got["jobs"])
+    write_search_files(cfg, stories, businesses, out, live_towns, flyers, got["jobs"], got["fundraisers"], got["homes"], videos)
     localize_photos(cfg, out)
     check_seo(out)
     if not args.sample and os.environ.get("GITHUB_ACTIONS") and datetime.now(timezone.utc).minute < 15:
