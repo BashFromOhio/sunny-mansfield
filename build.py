@@ -1594,7 +1594,26 @@ body{margin:0}
 .nf>*,.nf-col>*,.nf-side>*,.hero>*{min-width:0}
 .navbar .strip{border:0}
 .navbar .navgroup{flex-wrap:nowrap;justify-content:flex-start}
-.navbar .navgroup a,.navbar .navbtn{padding-inline:9px}
+.navbar .navgroup a,.navbar .navbtn{padding-inline:8px}
+/* the menu gets a wider band than the page so every section fits on one line on a laptop;
+   it stays centered, and only scrolls (with a soft fade at the edge) on small screens */
+.navbar .wrap.strip{max-width:1440px;justify-content:center;gap:14px}
+.navbar .navgroup{flex:0 1 auto;min-width:0}
+.navbar .navgroup>:first-child{margin-left:auto}.navbar .navgroup>:last-child{margin-right:auto}
+.navbar .navcta{flex:none}
+.navbar .navcta[aria-current]{background:var(--secondary)}
+.navbar .navgroup.fade-r{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent)}
+.navbar .navgroup.fade-l{-webkit-mask-image:linear-gradient(90deg,transparent,#000 44px);mask-image:linear-gradient(90deg,transparent,#000 44px)}
+.navbar .navgroup.fade-l.fade-r{-webkit-mask-image:linear-gradient(90deg,transparent,#000 44px,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,transparent,#000 44px,#000 calc(100% - 44px),transparent)}
+@media (min-width:1400px){.navbar .navgroup a{padding-inline:12px}.navbar .wrap.strip{gap:20px}}
+.toplinks{display:flex;align-items:center;gap:18px}
+.topbar-in>*{white-space:nowrap}
+@media (max-width:1120px){.topbar-mid{display:none}}
+.toplinks a,.toplinks .navbtn{color:#fff;text-decoration:none;padding:0;white-space:nowrap}
+.toplinks a:hover,.toplinks .navbtn:hover{color:var(--secondary)}
+.toplinks a.on{text-decoration:underline;text-underline-offset:3px}
+@media (max-width:760px){.topbar-in>.caps:first-child .dow{display:none}.toplinks{gap:14px}.topshare span{display:none}}
+@media (max-width:420px){.topbar-in>.caps:first-child{display:none}.topbar-in{justify-content:center}}
 .mag-head .sections{flex:0 1 auto}
 .plate-ad .adbanner.promo .ptext{gap:4px}.plate-ad .adbanner.promo .script{display:block;line-height:1.25;font-size:20px}
 @media (max-width:760px){.navbar .wrap.strip{padding-inline:0}.navbar .navgroup{padding-inline:8px}
@@ -1919,25 +1938,35 @@ def card(cfg, s, front=False):
             f'{share(cfg, s)}</article>')
 
 
+# Main menu, in the order most news sites use: home, then the reading sections (most visited first),
+# then the community marketplace grouped together, then giving. About, Join the team and Advertise
+# sit in the top bar, where readers expect "about the paper" links; Submit news is the button.
+NAV = [("front", "Front page"), ("events.html", "Events"), ("sports.html", "Sports"), ("students.html", "Student Voices"),
+       ("watch.html", "Watch Mansfield"), ("pets.html", "Tyger Paws"), ("businesses.html", "Businesses"),
+       ("jobs.html", "Jobs"), ("homes.html", "Homes"), ("free.html", "Free Stuff"), ("fundraisers.html", "Donate")]
+NAV_ALIAS = {"index.html": "front", "write.html": "students.html", "send-a-story.html": "students.html"}
+
+
 def masthead(cfg, site, stories, quote=None, current=""):
-    today = datetime.now(timezone.utc).strftime("%A, %B %-d, %Y")
+    now = datetime.now(timezone.utc)
+    today = f'<span class="dow">{now.strftime("%A")}, </span>{now.strftime("%B %-d, %Y")}'
+    current = NAV_ALIAS.get(current, current)
     on = lambda key: ' class="on" aria-current="page"' if key == current else ""
+    links = "".join(f'<a href="{e(site)}/{"" if key == "front" else key}"{on(key)}>{e(label)}</a>' for key, label in NAV)
     ad = banner(cfg, "A1").replace('class="wrap adrow"', 'class="adrow"', 1)
     return f"""<header>
 <div class="topbar"><div class="wrap topbar-in"><span class="caps">{today}</span>
 <span class="caps topbar-mid">{len(stories)} good stories this week · Free · Updated all day</span>
-<a class="caps topshare" href="{e(fb_share(site + '/'))}" target="_blank" rel="noopener">{FB_ICON}Share the paper</a></div></div>
+<nav class="caps toplinks" aria-label="About the paper"><button class="navbtn" type="button" data-about>About</button>
+<a href="{e(site)}/rules.html"{on("rules.html")}>Join the team</a>{f'<a href="{e(site)}/advertise.html"{on("advertise.html")}>Advertise</a>' if ads_open(cfg) else ""}
+<a class="topshare" href="{e(fb_share(site + '/'))}" target="_blank" rel="noopener" aria-label="Share the paper on Facebook">{FB_ICON}<span>Share the paper</span></a></nav></div></div>
 <div class="wrap plate">
 <a class="logo" href="{e(site)}/" aria-label="{e(cfg['site_name'])} home">{logo("logo-retro.svg")}</a>
 <div class="plate-ad">{ad}</div>
 </div>
 <nav class="navbar" aria-label="Main"><div class="wrap strip caps">
-<div class="navgroup"><a href="{e(site)}/"{on("front")}>Front page</a><a href="{e(site)}/events.html">Events</a><a href="{e(site)}/watch.html"{on("watch")}>Watch Mansfield</a>
-<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/students.html">Student Voices</a><a href="{e(site)}/pets.html"{on("pets")}>Tyger Paws</a><a href="{e(site)}/fundraisers.html">Donate</a>
-<a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/homes.html">Homes</a><a href="{e(site)}/businesses.html">Businesses</a>
-<button class="navbtn" type="button" data-about>About</button>
-<a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}</div>
-<a class="navcta" href="{e(site)}/submit.html">Submit news</a></div></nav>
+<div class="navgroup">{links}</div>
+<a class="navcta" href="{e(site)}/submit.html"{' aria-current="page"' if current == "submit.html" else ""}>Submit news</a></div></nav>
 </header>
 <aside class="about" id="about" role="dialog" aria-labelledby="about-h" hidden>
 <button class="close" type="button" data-about-close aria-label="Close">&times;</button>
@@ -2217,6 +2246,10 @@ document.querySelectorAll('.railbox').forEach(box=>{const r=box.querySelector('.
   const step=c.getBoundingClientRect().width+parseFloat(getComputedStyle(r).columnGap||0);
   r.scrollTo({left:r.scrollLeft+r.clientWidth>=r.scrollWidth-4?0:r.scrollLeft+step,behavior:'smooth'})},4500)});
 const h=decodeURIComponent(location.hash.slice(1));show(tabs.some(x=>x.dataset.sec===h)?h:'all',false);
+const ng=document.querySelector('.navbar .navgroup');
+if(ng){const fade=()=>{ng.classList.toggle('fade-l',ng.scrollLeft>4);ng.classList.toggle('fade-r',ng.scrollLeft+ng.clientWidth<ng.scrollWidth-4)};
+ const cur=ng.querySelector('.on');if(cur&&ng.scrollWidth>ng.clientWidth)ng.scrollLeft=cur.offsetLeft-(ng.clientWidth-cur.offsetWidth)/2;
+ fade();ng.addEventListener('scroll',fade,{passive:true});addEventListener('resize',fade)}
 const about=document.getElementById('about');
 if(about){const seen=store('aboutSeen');if(!seen&&!/admin\.html/.test(location.pathname))setTimeout(()=>about.hidden=false,4000);
  document.addEventListener('click',ev=>{if(ev.target.closest('[data-about]')){about.hidden=false;about.querySelector('.btn').focus()}
@@ -3261,7 +3294,9 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 
 def shell(cfg, title, desc, url, inner, stories, image=None, extra="", data=None, index=True):
     site = cfg["site_url"].rstrip("/")
-    body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories)}<main>
+    page = url.split("#")[0].rstrip("/")
+    page = "front" if page == site else page.rsplit("/", 1)[-1]
+    body = f"""<div class="sheet"><div class="stripes" aria-hidden="true"></div>{masthead(cfg, site, stories, current=page)}<main>
 {inner}<div class="stripes" aria-hidden="true"></div></main>{footer(cfg)}</div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>"""
     return ("<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
