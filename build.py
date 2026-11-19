@@ -1056,7 +1056,9 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .catside .n{color:var(--text-3);font-size:13px}
 .allcat{font-weight:600}
 .mtools{display:flex;gap:12px;align-items:center;margin-bottom:16px}
-.mtools input{flex:1}
+.mtools input{flex:1;min-width:0}.mtools select{flex:none;width:auto}
+.homephotos{padding-block:4px 20px}
+@media (max-width:600px){.mtools:has(select){flex-wrap:wrap}.mtools:has(select) input{flex:1 1 100%}.mtools select{flex:1 1 0}}
 .viewtog{display:flex}
 .mlist{display:grid;gap:0;border-top:2px solid var(--border-strong)}
 .mlist .listing{grid-template-columns:120px minmax(0,1fr);grid-template-rows:auto auto 1fr auto;column-gap:16px;row-gap:4px;
@@ -3592,7 +3594,7 @@ def render_submit(cfg, stories):
         ("biz", "Post a job", "Hiring in Richland County? Post it free for 30 days. Applicants reply through Sunny Mansfield, "
          "so your email is never shown.", "#form:Job", "Post a job", "job"),
         ("hoods", "List a home for rent or sale", "Renting out a house or apartment, or selling one in Richland County? List it "
-         "free for 30 days with the price up front. People ask about it through the site, so your phone and email stay private.",
+         "free for 30 days with the price up front. Professional photos only. People ask about it through the site, so your phone and email stay private.",
          "#form:Home for Rent or Sale", "List a home", "home"),
         ("seniors", "Send a birthday shout-out", "Just their name and birthday, plus a special message if you like. "
          "It shows on the front page and our Facebook page on their big day.", f"{site}/birthdays.html#form", "Send a shout-out", "birthday"),
@@ -3615,6 +3617,7 @@ def render_submit(cfg, stories):
         field("summary", "Tell us about it", "textarea", True, "Two to four sentences. Who, what, where, when. "
               "Student Voices stories can run up to 300 words: leave a blank line between paragraphs."),
         field("photo", "Photo or flyer", "file", hint="JPG or PNG up to 6 MB. Your own photo, or one you have permission to use."),
+        f'<p class="formnote" data-for="{HOME_LABEL}" hidden><b>Professional photos only.</b> {e(HOME_PHOTOS)}</p>',
         field("event_date", "Event date", "date", show=["Event Flyer"]),
         field("category", "Category", "select", show=["Free Stuff"], opts=[n for _, n, _ in MARKET_CATS], extra="Category"),
         field("free_ok", "It's free: no price, trade or \u201cgas money\u201d. It's legal to give away and not recalled, and I'm 18 or older.",
@@ -3632,7 +3635,8 @@ def render_submit(cfg, stories):
         field("business", "Listed by", show=[HOME_LABEL], hint="Optional: your name, property manager or real estate agency."),
         field("home_ok", "This home is in Richland County and I own it or I'm allowed to list it. I follow fair housing laws "
               "(no preferences about race, color, religion, sex, disability, family status, national origin, ancestry or military status), "
-              "I'll never ask for money before someone sees it in person, and I'm 18 or older.",
+              "I'll never ask for money before someone sees it in person, any photo I send is a professional photo I have the right to use, "
+              "and I'm 18 or older.",
               "checkbox", show=[HOME_LABEL], consent="Home rules OK", need=True),
         field("business", "Business name", show=["Business Spotlight"]),
         field("business", "Special cause", show=["Fundraiser"], hint="Optional. Fundraisers with the same cause, like \u201cBellville flood relief\u201d, are grouped together."),
@@ -3798,7 +3802,8 @@ LEGAL = {
         ("Home listing rules", "Only homes in Richland County that you own or are allowed to list, with the real price. "
          "Follow fair housing laws: no preferences or limits based on race, color, religion, sex, disability, family status, "
          "national origin, ancestry or military status. Never ask for a deposit, fee or rent before someone has seen the home "
-         "in person. We don't check listings, handle money or act as a landlord or agent. The person listing is responsible "
+         "in person. Only professional, listing-quality photos are posted; we may post a listing without its photo. "
+         "We don't check listings, handle money or act as a landlord or agent. The person listing is responsible "
          "for the post."),
         ("Private replies", "Use the reply form only to answer the post. No spam, sales pitches or harassment. We may block "
          "anyone who misuses it, and we can't promise every message is delivered."),
@@ -4804,8 +4809,13 @@ HOME_LABEL = "Home for Rent or Sale"
 HOME_DAYS = 30
 HOME_KINDS = ["For rent", "For sale"]
 HOME_SAFETY = ("Never pay a deposit, application fee or rent before you've seen the home in person and met the owner or agent. "
-               "Scammers copy real listings and ask for money by wire, gift card or payment app. Sunny Mansfield doesn't check "
-               "listings or handle any money.")
+               "Scammers copy real listings and ask for money by wire, gift card or payment app.")
+HOME_PHOTOS = ("We only post professional, listing-quality photos with homes: sharp, bright and showing the home itself. "
+               "If a photo doesn't meet that bar, we'll post the listing without it or ask for a better one.")
+HOME_DISCLAIMER = ("Home listings are posted by owners and agents, not by Sunny Mansfield. We don't inspect homes or verify "
+                   "listings, prices, photos or availability. We aren't a landlord, real estate agent or broker, we don't handle "
+                   "any money, and we're not part of any rental or sale. Check every detail yourself before you sign or pay anything.")
+CAMERA = ('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>')
 FAIR_HOUSING = ("Every home here is offered under the Fair Housing Act: no listing may prefer or exclude anyone because of race, "
                 "color, religion, sex, disability, family status, national origin, ancestry or military status.")
 HOME_ART = '<path d="M10 52L50 16l40 36M20 44v42h60V44M42 86V62h16v24"/>'
@@ -4860,9 +4870,10 @@ def render_homes(cfg, homes, stories):
 <select id="h-sort" aria-label="Sort homes"><option value="new">Newest first</option><option value="low">Lowest price</option><option value="high">Highest price</option></select>
 <a class="btn solid" href="{e(site)}/submit.html#home">List a home</a></div>
 <div class="qtabs" role="group" aria-label="Rent or sale"><button class="tab" type="button" data-hk="all" aria-pressed="true">All homes</button>{tabs}</div>
+<p class="note safenote homephotos">{CAMERA}<span><b>Professional photos only.</b> {e(HOME_PHOTOS)}</span></p>
 <div class="grid homes" id="h-list">{cards}</div>
 <div class="empty" id="h-empty"{" hidden" if homes else ""}>{first_post(cfg, "homes", block=True)}</div>
-<p class="note safenote">{SHIELD}<span>{e(HOME_SAFETY)} {e(FAIR_HOUSING)} Report a listing: {e(cfg['submit_email'])}</span></p></section>
+<p class="note safenote">{SHIELD}<span><b>Disclaimer:</b> {e(HOME_DISCLAIMER)} {e(HOME_SAFETY)} {e(FAIR_HOUSING)} Report a listing: {e(cfg['submit_email'])}</span></p></section>
 <script>(()=>{{const box=document.getElementById('h-list');const items=[...box.children];const q=document.getElementById('h-search');const so=document.getElementById('h-sort');let t='all';
 function go(){{const s=q.value.trim().toLowerCase();let n=0;const k=so.value;
  items.sort((a,b)=>k==='new'?b.dataset.date-a.dataset.date:k==='low'?(+a.dataset.price||1e12)-(+b.dataset.price||1e12):b.dataset.price-a.dataset.price).forEach(el=>box.appendChild(el));
@@ -4893,7 +4904,7 @@ def render_home_page(cfg, h, stories):
 <aside class="box"><dl class="facts">{facts}</dl><div class="share">{reply_button(cfg, h, "Ask about it")}{more}
 <a class="btn fb sm" href="{e(fb_share(home_url(cfg, h)))}" target="_blank" rel="noopener">{FB_ICON}Share</a></div>
 <p class="hint">{e(REPLY_NOTE)}</p></aside></section>
-<section class="wrap latest"><p class="note safenote">{SHIELD}<span>{e(HOME_SAFETY)} {e(FAIR_HOUSING)} <a class="link" href="{e(report_link(cfg, {"title": h["title"], "link": home_url(cfg, h)}))}">Report this listing</a> · <a class="link" href="{e(site)}/homes.html">All homes</a></span></p></section>"""
+<section class="wrap latest"><p class="note safenote">{SHIELD}<span><b>Disclaimer:</b> {e(HOME_DISCLAIMER)} {e(HOME_SAFETY)} {e(FAIR_HOUSING)} <a class="link" href="{e(report_link(cfg, {"title": h["title"], "link": home_url(cfg, h)}))}">Report this listing</a> · <a class="link" href="{e(site)}/homes.html">All homes</a></span></p></section>"""
     data = [breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Homes", f"{site}/homes.html"), (h["title"], home_url(cfg, h))])]
     return shell(cfg, f"{home_price_label(h)}: {h['title']}, {h.get('town') or 'Richland County'} OH · {cfg['site_name']}",
                  f"{h.get('kind') or 'Home'} in {h.get('town') or 'Richland County'}, Ohio: {home_price_label(h)}, {home_facts(h)}. {h['summary'][:100]}",
