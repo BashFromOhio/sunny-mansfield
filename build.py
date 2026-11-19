@@ -1212,6 +1212,11 @@ footer .credit .legal.towns{font-weight:400;opacity:.85}
 .vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .legaltext h3{font:700 19px/1.3 var(--sans);margin:22px 0 4px}.legaltext ul{font-size:17px;line-height:1.65;margin:6px 0 0;padding-left:22px}.legaltext li{margin:4px 0}.legaltext ol.clusters{font-size:16px;line-height:1.6;margin:6px 0 0;padding-left:26px;columns:2;column-gap:32px}
 @media (max-width:600px){.legaltext ol.clusters{columns:1}}
+.picsteps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:40px 32px;max-width:900px;padding-block:8px 24px}
+@media (max-width:700px){.picsteps{grid-template-columns:minmax(0,1fr)}}
+.picstep{margin:0;display:grid;gap:12px;align-content:start}.picstep figcaption{font-size:16px;line-height:1.55}
+.picstep .n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--secondary);color:var(--tertiary);font:700 14px/1 var(--sans);margin-right:10px;vertical-align:1px}
+.picstep img{width:100%;max-width:390px;height:auto;border:2px solid var(--border-subtle);display:block}.picshare{padding-bottom:48px}
 .guide .steps{font-size:16px}.guide #faq~p{margin-bottom:12px}.guide .share{margin-top:28px}.tmpl{background:var(--tertiary);border:2px solid var(--border-subtle);border-left:4px solid var(--secondary);padding:16px 20px;margin-top:12px;display:grid;gap:8px}
 .tmpl p{font-size:16px}.tmpl.jump ul{margin:0}.checks{list-style:none;padding-left:0}.checks li{padding-left:30px;position:relative}
 .checks li::before{content:"";position:absolute;left:2px;top:5px;width:16px;height:16px;border:2px solid var(--secondary);border-radius:3px}
@@ -3914,7 +3919,7 @@ def render_students(cfg, stories):
 <li><span class="n">2</span><span><b>Write your story.</b> 150 to 300 words in your own words, plus one good photo.</span></li>
 <li><span class="n">3</span><span><b>Send it.</b> No account needed. An editor reads it and it goes up with your name on it.</span></li>
 </ol>
-<div class="share"><a class="btn solid" href="{e(site)}/write.html">Student writer guide</a><a class="textbtn" href="{e(site)}/submit.html#student">Send a story</a></div></div>
+<div class="share"><a class="btn solid" href="{e(site)}/write.html">Student writer guide</a><a class="textbtn" href="{e(site)}/send-a-story.html">How to send a story</a></div></div>
 <div class="box" id="interns"><span class="caps kicker">Student interns</span><h2 class="hed">Run Student Voices at your school</h2>
 <p>Interns are the point of contact for their school. They plan the week's stories with their advisor, help new writers, check each
 story before it's sent and share the links once they're live. It's real editing experience for your resume and college applications.</p>
@@ -3943,7 +3948,7 @@ def render_write_guide(cfg, stories):
         ("Check it.", f'Go through the <a class="link" href="#checklist">checklist</a>, then have your intern or advisor read it.'),
         ("Send it.", f"Open {send}. Student Voices is already picked. Choose your story type, type your headline, paste your story, "
          "add one photo, fill in your school and name, check the \u201cI agree\u201d box and press <b>Send for review</b>. "
-         "No account needed."),
+         f'No account needed. <a class="link" href="{e(site)}/send-a-story.html">See it in pictures</a>.'),
         ("Share it.", "An editor reads it, usually within a day, and it goes up on its own page with your name and a Share button. "
          "Send the link to your family and post it."),
     ]
@@ -3996,6 +4001,7 @@ def render_write_guide(cfg, stories):
 <section class="wrap legaltext guide">
 <div class="tmpl jump"><b>Quick links</b>
 <ul><li><a class="link" href="{e(site)}/submit.html#student">Send a story</a> (no account needed)</li>
+<li><a class="link" href="{e(site)}/send-a-story.html">How to send a story, in pictures</a></li>
 <li><a class="link" href="{e(site)}/students.html">See Student Voices</a></li>
 <li><a class="link" href="{e(site)}/rules.html#apply">Apply to be a verified writer or intern</a></li>
 <li><a class="link" href="{e(site)}/rules.html#rules">The Sunny rules</a></li>
@@ -4059,6 +4065,36 @@ add a parent or guardian's name and email. Once an editor verifies you, you'll g
             breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Student Voices", f"{site}/students.html"),
                          ("Student writer guide", f"{site}/write.html")])]
     return shell(cfg, f"Student Writer Guide: Write for Sunny Mansfield", desc, f"{site}/write.html", inner, stories, data=data)
+
+
+PICTURE_STEPS = [  # assets/guide/step-N.jpg, captured from the real form
+    "Open the student writer guide and tap <b>Send a story</b>.",
+    "Or, on the Submit page, tap <b>Write a story</b> on the Student Voices card.",
+    "<b>Student Voices</b> is already picked. Type your headline and paste your story. Leave a blank line between paragraphs.",
+    "Add one photo, pick your <b>story type</b>, and type your <b>school</b> and class year.",
+    "Under 18? Choose <b>Yes</b> and add a parent or guardian's name. Add the teacher or advisor who read it. Only editors see these.",
+    "Type your name the way it should appear, choose <b>Student reporter</b>, add your email, check <b>I agree</b> and press <b>Send for review</b>.",
+    "You'll see <b>Got it.</b> Your story is in the review queue. An editor reads it, usually within a day.",
+    "Once it's approved, your story gets its own page with your name, school and a Share button. Send the link to family and friends.",
+]
+
+
+def render_send_pictures(cfg, stories):
+    """send-a-story.html: the submit form, step by step, in screenshots. For students, interns and advisors."""
+    site = cfg["site_url"].rstrip("/")
+    figs = "".join(f'<figure class="picstep"><figcaption><span class="n">{i}</span>{t}</figcaption>'
+                   f'<img src="/assets/guide/step-{i}.jpg" alt="Step {i}" width="390" loading="{"eager" if i < 3 else "lazy"}"></figure>'
+                   for i, t in enumerate(PICTURE_STEPS, 1))
+    inner = f"""{page_title("Step by step", "How to send a story", "Sending a Student Voices story takes about two minutes. Here's every step, in pictures.")}
+<section class="wrap"><div class="picsteps">{figs}</div>
+<div class="share picshare"><a class="btn solid" href="{e(site)}/submit.html#student">Send your story</a><a class="textbtn" href="{e(site)}/write.html">Student writer guide</a></div></section>"""
+    desc = "How Richland County students send a story to Sunny Mansfield's Student Voices, step by step with pictures of the form."
+    data = [{"@context": "https://schema.org", "@type": "WebPage", "name": "How to send a story", "url": f"{site}/send-a-story.html",
+             "description": desc, "isPartOf": {"@id": f"{site}/#site"}},
+            breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Student Voices", f"{site}/students.html"),
+                         ("How to send a story", f"{site}/send-a-story.html")])]
+    return shell(cfg, f"How to Send a Student Voices Story, Step by Step · {cfg['site_name']}", desc,
+                 f"{site}/send-a-story.html", inner, stories, data=data)
 
 
 def render_legal(cfg, stories, kind):
@@ -5280,7 +5316,7 @@ def merge_community(cfg, stories, community):
     return sorted(stories + community, key=lambda s: s["date"], reverse=True)
 
 
-PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("students.html", "daily", "0.7"), ("write.html", "monthly", "0.5"), ("pets.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
+PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("students.html", "daily", "0.7"), ("write.html", "monthly", "0.5"), ("send-a-story.html", "monthly", "0.4"), ("pets.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
          ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"), ("homes.html", "daily", "0.7"), ("watch.html", "daily", "0.7"),
          ("submit.html", "monthly", "0.6"), ("birthdays.html", "daily", "0.6"), ("rules.html", "monthly", "0.4"), ("about.html", "monthly", "0.5"), ("contact.html", "yearly", "0.4"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
@@ -5532,6 +5568,7 @@ def main():
     (out / "contact.html").write_text(rebase(render_contact(cfg, stories)))
     (out / "students.html").write_text(rebase(render_students(cfg, stories)))
     (out / "write.html").write_text(rebase(render_write_guide(cfg, stories)))
+    (out / "send-a-story.html").write_text(rebase(render_send_pictures(cfg, stories)))
     for kind in LEGAL:
         (out / f"{kind}.html").write_text(rebase(render_legal(cfg, stories, kind)))
     (out / "fundraisers.html").write_text(rebase(render_fundraisers(cfg, got["fundraisers"], stories)))
