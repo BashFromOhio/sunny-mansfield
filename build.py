@@ -37,6 +37,7 @@ HERE = Path(__file__).resolve().parent
 SECTIONS = [
     ("good", "Good News"),
     ("sports", "Sports"),
+    ("students", "Student Voices"),
     ("hoods", "Neighborhoods"),
     ("biz", "Local Business"),
     ("sales", "Garage Sales"),
@@ -461,6 +462,8 @@ SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "cool research": "goo
                     "headline": "headline", "link": "link", "birthday": "birthday"}
 FUND_DAYS = 90  # fundraisers without an end date come down after this
 ATHLETE_FACTS = ("Sport", "School", "Class of")  # folded into the summary by the submit form
+STUDENT_FACTS = ("Story type", "School", "Class of")  # the same, for Student Voices posts
+STUDENT_TYPES = ["CTE Spotlight", "Yearbook Throwback", "Athlete's View", "School News"]
 # Free Stuff categories: (key, name, words that suggest it when a listing has no category).
 MARKET_CATS = [
     ("furniture", "Furniture", r"table|chair|couch|sofa|dresser|desk|bed\b|mattress|cabinet|shelf|recliner"),
@@ -706,13 +709,23 @@ def load_submissions(config, sample):
                 else:
                     keep.append(line)
             row["summary"], section = " ".join(keep), "sports"
+        if section == "students":
+            keep = []
+            for line in row["summary"].splitlines():
+                k, _, v = line.partition(": ")
+                if k in STUDENT_FACTS and v.strip():
+                    facts[k] = v.strip()
+                else:
+                    keep.append(line)
+            row["summary"] = "\n".join(keep).strip()  # students write whole articles, so keep their paragraphs
         byline = row["name"] or "A neighbor"
         link = full_link(row["link"])
         video = youtube_id(link)
         if video:  # play it right on the story page instead of sending readers off to YouTube
             image = image or f"https://img.youtube.com/vi/{video}/hqdefault.jpg"
             link = ""
-        got["stories"].append({"athlete": facts if facts or row["section"].lower() == "athlete spotlight" else None,"id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
+        got["stories"].append({"athlete": facts if section == "sports" and (facts or row["section"].lower() == "athlete spotlight") else None,
+                        "student": facts if section == "students" else None, "id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
                         "body": paragraphs(row["summary"]), "link": link, "video": video, "source": byline,
                         "role": row["role"], "image": image, "date": date, "section": section, "community": True,
                         "town": row["town"]})
@@ -1197,6 +1210,16 @@ footer .credit .legal.towns{font-weight:400;opacity:.85}
 .note.towns{font-size:15px;margin-top:8px}
 .grid.events .slide.flyer{width:auto}
 .vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.legaltext h3{font:700 19px/1.3 var(--sans);margin:22px 0 4px}.legaltext ul{font-size:17px;line-height:1.65;margin:6px 0 0;padding-left:22px}.legaltext li{margin:4px 0}.legaltext ol.clusters{font-size:16px;line-height:1.6;margin:6px 0 0;padding-left:26px;columns:2;column-gap:32px}
+@media (max-width:600px){.legaltext ol.clusters{columns:1}}
+.picsteps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:40px 32px;max-width:900px;padding-block:8px 24px}
+@media (max-width:700px){.picsteps{grid-template-columns:minmax(0,1fr)}}
+.picstep{margin:0;display:grid;gap:12px;align-content:start}.picstep figcaption{font-size:16px;line-height:1.55}
+.picstep .n{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--secondary);color:var(--tertiary);font:700 14px/1 var(--sans);margin-right:10px;vertical-align:1px}
+.picstep img{width:100%;max-width:390px;height:auto;border:2px solid var(--border-subtle);display:block}.picshare{padding-bottom:48px}
+.guide .steps{font-size:16px}.guide #faq~p{margin-bottom:12px}.guide .share{margin-top:28px}.tmpl{background:var(--tertiary);border:2px solid var(--border-subtle);border-left:4px solid var(--secondary);padding:16px 20px;margin-top:12px;display:grid;gap:8px}
+.tmpl p{font-size:16px}.tmpl.jump ul{margin:0}.checks{list-style:none;padding-left:0}.checks li{padding-left:30px;position:relative}
+.checks li::before{content:"";position:absolute;left:2px;top:5px;width:16px;height:16px;border:2px solid var(--secondary);border-radius:3px}
 .legaltext{max-width:760px;padding-block:8px 40px}.legaltext .hed{font-size:24px;margin:28px 0 6px}.legaltext p{font-size:17px;line-height:1.65;margin:0}
 
 /* sports: athlete cards and tournament brackets */
@@ -1683,6 +1706,7 @@ ART = {
     "vote": '<path d="M14 54h72v34H14zM30 54V18h40v36M40 36l8 8 14-16"/>',
     "sports": '<path d="M30 14h40v22c0 12-9 22-20 22S30 48 30 36zM30 22H16c0 14 6 20 14 20M70 22h14c0 14-6 20-14 20M50 58v12M36 88h28M40 88l3-18h14l3 18"/>',
     "research": '<path d="M38 12h24M42 12v28L18 82c-2 4 1 8 5 8h54c4 0 7-4 5-8L58 40V12M28 66h44"/>',
+    "students": '<path d="M18 12h44l16 16v60H18zM62 12v16h16M30 44h36M30 56h36M30 68h22M58 84l22-22 6 6-22 22h-6z"/>',
 }
 
 
@@ -1844,7 +1868,8 @@ def photo(s):
 
 
 def kicker(s):
-    return f'<span class="caps kicker">{e(SECTION_NAMES[s["section"]])}</span>'
+    kind = (s.get("student") or {}).get("Story type")  # Student Voices posts say what kind: CTE Spotlight, Athlete's View...
+    return f'<span class="caps kicker">{e(SECTION_NAMES[s["section"]])}{" · " + e(kind) if kind else ""}</span>'
 
 
 def meta(s):
@@ -1908,7 +1933,7 @@ def masthead(cfg, site, stories, quote=None, current=""):
 </div>
 <nav class="navbar" aria-label="Main"><div class="wrap strip caps">
 <div class="navgroup"><a href="{e(site)}/"{on("front")}>Front page</a><a href="{e(site)}/events.html">Events</a><a href="{e(site)}/watch.html"{on("watch")}>Watch Mansfield</a>
-<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/pets.html"{on("pets")}>Tyger Paws</a><a href="{e(site)}/fundraisers.html">Donate</a>
+<a href="{e(site)}/sports.html">Sports</a><a href="{e(site)}/students.html">Student Voices</a><a href="{e(site)}/pets.html"{on("pets")}>Tyger Paws</a><a href="{e(site)}/fundraisers.html">Donate</a>
 <a href="{e(site)}/free.html">Free Stuff</a><a href="{e(site)}/jobs.html">Jobs</a><a href="{e(site)}/homes.html">Homes</a><a href="{e(site)}/businesses.html">Businesses</a>
 <button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/rules.html">Join the team</a>{f'<a href="{e(site)}/advertise.html">Advertise</a>' if ads_open(cfg) else ""}</div>
@@ -2154,7 +2179,7 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 {sponsor_strip(cfg)}
 <div class="wrap credit"><span class="script">Made in Mansfield</span> <span>by Ofgeneration LLC</span>
 {follow_links(cfg)}<nav class="legal towns">Good news in {" ".join(f'<a href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS)}</nav>
-<nav class="legal"><a href="{e(site)}/about.html">About</a><a href="{e(site)}/contact.html">Contact</a><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a>{newsletter_link(cfg)}<a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
+<nav class="legal"><a href="{e(site)}/about.html">About</a><a href="{e(site)}/contact.html">Contact</a><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/write.html">Write for us</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a>{newsletter_link(cfg)}<a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
 Stories from other outlets belong to their publishers.</small>
 <small class="addr">{e(mailing_address(cfg, " · "))}</small></div></footer>"""
@@ -2252,6 +2277,7 @@ FIRST_POST = {  # what an empty spot asks for: label, where the form is, button,
     "funds": ("Fundraisers", "submit.html#fundraiser", "Share a fundraiser", "Medical bills, team trips, fire recovery and special causes."),
     "events": ("Local events", "submit.html#flyer", "Post your flyer", "Concerts, fish fries, festivals, games and church suppers."),
     "birthday": ("Birthdays", "birthdays.html#form", "Send a shout-out", "Know someone celebrating? We'll wish them a happy birthday here and on Facebook, free."),
+    "students": ("Student Voices", "submit.html#student", "Write for Student Voices", "A CTE program spotlight, a yearbook throwback, a game from an athlete's eyes."),
     "pets": ("Tyger Paws", "submit.html", "Send your adoption story", "Adopted a dog from the Richland County shelter? Send us your adoption story and a photo."),
     "watch": ("Watch Mansfield", "submit.html", "Send us your video", "A podcast, a local show, a highlight reel. Mansfield made, Mansfield watched."),
 }
@@ -3218,7 +3244,7 @@ def render_index(cfg, stories, businesses, flyers, listings, funds=(), headlines
 <main><h1 class="vh">{e(cfg['site_name'])}: good news from Mansfield and Richland County, Ohio</h1>{note}{ticker(news[:10])}{front}
 {birthday_rail(cfg, birthdays)}
 {happy_tails_box(cfg, dogs)}
-{civic(cfg, businesses)}
+{civic(cfg, businesses) if cfg.get("shop_local_shelf") else ""}
 <div id="shelves">{shelf_order(rails, "", events)}</div>
 {market}
 <section class="wrap latest" id="latest" hidden><h2 class="label">More good news</h2>
@@ -3352,6 +3378,7 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
   if(sec==='Free Stuff'&&/\$\s?\d|\\b(obo|or best offer|for sale|asking|venmo|cash ?app|zelle|paypal|wanted|wtb|iso)\\b/i.test(pub)){{msg.textContent='Free Stuff is free only. Please take out any price, trade or payment app.';return}}
   if(val('minor')===''){{msg.textContent='Please tell us if the athlete is under 18.';f.minor.focus();return}}
   if(val('minor')==='Yes'&&(!val('guardian')||!val('guardian_ok'))){{msg.textContent='For an athlete under 18, add the parent or guardian name and check that they said OK.';f.guardian.focus();return}}
+  if(val('s_minor')==='Yes'&&!val('s_guardian')){{msg.textContent='If you are under 18, add your parent or guardian\u2019s name. Only editors see it.';f.s_guardian.focus();return}}
   const thanks=f.nextElementSibling;
   const done=text=>{{f.reset();delete f.dataset.piiOk;showFor(f);syncSign();f.hidden=true;thanks.querySelector('[data-thanks]').textContent=text;thanks.hidden=false;thanks.scrollIntoView({{behavior:'smooth',block:'center'}})}};
   if(f.hp.value){{done('Thanks!');return}}
@@ -3385,6 +3412,8 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
   finally{{btn.disabled=false}}}});}});
 /*VERIFY*/
 document.querySelectorAll('[data-pick]').forEach(b=>b.addEventListener('click',()=>{{const f=document.getElementById('send');if(!f)return;f.section.value=b.dataset.pick;showFor(f)}}));
+{{const f=document.getElementById('send'),id=location.hash.slice(1),b=id&&/^[\w-]+$/.test(id)&&document.querySelector('#'+id+' [data-pick]');
+ if(f&&b){{f.section.value=b.dataset.pick;showFor(f)}}}}  // submit.html#student arrives with Student Voices already picked
 }})();
 </script>""".replace("/*VERIFY*/", VERIFY_JS)
 
@@ -3520,6 +3549,9 @@ def render_submit(cfg, stories):
          "donation link and we'll help spread the word. You're responsible for your fundraiser and how the money is used.", "#form:Fundraiser", "Post a fundraiser", "fundraiser"),
         ("sports", "Spotlight an athlete", "A big game, a personal best, a signing day, a kid who never quits. Send a photo "
          "and a few lines and they get their own page to share.", "#form:Athlete Spotlight", "Spotlight an athlete", "athlete"),
+        ("students", "Write for Student Voices", "Students: spotlight a CTE program, share a yearbook throwback or tell us about "
+         "the game from the field. Your story gets your byline and its own page. New here? Read the "
+         f'<a class="link" href="{site}/write.html">student writer guide</a>.', "#form:Student Voices", "Write a story", "student"),
         ("sales", "Give away free stuff", "Clearing out the garage? Give it to a neighbor. Free only: no prices or trades. "
          "People message you through the site, so your phone and email stay private. Up for 30 days.", "#form:Free Stuff", "Give something away", "free"),
         ("biz", "Post a job", "Hiring in Richland County? Post it free for 30 days. Applicants reply through Sunny Mansfield, "
@@ -3545,7 +3577,8 @@ def render_submit(cfg, stories):
     fields = [
         field("section", "What are you sharing?", "select", True, opts=labels),
         field("title", "Headline", req=True, hint="Short and specific, like \u201cOntario band raises $3,000 with a car wash\u201d."),
-        field("summary", "Tell us about it", "textarea", True, "Two to four sentences. Who, what, where, when."),
+        field("summary", "Tell us about it", "textarea", True, "Two to four sentences. Who, what, where, when. "
+              "Student Voices stories can run up to 300 words: leave a blank line between paragraphs."),
         field("photo", "Photo or flyer", "file", hint="JPG or PNG up to 6 MB. Your own photo, or one you have permission to use."),
         field("event_date", "Event date", "date", show=["Event Flyer"]),
         field("category", "Category", "select", show=["Free Stuff"], opts=[n for _, n, _ in MARKET_CATS], extra="Category"),
@@ -3578,9 +3611,17 @@ def render_submit(cfg, stories):
               hint="Needed if the athlete is under 18. Only editors see it."),
         field("guardian_ok", "Their parent or guardian said it's OK to share this post and photo.", "checkbox",
               show=["Athlete Spotlight"], consent="Parent or guardian OK"),
+        field("stype", "Story type", "select", show=["Student Voices"], opts=STUDENT_TYPES, extra="Story type", need=True),
+        field("school", "Your school", show=["Student Voices"], extra="School", need=True, hint="Like Mansfield Senior High or Pioneer Career & Technology Center."),
+        field("grad", "Class of", show=["Student Voices"], extra="Class of", hint="Your graduation year, like 2027."),
+        field("s_minor", "Are you under 18?", "select", show=["Student Voices"], opts=["No", "Yes"], consent="Writer under 18", need=True),
+        field("s_guardian", "Parent or guardian's name", show=["Student Voices"], consent="Writer's parent or guardian",
+              hint="Needed if you're under 18. Only editors see it."),
+        field("advisor", "Teacher or advisor who read it", show=["Student Voices"], consent="Advisor",
+              hint="Optional, but it helps. Only editors see it."),
         field("link", "Link for more", "url", hint="Optional: a website, event page or Facebook post. For a fundraiser, the GoFundMe or donation page."),
         field("name", "Your name as it should appear", req=True),
-        field("role", "You are a", "select", opts=["Neighbor", "Student reporter", "Business", "Mentor", "Organization"]),
+        field("role", "You are a", "select", opts=["Neighbor", "Student reporter", "Student intern", "Business", "Mentor", "Organization"]),
         field("town", "Town or neighborhood"),
         field("email", "Your email", "email", hint="Never shown on the site. Editors use it if they have a question. "
               "For Free Stuff, jobs and homes it's required: replies are sent here."),
@@ -3622,8 +3663,8 @@ def render_rules(cfg, stories):
     rule_items = "".join(f'<li><span class="n">{i}</span><span><b>{a}</b> {b}</span></li>' for i, (a, b) in enumerate(rules, 1))
     roles = [
         ("good", "Community editors", "Review new posts, pick the lead story and keep the paper sunny. A few minutes a day."),
-        ("research", "Student reporters", "Aspiring journalists in high school or college. Real bylines for your portfolio and "
-         "college applications, with a mentor to help."),
+        ("research", "Student reporters and interns", "Aspiring journalists in high school or college. Real bylines for your portfolio and "
+         f'college applications, with a mentor to help. Student interns coordinate stories from their school. <a class="link" href="{site}/write.html">Student writer guide</a>'),
         ("biz", "Business correspondents", "Marketers and shop owners who tell the stories of other local businesses, not just their own."),
         ("seniors", "Mentors and motivators", "Teachers, coaches, pastors and leaders who share wins and help new writers grow."),
     ]
@@ -3646,9 +3687,9 @@ def render_rules(cfg, stories):
 <section class="wrap formbox" id="apply"><h2 class="label">Apply to join</h2>{sunny_form(cfg, "apply-form", "Join the team", [
         field("name", "Your name", req=True),
         field("email", "Your email", "email", True, "We'll email you when you're verified."),
-        field("role", "Role", "select", True, opts=["Community editor", "Student reporter", "Business correspondent", "Mentor and motivator"]),
+        field("role", "Role", "select", True, opts=["Community editor", "Student reporter", "Student intern", "Business correspondent", "Mentor and motivator"]),
         field("town", "Town or neighborhood"),
-        field("summary", "What would you like to cover?", "textarea", True),
+        field("summary", "What would you like to cover?", "textarea", True, "Students: include your school and grade."),
         field("age", "Are you 18 or older?", "select", True, opts=["Yes", "No"], extra="18 or older"),
         field("guardian", "If not: parent or guardian's name and email", extra="Parent or guardian", wide=True),
         field("link", "Portfolio, school paper or social link", "url"),
@@ -3770,6 +3811,7 @@ def render_about(cfg, stories):
          f'<ul><li><a class="link" href="{e(site)}/">Good news</a> from around the county, every day.</li>'
          f'<li><a class="link" href="{e(site)}/events.html">Events and things to do</a>, posted by the people putting them on.</li>'
          f'<li><a class="link" href="{e(site)}/sports.html">High school sports</a>, athlete spotlights and tournament brackets.</li>'
+         f'<li><a class="link" href="{e(site)}/students.html">Student Voices</a>, stories written by local students.</li>'
          f'<li><a class="link" href="{e(site)}/pets.html">Tyger Paws</a>, a dog of the day from the Richland County Dog Shelter.</li>'
          f'<li><a class="link" href="{e(site)}/businesses.html">Local business spotlights</a>, '
          f'<a class="link" href="{e(site)}/fundraisers.html">fundraisers</a>, '
@@ -3837,6 +3879,222 @@ def render_contact(cfg, stories):
     return shell(cfg, f"Contact Us · {cfg['site_name']}",
                  "Contact the Sunny Mansfield editors: email, mail and Facebook. Share good news, fix or remove a post, or ask about "
                  "advertising in Mansfield and Richland County, Ohio.", f"{site}/contact.html", inner, stories, data=data)
+
+
+STUDENT_KINDS = [  # story type, line drawing, what it is, its spot in the writer guide
+    ("CTE Spotlight", "biz", "A different career-tech program every week: what students learn, build and fix, and how it "
+     "connects to jobs right here in Richland County.", "cte-spotlight"),
+    ("Yearbook Throwback", "seniors", "Pages from past yearbooks: what school looked like then, who was in the photos and "
+     "what's changed since.", "yearbook-throwback"),
+    ("Athlete's View", "sports", "Games, practices and seasons told by the athletes who play them. The moments the "
+     "scoreboard doesn't show.", "athletes-view"),
+    ("School News", "good", "Clubs, band, theater, art shows, service projects, awards and the teachers who go above and beyond.",
+     "school-news"),
+]
+
+
+CTE_CLUSTERS = ["Health Science", "Business", "Sales and Marketing", "Finance", "Information Technology",
+                "Science, Technology, Engineering and Math (STEM)", "Manufacturing", "Transportation and Logistics",
+                "Hospitality and Tourism", "Government", "Law and Public Safety", "Agriculture", "Human Services",
+                "Construction", "Education and Training", "Arts, Audio/Visual Technology and Communications"]
+CLUSTER_HTML = ('<p><b>The 16 career clusters.</b> Pick the one your program fits, and work through them over the year:</p>'
+                '<ol class="clusters">' + "".join(f"<li>{e(c)}</li>" for c in CTE_CLUSTERS) + "</ol>")
+
+
+def render_students(cfg, stories):
+    """students.html: Student Voices, stories written by Richland County students, with a way in for new writers."""
+    site = cfg["site_url"].rstrip("/")
+    kinds = "".join(f"""<article class="card role"><span class="art sm"><svg viewBox="0 0 100 100" aria-hidden="true">{ART[a]}</svg></span>
+<h3 class="hed">{e(k)}</h3><p class="dek">{e(d)}</p><a class="link" href="{e(site)}/write.html#{anchor}">How to write one</a></article>"""
+                    for k, a, d, anchor in STUDENT_KINDS)
+    mine = [s for s in stories if s["section"] == "students"]
+    grid = "".join(card(cfg, s) for s in mine) or first_post(cfg, "students", block=True)
+    inner = f"""{page_title("Written by students", "Student Voices", "Stories by Richland County students: the programs, people, games and memories that make our schools great.")}
+<section class="wrap latest"><h2 class="label">What students write</h2><div class="grid four">{kinds}</div></section>
+<section class="wrap latest"><h2 class="label">Latest from students</h2><div class="grid">{grid}</div></section>
+<section class="wrap civic">
+<div class="box" id="write"><span class="caps kicker">Students</span><h2 class="hed">Write for Student Voices</h2>
+<ol class="steps">
+<li><span class="n">1</span><span><b>Read the guide.</b> Five minutes, with a fill-in-the-blank template and a checklist.</span></li>
+<li><span class="n">2</span><span><b>Write your story.</b> 150 to 300 words in your own words, plus one good photo.</span></li>
+<li><span class="n">3</span><span><b>Send it.</b> No account needed. An editor reads it and it goes up with your name on it.</span></li>
+</ol>
+<div class="share"><a class="btn solid" href="{e(site)}/write.html">Student writer guide</a><a class="textbtn" href="{e(site)}/send-a-story.html">How to send a story</a></div></div>
+<div class="box" id="interns"><span class="caps kicker">Student interns</span><h2 class="hed">Run Student Voices at your school</h2>
+<p>Interns are the point of contact for their school. They plan the week's stories with their advisor, help new writers, check each
+story before it's sent and share the links once they're live. It's real editing experience for your resume and college applications.</p>
+<div class="share"><a class="btn solid" href="{e(site)}/rules.html#apply">Apply to be an intern</a><a class="textbtn" href="{e(site)}/write.html#interns">What interns do</a></div></div>
+</section>"""
+    about = "Stories written by Richland County, Ohio students: CTE program spotlights, yearbook throwbacks, athletes' own game stories and school news."
+    data = [{"@context": "https://schema.org", "@type": "CollectionPage", "name": "Student Voices", "url": f"{site}/students.html",
+             "description": about, "isPartOf": {"@id": f"{site}/#site"}},
+            breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Student Voices", f"{site}/students.html")])]
+    return shell(cfg, f"Student Voices: Stories by Richland County Students · {cfg['site_name']}", about,
+                 f"{site}/students.html", inner, stories, data=data)
+
+
+def render_write_guide(cfg, stories):
+    """write.html: the student writer guide. Plain steps a high schooler can follow from idea to published story."""
+    site = cfg["site_url"].rstrip("/")
+    mail = cfg["submit_email"]
+    email = f'<a class="link" href="mailto:{e(mail)}">{e(mail)}</a>'
+    send = f'<a class="link" href="{e(site)}/submit.html#student">the submit form</a>'
+    steps = [
+        ("Pick your story.", f'Choose one of the <a class="link" href="#story-types">four story types</a> below. Check with your '
+         "intern or advisor first so two people don't write the same story."),
+        ("Report it.", "Go see it in person. Talk to at least two people. Write down each person's full name and their grade or "
+         "job title, and ask how to spell it. Ask: “Can I quote you and use your photo?” Take your photos."),
+        ("Write it.", f'Use the <a class="link" href="#template">fill-in-the-blank template</a>. 150 to 300 words, in your own words.'),
+        ("Check it.", f'Go through the <a class="link" href="#checklist">checklist</a>, then have your intern or advisor read it.'),
+        ("Send it.", f"Open {send}. Student Voices is already picked. Choose your story type, type your headline, paste your story, "
+         "add one photo, fill in your school and name, check the \u201cI agree\u201d box and press <b>Send for review</b>. "
+         f'No account needed. <a class="link" href="{e(site)}/send-a-story.html">See it in pictures</a>.'),
+        ("Share it.", "An editor reads it, usually within a day, and it goes up on its own page with your name and a Share button. "
+         "Send the link to your family and post it."),
+    ]
+    step_items = "".join(f'<li><span class="n">{i}</span><span><b>{a}</b> {b}</span></li>' for i, (a, b) in enumerate(steps, 1))
+    kinds = {
+        "cte-spotlight": ("CTE Spotlight", "One program a week. Show the community what students learn and make. "
+                          "Rotate through the career clusters below so every program gets its turn.", [
+            "What is the program called, and what do students learn?",
+            "What are students building, fixing or making right now?",
+            "Ask a student: why did you pick this program, and what's your favorite project?",
+            "Ask the teacher: what do you want the community to know?",
+            "What certifications, competitions or jobs does it lead to in Richland County?",
+            "Photos: students working with their hands, safety gear on.",
+        ]),
+        "yearbook-throwback": ("Yearbook Throwback", "One page or photo from a past yearbook, then and now.", [
+            "Name the school and the year, like “from the 1994 yearbook.”",
+            "What was happening at school and around town that year?",
+            "What's the same today, and what's changed?",
+            "If you can, find someone from that year (a teacher, alum or family member) and ask what they remember.",
+            "Photo: a clear, flat photo of the page with no glare. Only share pages your school says are OK.",
+            "Keep it kind: no jokes about anyone's hair, clothes or looks.",
+        ]),
+        "athletes-view": ("Athlete's View", "Written by an athlete, in your own voice (“I” and “we”).", [
+            "Pick one game, practice, moment or teammate.",
+            "Give the facts: the sport, the teams, the date, the place and the final score.",
+            "What did it feel like? What happened that the crowd didn't see?",
+            "Who do you want to thank: coaches, teammates, parents, the student section?",
+            "Keep it positive about the other team, the officials and your coaches. No trash talk.",
+        ]),
+        "school-news": ("School News", "Anything good happening at your school.", [
+            "Clubs, band, choir, theater, art shows, service projects, awards, or a teacher or staff member who goes above and beyond.",
+            "Answer who, what, when, where and why it matters.",
+            "Include at least one quote.",
+        ]),
+    }
+    kind_html = "".join(f'<h3 id="{k}">{e(t)}</h3><p>{e(d)}</p><ul>' + "".join(f"<li>{e(x)}</li>" for x in items) + "</ul>"
+                        + (CLUSTER_HTML if k == "cte-spotlight" else "") for k, (t, d, items) in kinds.items())
+    check = [
+        "It's true, kind and about Richland County.",
+        "Every name is spelled right, with a grade or job title.",
+        "There's at least one quote, and the person said you could use it.",
+        "It's all in your own words. Nothing copied from another website or article.",
+        "It's 150 to 300 words, with a blank line between paragraphs.",
+        "Everyone in your photo said OK, and a parent said OK for anyone under 18. Ask your advisor to make sure no one pictured "
+        "is on your school's “no photos” list.",
+        "There are no phone numbers, emails or home addresses in it.",
+        "Your intern or advisor read it.",
+    ]
+    inner = f"""{page_title("Let's write!", "Student writer guide", "Everything you need to write for Sunny Mansfield, in six easy steps. It takes about five minutes to read.")}
+<section class="wrap legaltext guide">
+<div class="tmpl jump"><b>Quick links</b>
+<ul><li><a class="link" href="{e(site)}/submit.html#student">Send a story</a> (no account needed)</li>
+<li><a class="link" href="{e(site)}/send-a-story.html">How to send a story, in pictures</a></li>
+<li><a class="link" href="{e(site)}/students.html">See Student Voices</a></li>
+<li><a class="link" href="{e(site)}/rules.html#apply">Apply to be a verified writer or intern</a></li>
+<li><a class="link" href="{e(site)}/rules.html#rules">The Sunny rules</a></li>
+<li>Questions: {email}</li></ul></div>
+<h2 class="hed" id="steps">Six steps from idea to published</h2>
+<ol class="steps">{step_items}</ol>
+<h2 class="hed" id="story-types">The four story types</h2>
+<p>Pick the one that fits. Each comes with the questions to ask.</p>
+{kind_html}
+<h2 class="hed" id="template">Fill-in-the-blank template</h2>
+<p>Copy this, fill in the brackets, then make it sound like you.</p>
+<div class="tmpl">
+<p><b>Headline:</b> [Who] [does what]. Under 12 words, like “[School] [program] students [build, win, open or raise something].”</p>
+<p><b>Paragraph 1, the opener:</b> Who did what, where and when, in one or two sentences.</p>
+<p><b>Paragraph 2, the details:</b> What it looks like, how it works and why it matters.</p>
+<p><b>Paragraph 3, a quote:</b> “[Their exact words],” said [full name], a [grade or job title] at [school].</p>
+<p><b>Paragraph 4, what's next:</b> What happens next, or how people can see it, help or join.</p>
+<p><b>Photo credit:</b> Photo by [name].</p>
+</div>
+<h2 class="hed" id="checklist">Before you press Send</h2>
+<ul class="checks">{"".join(f"<li>{e(x)}</li>" for x in check)}</ul>
+<h2 class="hed" id="photos">Photo tips</h2>
+<ul><li>Hold your phone sideways.</li>
+<li>Get close. Faces and hands at work beat a wide shot of a room.</li>
+<li>Shoot near a window or outside, and turn off the flash.</li>
+<li>One great photo beats five OK ones. JPG or PNG under 6 MB. The form removes hidden location data for you.</li>
+<li>Only use photos you took or have permission to use, and say who took it.</li></ul>
+<h2 class="hed" id="headlines">Headline tips</h2>
+<ul><li>Say who did what, in under 12 words.</li>
+<li>Use an action word: builds, wins, opens, raises, celebrates.</li>
+<li>Skip “amazing,” “awesome” and ALL CAPS.</li></ul>
+<h2 class="hed" id="interns">For student interns</h2>
+<p>Interns keep the stories coming from their school and are the point of contact for Sunny Mansfield. A simple week:</p>
+<ul><li><b>Monday:</b> plan the week's stories with your advisor. Aim for one CTE Spotlight every week, plus anything else that's happening.</li>
+<li><b>Midweek:</b> check in with your writers and point new ones to this guide.</li>
+<li><b>Before sending:</b> read each story against the checklist and make sure every photo has an OK.</li>
+<li><b>Friday:</b> make sure the week's stories are sent, then share the links once they're up.</li>
+<li><b>New writers:</b> they can send stories right away. Email their names to {email} so we know to watch for them.</li></ul>
+<h2 class="hed" id="verified">Writing every week? Get verified</h2>
+<p>Verified writers' stories go live on their own, without waiting for an editor. <a class="link" href="{e(site)}/rules.html#apply">Apply here</a>
+and choose <b>Student reporter</b> or <b>Student intern</b>. Put your school and grade in your application. If you're under 18,
+add a parent or guardian's name and email. Once an editor verifies you, you'll get a way to sign in at the top of the submit form.</p>
+<h2 class="hed" id="advisors">For teachers and advisors</h2>
+<ul><li>Every story is read by an editor before it goes up, unless the writer has been verified.</li>
+<li>We need a parent or guardian's OK for any writer, or anyone pictured, under 18.</li>
+<li>You can ask us to fix or take down any post at any time by emailing {email} or using
+“Report or remove a post” at the bottom of any page. We usually act the same day.</li>
+<li>See everything students have written on <a class="link" href="{e(site)}/students.html">Student Voices</a>.</li></ul>
+<h2 class="hed" id="faq">Questions</h2>
+<p><b>How long until my story is up?</b> An editor reads it, usually within a day. Verified writers go live in about 20 minutes.</p>
+<p><b>Is my email public?</b> Never. Only editors see it.</p>
+<p><b>What shows with my story?</b> Your name the way you typed it, your role, your school and class year, the date, your photo and your words.</p>
+<p><b>I made a mistake.</b> Email {email} or use “Report or remove a post” and we'll fix it.</p>
+<p><b>My idea isn't on the list.</b> Send it anyway as School News.</p>
+<div class="share"><a class="btn solid" href="{e(site)}/submit.html#student">Send your story</a><a class="textbtn" href="{e(site)}/students.html">See Student Voices</a></div>
+</section>"""
+    desc = ("How Richland County students write for Sunny Mansfield: six easy steps, four story types (CTE Spotlight, Yearbook "
+            "Throwback, Athlete's View, School News), a fill-in-the-blank template and a checklist.")
+    data = [{"@context": "https://schema.org", "@type": "WebPage", "name": "Student writer guide", "url": f"{site}/write.html",
+             "description": desc, "isPartOf": {"@id": f"{site}/#site"}},
+            breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Student Voices", f"{site}/students.html"),
+                         ("Student writer guide", f"{site}/write.html")])]
+    return shell(cfg, f"Student Writer Guide: Write for Sunny Mansfield", desc, f"{site}/write.html", inner, stories, data=data)
+
+
+PICTURE_STEPS = [  # assets/guide/step-N.jpg, captured from the real form
+    "Open the student writer guide and tap <b>Send a story</b>.",
+    "Or, on the Submit page, tap <b>Write a story</b> on the Student Voices card.",
+    "<b>Student Voices</b> is already picked. Type your headline and paste your story. Leave a blank line between paragraphs.",
+    "Add one photo, pick your <b>story type</b>, and type your <b>school</b> and class year.",
+    "Under 18? Choose <b>Yes</b> and add a parent or guardian's name. Add the teacher or advisor who read it. Only editors see these.",
+    "Type your name the way it should appear, choose <b>Student reporter</b>, add your email, check <b>I agree</b> and press <b>Send for review</b>.",
+    "You'll see <b>Got it.</b> Your story is in the review queue. An editor reads it, usually within a day.",
+    "Once it's approved, your story gets its own page with your name, school and a Share button. Send the link to family and friends.",
+]
+
+
+def render_send_pictures(cfg, stories):
+    """send-a-story.html: the submit form, step by step, in screenshots. For students, interns and advisors."""
+    site = cfg["site_url"].rstrip("/")
+    figs = "".join(f'<figure class="picstep"><figcaption><span class="n">{i}</span>{t}</figcaption>'
+                   f'<img src="/assets/guide/step-{i}.jpg" alt="Step {i}" width="390" loading="{"eager" if i < 3 else "lazy"}"></figure>'
+                   for i, t in enumerate(PICTURE_STEPS, 1))
+    inner = f"""{page_title("Step by step", "How to send a story", "Sending a Student Voices story takes about two minutes. Here's every step, in pictures.")}
+<section class="wrap"><div class="picsteps">{figs}</div>
+<div class="share picshare"><a class="btn solid" href="{e(site)}/submit.html#student">Send your story</a><a class="textbtn" href="{e(site)}/write.html">Student writer guide</a></div></section>"""
+    desc = "How Richland County students send a story to Sunny Mansfield's Student Voices, step by step with pictures of the form."
+    data = [{"@context": "https://schema.org", "@type": "WebPage", "name": "How to send a story", "url": f"{site}/send-a-story.html",
+             "description": desc, "isPartOf": {"@id": f"{site}/#site"}},
+            breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Student Voices", f"{site}/students.html"),
+                         ("How to send a story", f"{site}/send-a-story.html")])]
+    return shell(cfg, f"How to Send a Student Voices Story, Step by Step · {cfg['site_name']}", desc,
+                 f"{site}/send-a-story.html", inner, stories, data=data)
 
 
 def render_legal(cfg, stories, kind):
@@ -3971,7 +4229,8 @@ def athlete_card(cfg, s):
 def render_sports(cfg, stories, brackets):
     site = cfg["site_url"].rstrip("/")
     athletes = [s for s in stories if s.get("athlete") is not None]
-    news = [s for s in stories if s["section"] == "sports" and s.get("athlete") is None]
+    news = [s for s in stories if (s["section"] == "sports" and s.get("athlete") is None)
+            or (s.get("student") or {}).get("Story type") == "Athlete's View"]
     add = (f'<a class="slide flyer add" href="{e(site)}/submit.html#athlete"><span class="flyer-img"><span class="plus">+</span></span>'
            f'<span class="hed">Spotlight an athlete</span><span class="dek">Free. Parents, coaches and teammates welcome.</span></a>')
     spot = rail("Athlete spotlights", "".join(athlete_card(cfg, s) for s in athletes) + add, rid="athletes", kind="athletes")
@@ -3983,7 +4242,9 @@ def render_sports(cfg, stories, brackets):
 {banner(cfg, "A5")}
 {spot}
 <section class="wrap latest" id="brackets"><h2 class="label">Brackets</h2>{boxes}</section>
-<section class="wrap latest"><h2 class="label">Sports news</h2><div class="grid">{grid}</div></section>"""
+<section class="wrap latest"><h2 class="label">Sports news</h2><div class="grid">{grid}</div></section>
+<section class="wrap latest"><p class="note" style="text-align:center">Student athletes: tell us about the game from the field. 
+<a class="link" href="{e(site)}/write.html#athletes-view">Write an Athlete's View</a></p></section>"""
     return shell(cfg, f"Richland County High School Sports · {cfg['site_name']}",
                  "Richland County, Ohio high school sports: athlete spotlights, signing days, playoff brackets and good sports news "
                  "from Mansfield, Ontario, Lexington, Madison, Clear Fork and more.",
@@ -4850,7 +5111,7 @@ def render_story_page(cfg, s, stories):
     section = SECTION_NAMES.get(s["section"], "Celebrations of Life" if life else "Good News")
     by = f'By {e(s["source"])}' if s.get("community") else e(s["source"])
     bits = [by] + ([e(s["role"])] if s.get("community") and s.get("role") else []) + [s["date"].strftime("%B %-d, %Y")]
-    facts = s.get("athlete") or {}
+    facts = s.get("athlete") or s.get("student") or {}
     facts_html = ('<dl class="story-facts">' + "".join(f"<div><dt>{e(k)}</dt><dd>{e(v)}</dd></div>" for k, v in facts.items() if v)
                   + "</dl>") if facts else ""
     if s.get("community") and s.get("body"):
@@ -4948,8 +5209,8 @@ def story_title(cfg, s):
 
 
 def story_desc(cfg, s):
-    a = s.get("athlete") or {}
-    facts = ", ".join(x for x in (a.get("School"), a.get("Sport"), f"Class of {a['Class of']}" if a.get("Class of") else "") if x)
+    a = s.get("athlete") or s.get("student") or {}
+    facts = ", ".join(x for x in (a.get("School"), a.get("Sport") or a.get("Story type"), f"Class of {a['Class of']}" if a.get("Class of") else "") if x)
     text = s["summary"] or f"Good news from {cfg['site_name']}"
     return (f"{facts}. {text}" if facts else text)[:300]
 
@@ -5055,7 +5316,7 @@ def merge_community(cfg, stories, community):
     return sorted(stories + community, key=lambda s: s["date"], reverse=True)
 
 
-PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("pets.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
+PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("students.html", "daily", "0.7"), ("write.html", "monthly", "0.5"), ("send-a-story.html", "monthly", "0.4"), ("pets.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
          ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"), ("homes.html", "daily", "0.7"), ("watch.html", "daily", "0.7"),
          ("submit.html", "monthly", "0.6"), ("birthdays.html", "daily", "0.6"), ("rules.html", "monthly", "0.4"), ("about.html", "monthly", "0.5"), ("contact.html", "yearly", "0.4"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
@@ -5122,6 +5383,7 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 - [Front page]({site}/): today's good news, the editor's headline, local business, causes, sports and events
 - [Events]({site}/events.html): things to do in Mansfield and Richland County this weekend and coming up
 - [Sports]({site}/sports.html): athlete spotlights, tournament brackets and good sports news
+- [Student Voices]({site}/students.html): stories written by Richland County students, and the [student writer guide]({site}/write.html)
 - [Tyger Paws]({site}/pets.html): adoptable dogs at the Richland County Dog Shelter, a dog of the day, and adoption stories
 - [Business spotlights]({site}/businesses.html): free pages for Richland County businesses
 - [Fundraisers]({site}/fundraisers.html): local causes posted by neighbors (not run or verified by Sunny Mansfield)
@@ -5304,6 +5566,9 @@ def main():
     (out / "rules.html").write_text(rebase(render_rules(cfg, stories)))
     (out / "about.html").write_text(rebase(render_about(cfg, stories)))
     (out / "contact.html").write_text(rebase(render_contact(cfg, stories)))
+    (out / "students.html").write_text(rebase(render_students(cfg, stories)))
+    (out / "write.html").write_text(rebase(render_write_guide(cfg, stories)))
+    (out / "send-a-story.html").write_text(rebase(render_send_pictures(cfg, stories)))
     for kind in LEGAL:
         (out / f"{kind}.html").write_text(rebase(render_legal(cfg, stories, kind)))
     (out / "fundraisers.html").write_text(rebase(render_fundraisers(cfg, got["fundraisers"], stories)))
