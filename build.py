@@ -2869,10 +2869,23 @@ def render_watch_index(cfg, videos, stories):
 {body}
 <section class="wrap latest"><p class="note" style="text-align:center">Have a Mansfield show, podcast or video? <a class="link" href="{e(site)}/submit.html">Send it to us</a> and we may feature it here.</p></section>"""
     data = {"@context": "https://schema.org", "@type": "CollectionPage", "name": "Watch Mansfield", "url": f"{site}/watch.html",
-            "hasPart": [{"@type": "VideoObject", "name": v.get("title") or "", "url": watch_url(cfg, v)} for v in videos]}
+            "hasPart": [video_ld(cfg, v) for v in videos if v.get("date")]}
     return shell(cfg, f"Watch Mansfield: local videos and podcasts · {cfg['site_name']}",
                  "Podcasts, shows and videos made by people in Mansfield and Richland County, Ohio. Local interviews, sports talk, "
                  "music and stories from around town, all in one place.", f"{site}/watch.html", inner, stories, data=data)
+
+
+def video_ld(cfg, v, image=None):
+    """VideoObject fields Google needs for a video result: name, description, thumbnailUrl, uploadDate, embedUrl."""
+    site = cfg["site_url"].rstrip("/")
+    data = {"@type": "VideoObject", "name": v.get("title") or "Watch Mansfield", "description": watch_desc(v),
+            "thumbnailUrl": [image or (v["thumb"] if (v.get("thumb") or "").startswith("https://") else site + "/og.png")],
+            "embedUrl": v["src"].split("?")[0], "url": watch_url(cfg, v), "publisher": {"@id": f"{site}/#org"}}
+    if v.get("date"):
+        data["uploadDate"] = v["date"]
+    if v.get("url", "").startswith("http"):
+        data["contentUrl"] = v["url"]
+    return data
 
 
 def watch_url(cfg, v):
@@ -3074,13 +3087,7 @@ def render_watch_page(cfg, v, videos, stories, has_image):
                       + f'</span><span><span class="hed">{e(o.get("title") or "")}</span><span class="caps host">{e(o.get("host") or "")}</span></span></a>'
                       for o in others) + f'</div><a class="explore" href="{e(site)}/watch.html">All videos <span aria-hidden="true">&rsaquo;</span></a></aside>') if others else ""
     image = f"{site}/{v['page'][:-5]}.jpg" if has_image else None
-    data = {"@context": "https://schema.org", "@type": "VideoObject", "name": title, "description": watch_desc(v),
-            "thumbnailUrl": [image or (v["thumb"] if v["thumb"].startswith("https://") else site + "/og.png")],
-            "embedUrl": v["src"].split("?")[0], "url": url, "publisher": {"@id": f"{site}/#org"}}
-    if v.get("date"):
-        data["uploadDate"] = v["date"]
-    if v.get("url", "").startswith("http"):
-        data["contentUrl"] = v["url"]
+    data = {"@context": "https://schema.org", **video_ld(cfg, v, image)}
     inner = f"""<section class="wrap watch-layout{"" if others else " solo"}"><article class="watch-main">
 {watch_card(cfg, [v], solo=True)}
 <header class="watch-head"><a class="caps kicker" href="{e(site)}/watch.html">Watch Mansfield</a><h1 class="hed">{e(title)}</h1>
@@ -4566,7 +4573,8 @@ def render_town(cfg, name, about, stories, businesses, funds):
 def event_data(cfg, f):
     site = cfg["site_url"].rstrip("/")
     town = f.get("town") or "Mansfield"
-    ev = {"@context": "https://schema.org", "@type": "Event", "name": f["title"], "startDate": f["day"].strftime("%Y-%m-%d"),
+    day = f["day"].strftime("%Y-%m-%d")
+    ev = {"@context": "https://schema.org", "@type": "Event", "name": f["title"], "startDate": day, "endDate": day,
           "eventStatus": "https://schema.org/EventScheduled",
           "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
           "location": {"@type": "Place", "name": f"{town}, Ohio", "address": {"@type": "PostalAddress",
@@ -4574,6 +4582,8 @@ def event_data(cfg, f):
           "url": f"{site}{event_url(f)}", "description": " ".join((f.get("summary") or f["title"]).split())[:500]}
     if (f.get("image") or "").startswith("https://"):
         ev["image"] = [f["image"]]
+    if f.get("by"):
+        ev["organizer"] = {"@type": "Organization", "name": f["by"]}
     return ev
 
 
