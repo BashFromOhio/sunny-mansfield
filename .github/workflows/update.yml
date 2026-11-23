@@ -13,7 +13,7 @@ concurrency: { group: pages, cancel-in-progress: true }
 jobs:
   build:
     runs-on: ubuntu-latest
-    environment: { name: github-pages, url: "${{ steps.deploy.outputs.page_url }}" }
+    environment: { name: github-pages, url: "${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url }}" }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -26,5 +26,14 @@ jobs:
           SITE_URL: ${{ steps.pages.outputs.base_url }}
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }
+      # GitHub sometimes can't see a just-uploaded artifact yet ("Fetching artifact metadata failed"),
+      # which failed about 1 run in 6. Give it a moment, and try once more if the first deploy fails.
+      - run: sleep 10
       - id: deploy
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - if: steps.deploy.outcome == 'failure'
+        run: sleep 30
+      - id: deploy2
+        if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
