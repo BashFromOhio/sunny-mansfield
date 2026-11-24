@@ -4,6 +4,7 @@ build.py calls make_post_images(); each image lands at site/p/<story id>.jpg and
 so an RSS-to-Facebook service can post the framed picture instead of a bare link.
 """
 import io
+import re
 import urllib.request
 from datetime import date, datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
@@ -89,7 +90,27 @@ def footer(im, d, credit, center=False):
         spaced(d, (W - 80, y + 78), credit, font("Josefin-700", 13), MUTED, anchor="r")
 
 
-def photo_post(s, section, photo, credit):
+def collage(photos, size=(W - 160, 720)):
+    """Up to 4 photos in one picture: 2 side by side, 3 as one big and two small, 4 in a grid."""
+    w, h, gap = size[0], size[1], 8
+    pics = [ImageOps.exif_transpose(p).convert("RGB") for p in photos[:4]]
+    im = Image.new("RGB", size, CREAM)
+    half_w, half_h = (w - gap) // 2, (h - gap) // 2
+    if len(pics) == 2:
+        boxes = [(0, 0, half_w, h), (half_w + gap, 0, half_w, h)]
+    elif len(pics) == 3:
+        big = (w * 3) // 5
+        boxes = [(0, 0, big, h), (big + gap, 0, w - big - gap, half_h), (big + gap, half_h + gap, w - big - gap, half_h)]
+    else:
+        boxes = [(0, 0, half_w, half_h), (half_w + gap, 0, half_w, half_h), (0, half_h + gap, half_w, half_h),
+                 (half_w + gap, half_h + gap, half_w, half_h)]
+    for pic, (x, y, bw, bh) in zip(pics, boxes):
+        im.paste(ImageOps.fit(pic, (bw, bh), centering=(0.5, 0.4)), (x, y))
+    return im
+
+
+def photo_post(s, section, photo, credit, count=0):
+    """count: how many photos the story has, when photo is a collage of the first few ("12 PHOTOS" badge)."""
     im = stripes()
     d = ImageDraw.Draw(im)
     box = (80, 80, W - 80, 800)
@@ -97,6 +118,13 @@ def photo_post(s, section, photo, credit):
                        centering=(0.5, 0.4))
     im.paste(pic, box[:2])
     d.rectangle((box[0] - 4, box[1] - 4, box[2] + 3, box[3] + 3), outline=BROWN, width=5)
+    if count > 1:  # a tag on the photo that says there are more on the site
+        tag = f"{count} PHOTOS \u00b7 SEE THEM ALL ON SUNNYMANSFIELD.COM" if count > 4 else f"{count} PHOTOS ON SUNNYMANSFIELD.COM"
+        f = font("Josefin-700", 22)
+        tw = d.textlength(tag, font=f) + len(tag) * 22 * 0.14
+        x1, y1 = box[2] - 20, box[3] - 20
+        d.rectangle((x1 - tw - 36, y1 - 48, x1, y1), fill=ORANGE)
+        spaced(d, (x1 - 18, y1 - 24), tag, f, CREAM, anchor="r")
     spaced(d, (box[2], box[3] + 16), f"Photo: {s['source']}", font("Josefin-700", 14), MUTED, anchor="r")
     spaced(d, (80, 850), section, font("Josefin-700", 22), ORANGE)
     f, lines = headline(d, s["title"], W - 160, (62, 56, 50, 44), 3)
@@ -156,7 +184,12 @@ def make_post_images(stories, out, section_names, ua, credit, outlet_photos=Fals
         own = s.get("community") or outlet_photos
         photo = load_photo(s.get("image"), ua) if own else None
         section = section_names.get(s["section"], "Good News")
-        im = photo_post(s, section, photo, credit) if photo else text_post(s, section, credit)
+        count = 0
+        if photo and s.get("community") and len(s.get("gallery") or []) > 1:
+            more = [p for p in (load_photo(x, ua) for x in s["gallery"][1:4]) if p]
+            if more:  # preview the first few photos; the rest are on the story page
+                photo, count = collage([photo] + more), len(s["gallery"])
+        im = photo_post(s, section, photo, credit, count) if photo else text_post(s, section, credit)
         im.save(folder / f"{s['id']}.jpg", quality=86, optimize=True, progressive=False)
         s["post_image"] = f"p/{s['id']}.jpg"
         return bool(photo)
@@ -190,6 +223,93 @@ def fb_link(url, campaign):
     base, _, frag = url.partition("#")
     sep = "&" if "?" in base else "?"
     return f"{base}{sep}utm_source=facebook&utm_medium=social&utm_campaign={campaign}" + (f"#{frag}" if frag else "")
+
+
+# ---- Facebook captions: the headline once, one or two whole sentences, then the link ----
+_ABBR = re.compile(r"\b(?:Mr|Mrs|Ms|Dr|St|Jr|Sr|Ave|Rd|Blvd|Mt|No|Inc|Co|Corp|Ltd|vs|Jan|Feb|Mar|Apr|Jun|Jul|Aug|"
+                   r"Sep|Sept|Oct|Nov|Dec|U\.S|a\.m|p\.m|[A-Z])\.$")
+
+
+def _words(text):
+    return re.sub(r"[^a-z0-9 ]+", " ", (text or "").lower()).split()
+
+
+def _sentences(text):
+    """Split prose into sentences without breaking on "Dr." "St." "Nov." "U.S." and initials."""
+    out, cur = [], ""
+    for piece in re.split(r"(?:(?<=[.!?])|(?<=[.!?][\"\u201d')]))\s+", text):
+        cur = f"{cur} {piece}".strip() if cur else piece
+        if not _ABBR.search(cur.rstrip("\"\u201d')")):
+            out.append(cur)
+            cur = ""
+    return out + ([cur] if cur else [])
+
+
+def teaser(title, text, limit=280):
+    """One or two whole sentences from a story for a Facebook caption. Drops a first line that only repeats the
+    headline (people often paste the headline at the top of their story), and never ends mid-sentence with "..."."""
+    paras = [p.strip() for p in re.split(r"\r?\n+", text or "") if p.strip()]
+    head = _words(title)
+    norm = lambda w: re.sub(r"[^a-z0-9]+", "", w.lower())
+    while paras and len(head) >= 4:
+        toks = paras[0].split()
+        k = 0  # how many leading words repeat the headline
+        while k < len(toks) and k < len(head) and norm(toks[k]) == head[k]:
+            k += 1
+        if k < max(4, int(len(head) * 0.6)):
+            break
+        rest = " ".join(toks[k:])
+        if not re.search(r"[.!?]\s+\S", rest):
+            paras.pop(0)  # only the headline (maybe with a subtitle like ", Serving 1,577 Neighbors"): skip it
+            continue
+        # The whole headline runs straight into the story ("Headline, Serving 1,577 Neighbors The spirit..."):
+        # drop the headline words, but only when what follows starts fresh, never mid-sentence.
+        if k == len(head) and re.match(r"[,:;\-\u2013\u2014]|[A-Z0-9]", rest):
+            paras[0] = rest.lstrip(" ,:;-\u2013\u2014")
+        break
+    body = " ".join(paras).replace("\u2026", "").strip()
+    body = re.sub(r"\s*\.\.\.$", ".", body)
+    picked = []
+    for sent in _sentences(body):
+        if picked and len(" ".join(picked + [sent])) > limit:
+            break
+        picked.append(sent)
+        if len(" ".join(picked)) >= limit * 0.55:
+            break
+    if len(picked) > 1 and not re.search(r"[.!?][\"\u201d')]?$", picked[-1]):
+        picked.pop()  # the feed cut its summary off mid-sentence; end on the last whole sentence
+    text = " ".join(picked)
+    if len(text) > limit + 120:  # one giant run-on sentence: end it at a word, honestly marked
+        text = text[:limit].rsplit(" ", 1)[0].rstrip(",;:") + "\u2026"
+    return text
+
+
+def fb_caption(title, text, link, tags, cta="\U0001F449 Full story:", lead="", campaign="post"):
+    """A tidy Facebook post: optional lead line, the headline with the link right under it (so it shows before
+    Facebook's "See more"), a short teaser, then hashtags. Site links get tracking tags for Google Analytics."""
+    top = title.strip()
+    if link:
+        top += f"\n{cta} {fb_link(link, campaign)}" if cta else f"\n{fb_link(link, campaign)}"
+    bits = ([lead] if lead else []) + [top]
+    short = teaser(title, text)
+    if short:
+        bits.append(short)
+    if tags:
+        bits.append(tags)
+    return "\n\n".join(bits)
+
+
+def photo_cta(s):
+    n = len(s.get("gallery") or [])
+    if n > 1:
+        return f"\U0001F4F8 See all {n} photos and the full story:"
+    return "\U0001F4F8 Photos and the full story:" if s.get("image") else "\U0001F449 Full story:"
+
+
+def story_text(s):
+    """The fullest text we have for a story: a neighbor's whole post, or the feed summary."""
+    return "\n".join(s.get("body") or []) or s.get("summary") or ""
+
 THEMES = {  # weekday (Monday = 0): theme name, hashtag
     0: ("Neighbor news", "#GoodNews"),
     1: ("Shop Local Tuesday", "#ShopLocal"),
@@ -481,14 +601,14 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
             photo = load_photo(biz.get("image") if (biz.get("image") or "").startswith("https://") else None, ua)
             im = photo_post(fake, "Shop local", photo, credit) if photo else text_post(fake, "Business spotlight", credit, "Shop local!")
             link, title = f"{site}/b/{biz['slug']}.html", biz["name"]
-            text = f"Shop Local Tuesday: {biz['name']}. {biz.get('what') or ''}".strip()
+            text = f"{biz['name']}\n\n{teaser(biz['name'], biz.get('what') or '')}".strip()
     elif wd == 2 and flyers:
         f = flyers[0]
         when = f["day"].strftime("%A, %B %-d") if f.get("day") else "coming up"
         fake = {"title": f["title"], "source": f.get("town") or ""}
         photo = load_photo(f.get("image"), ua)
         im = photo_post(fake, f"Event · {when}", photo, credit) if photo else text_post(fake, f"Event · {when}", credit, "Save the date!")
-        link, title, text = f"{site}/#events", f["title"], f"Coming up {when}: {f['title']}. {f.get('summary') or ''}".strip()
+        link, title, text = f"{site}/#events", f["title"], f"\U0001F4C5 {when}\n\n{f['title']}\n\n{teaser(f['title'], f.get('summary') or '')}".strip()
     elif wd == 4:
         top = [s for s in stories if s["section"] != "life"][:5]
         if top:
@@ -501,7 +621,7 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
         photo = load_photo(f.get("image"), ua)
         im = photo_post(fake, "Fundraiser", photo, credit) if photo else text_post(fake, "Fundraiser", credit, "Lend a hand!")
         link, title = f"{site}/give/{f['id']}.html", f["title"]
-        text = f"Neighbors helping neighbors: {f['title']}. {f.get('summary') or ''} Give if you can, share if you can't.".strip()
+        text = f"{f['title']}\n\n{teaser(f['title'], f.get('summary') or '')}\n\nGive if you can, share if you can't.".replace("\n\n\n\n", "\n\n")
     if im is None:
         s = {0: pick(stories, "hoods", "good"), 3: pick(stories, "sports", athletes=True) or pick(stories, "sports"),
              6: pick(stories, "good", "biz", "seniors")}.get(wd) or pick(stories, "good", "hoods", "biz", "seniors", "sports") or next((x for x in stories if x["section"] != "life"), None)
@@ -512,7 +632,7 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
         section = section_names.get(s["section"], "Good News")
         im = photo_post(s, section, photo, credit) if photo else text_post(s, section, credit)
         link, title = page_url(s), s["title"]
-        text = f"{s['title']}. {s.get('summary') or ''}".strip()
+        text = f"{s['title']}\n\n{teaser(s['title'], story_text(s))}".strip()
     folder = Path(out) / "social"
     folder.mkdir(parents=True, exist_ok=True)
     name = f"{day:%Y-%m-%d}.jpg"
@@ -546,7 +666,8 @@ def make_top_story_feed(cfg, stories, out, page_url, note=print):
     if fresh:
         s = fresh[0]
         link, image = page_url(s), f"{site}/{s['post_image']}"
-        caption = f"{s['title']}\n👉 Full story: {fb_link(link, 'top')}\n\n{s.get('summary') or ''}\n\n#SunnyMansfield #MansfieldOhio #GoodNews"
+        cta = photo_cta(s) if s.get("community") else "\U0001F449 Read more:"
+        caption = fb_caption(s["title"], story_text(s), link, "#SunnyMansfield #MansfieldOhio #GoodNews", cta, campaign="top")
         item = (f"<item><title>{e(s['title'])}</title><link>{e(image)}</link><guid isPermaLink=\"false\">sunny-top2-{s['id']}</guid>"
                 f"<pubDate>{format_datetime(noon)}</pubDate><description>{e(caption)}</description>"
                 f"<enclosure url=\"{e(image)}\" type=\"image/jpeg\" length=\"0\"/>"
@@ -596,25 +717,29 @@ def make_community_feed(cfg, stories, flyers, funds, businesses, out, page_url, 
         if s.get("community") and s.get("post_image"):
             link = page_url(s)
             items.append((s["date"], f"c-{s['id']}", s["title"], link, f"{site}/{s['post_image']}",
-                          f"{s['title']}\n\n{s.get('summary') or ''}\n\nRead more: {link}\n\n{tags}"))
+                          fb_caption(s["title"], story_text(s), link, tags, photo_cta(s), campaign="community")))
     for f in flyers:
         when = f["day"].strftime("%A, %B %-d") if f.get("day") else "Coming up"
         img = framed(f"f{f['id']}", f["title"], f.get("town") or "", f"Event · {when}", f.get("image"), "Save the date!")
         items.append((f["date"], f"f-{f['id']}", f["title"], f"{site}/e/{f['id']}.html", img,
-                      f"{when}: {f['title']}\n\n{f.get('summary') or ''}\n\nMore local events: {site}/#events\n\n{tags} #ThingsToDoMansfield"))
+                      fb_caption(f["title"], f.get("summary") or "", f"{site}/e/{f['id']}.html", f"{tags} #ThingsToDoMansfield",
+                                 "\U0001F449 Details:", lead=f"\U0001F4C5 {when}", campaign="event")))
     for f in funds:
         link = f"{site}/give/{f['id']}.html"
         img = framed(f"d{f['id']}", f["title"], f.get("by") or "", "Fundraiser", f.get("image"), "Lend a hand!")
         give = f"\n\nGive here: {f['link']}" if f.get("link") else ""
         items.append((f["date"], f"d-{f['id']}", f["title"], link, img,
-                      f"Neighbors helping neighbors: {f['title']}\n\n{f.get('summary') or ''}{give}\n\nGive if you can, share if you can't.\n\n{tags} #GiveLocal"))
+                      fb_caption(f["title"], f.get("summary") or "", link,
+                                 f"{give.strip()}\n\nGive if you can, share if you can't.\n\n{tags} #GiveLocal".lstrip(),
+                                 "\U0001F449 Read more:", lead="\U0001F49B Neighbors helping neighbors", campaign="fundraiser")))
     for b in businesses:
         if b.get("community"):  # spotlights sent in through the site
             link = f"{site}/b/{b['slug']}.html"
             img = framed(f"b{b['slug']}", b["name"], b.get("neighborhood") or "", "Business spotlight",
                          b.get("image") if (b.get("image") or "").startswith("https://") else None, "Shop local!")
             items.append((b.get("date") or datetime.now(timezone.utc), f"b-{b['slug']}", b["name"], link, img,
-                          f"Shop local: {b['name']}\n\n{b.get('what') or ''}\n\nRead more: {link}\n\n{tags} #ShopLocal"))
+                          fb_caption(b["name"], b.get("what") or "", link, f"{tags} #ShopLocal",
+                                     "\U0001F449 Read more:", lead="\U0001F6CD Shop local", campaign="spotlight")))
     items.sort(key=lambda x: x[0], reverse=True)
     body = "".join(
         f"<item><title>{e(t)}</title><link>{e(img)}</link><guid isPermaLink=\"false\">sunny2-{gid}</guid>"
