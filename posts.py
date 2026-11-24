@@ -181,6 +181,15 @@ def _safe(fn, s):
 # expose enclosures. The story link is in the caption (description) instead.
 
 TAGS = "#SunnyMansfield #MansfieldOhio #RichlandCounty"
+
+
+def fb_link(url, campaign):
+    """Tag links we post to Facebook so Google Analytics can show which posts bring people to the site."""
+    if "sunnymansfield.com" not in url and "://" in url:
+        return url
+    base, _, frag = url.partition("#")
+    sep = "&" if "?" in base else "?"
+    return f"{base}{sep}utm_source=facebook&utm_medium=social&utm_campaign={campaign}" + (f"#{frag}" if frag else "")
 THEMES = {  # weekday (Monday = 0): theme name, hashtag
     0: ("Neighbor news", "#GoodNews"),
     1: ("Shop Local Tuesday", "#ShopLocal"),
@@ -509,7 +518,7 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
     name = f"{day:%Y-%m-%d}.jpg"
     im.save(folder / name, quality=86, optimize=True, progressive=False)
     image = f"{site}/social/{name}"
-    caption = f"{theme} ☀️\n\n{text}\n\nRead more: {link}\n\n{TAGS} {tag}"
+    caption = f"{theme} ☀️\n👉 Full story: {fb_link(link, 'daily')}\n\n{text}\n\n{TAGS} {tag}"
     (Path(out) / "social.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])} daily post</title>
 <link>{e(site)}/</link><description>One ready-made post a day for Facebook and Instagram</description>
@@ -537,12 +546,27 @@ def make_top_story_feed(cfg, stories, out, page_url, note=print):
     if fresh:
         s = fresh[0]
         link, image = page_url(s), f"{site}/{s['post_image']}"
-        caption = f"{s['title']}\n\n{s.get('summary') or ''}\n\nRead more: {link}\n\n#SunnyMansfield #MansfieldOhio #GoodNews"
+        caption = f"{s['title']}\n👉 Full story: {fb_link(link, 'top')}\n\n{s.get('summary') or ''}\n\n#SunnyMansfield #MansfieldOhio #GoodNews"
         item = (f"<item><title>{e(s['title'])}</title><link>{e(image)}</link><guid isPermaLink=\"false\">sunny-top2-{s['id']}</guid>"
                 f"<pubDate>{format_datetime(noon)}</pubDate><description>{e(caption)}</description>"
                 f"<enclosure url=\"{e(image)}\" type=\"image/jpeg\" length=\"0\"/>"
                 f"</item>")
         note(f"Top story: {s['title']}")
+    # links.xml: the same top story as a link-card post (Facebook shows the page's preview with a tap-through),
+    # posted at 6 p.m. Eastern so it doesn't crowd the photo posts. The item's link is the story page itself.
+    evening = noon.replace(hour=18)
+    card = ""
+    if fresh and now >= evening:
+        s = fresh[0]
+        summary = " ".join((s.get("summary") or "").split())
+        summary = summary if len(summary) <= 200 else summary[:197].rsplit(" ", 1)[0] + "\u2026"
+        message = f"☀️ {s['title']}" + (f"\n\n{summary}" if summary else "") + "\n\nTap below for the full story 👇"
+        card = (f"<item><title>{e(s['title'])}</title><link>{e(fb_link(page_url(s), 'link-post'))}</link>"
+                f"<guid isPermaLink=\"false\">sunny-link-{s['id']}</guid><pubDate>{format_datetime(evening)}</pubDate>"
+                f"<description>{e(message)}</description></item>")
+    (Path(out) / "links.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>{e(cfg['site_name'])} link post</title>
+<link>{e(site)}/</link><description>The day's top story as a Facebook link post</description>{card}</channel></rss>""")
     (Path(out) / "top.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])} top story</title>
 <link>{e(site)}/</link><description>The best new story each day, for Facebook</description>{item}</channel></rss>""")
@@ -677,23 +701,25 @@ def make_series_feed(cfg, series, dogs, out, page_url, ua, credit, dog_of_the_da
                     im = dog_post(d, photo, credit)
                     line = " · ".join(x for x in (d.get("age"), d.get("sex"), d.get("breed")) if x)
                     title, link = f"Dog of the day: {d['name']}", d["url"]
-                    text = (f"🐾 Adopt-a-Paw dog of the day: meet {d['name']}!" + (f"\n{line}" if line else "")
+                    others = len(dogs) - 1
+                    more = f", plus {others} more dog{'s' if others != 1 else ''} waiting at the shelter" if others > 0 else ""
+                    text = (f"🐾 Meet {d['name']}{more}.\n👉 See them all: {fb_link(f'{site}/{page}', 'dog-of-the-day')}"
+                            + (f"\n\n{d['name']}: {line}" if line else "")
                             + f"\n\n{d['name']} is waiting at the Richland County Dog Shelter for a family. "
-                            f"Can't adopt? A share might reach the right home.\n\nMeet {d['name']}: {d['url']}\n"
-                            f"Every adoptable dog: {site}/{page}")
+                            f"Can't adopt? A share might reach the right home.")
                 elif key == "homes":
                     h = series_pick(list(homes), day, at)
                     if h:
                         im = home_post(h, load_photo(h.get("image"), ua), credit)
                         title, link = f"{h['price_label']}: {h['title']}", h["url"]
                         text = (f"🏡 {h.get('kind') or 'Home'}: {h['price_label']}\n{h['facts']}\n\n{h['title']}"
-                                f"\n\nAsk about it privately: {link}\nMore homes: {site}/{page}")
+                                f"\n\n👉 Photos and details: {fb_link(link, 'home-of-the-day')}\nMore homes: {fb_link(f'{site}/{page}', 'home-of-the-day')}")
                 else:
                     s = series_pick(series.get(key) or [], day, at)
                     if s:
                         im = text_post(s, label, credit, script)
                         title, link = s["title"], page_url(s)
-                        text = f"{script} {s['title']}. {s.get('summary') or ''}".strip() + f"\n\nRead more: {link}\nMore {label}: {site}/{page}"
+                        text = f"{script} {s['title']}. {s.get('summary') or ''}".strip() + f"\n\nRead more: {fb_link(link, key)}\nMore {label}: {fb_link(f'{site}/{page}', key)}"
                     elif ask_day is not None and day.weekday() == ask_day:
                         head, body = SERIES_ASKS[key]
                         im = text_post({"title": head, "source": ""}, label, credit, script)
