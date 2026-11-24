@@ -756,8 +756,11 @@ def youtube_id(link):
 
 
 def add_photos(stories, limit=80):
-    """Fill in missing photos from each article's own share image (og:image)."""
-    todo = [s for s in stories if not s.get("image") and s.get("photos", True)][:limit]
+    """Fill in missing photos from each article's own share image (og:image). Bing News thumbnails are checked the
+    same way and swapped for the article's own image when we can read it: Bing sometimes attaches a photo from a
+    different story (a basketball game on a legal-clinic story, November 2026)."""
+    bing = lambda s: "bing.com/th" in (s.get("image") or "")
+    todo = [s for s in stories if (not s.get("image") or bing(s)) and s.get("photos", True)][:limit]
     fails = {}
     for s in todo:
         try:
@@ -778,8 +781,12 @@ def add_photos(stories, limit=80):
             if image.startswith("//"):
                 image = "https:" + image
             if image.startswith("https://") and is_image(image):
+                if bing(s):
+                    STATS["bing_swapped"] = STATS.get("bing_swapped", 0) + 1
                 s["image"] = image
         except Exception as exc:
+            if bing(s):
+                continue  # couldn't read the article; keep Bing's thumbnail from the feed
             if bing_photo(s):
                 STATS["bing"] = STATS.get("bing", 0) + 1
                 continue
@@ -787,7 +794,8 @@ def add_photos(stories, limit=80):
             fails[key] = fails.get(key, 0) + 1
     have = sum(1 for s in stories if s.get("image"))
     note(f"Photos: {have} of {len(stories)} stories ({len(todo)} looked up, "
-         f"{STATS.get('google_decoded', 0)} Google links decoded, {STATS.get('bing', 0)} photos from Bing)")
+         f"{STATS.get('google_decoded', 0)} Google links decoded, {STATS.get('bing', 0)} photos from Bing, "
+         f"{STATS.get('bing_swapped', 0)} Bing thumbnails swapped for the article's own)")
     if fails:  # one line, so the notice limit (10 per run) leaves room for the rest
         note("Photo lookups failed: " + "; ".join(f"{k.split(':')[0]} x{n}" for k, n in sorted(fails.items(), key=lambda kv: -kv[1])[:10]))
 

@@ -222,3 +222,15 @@ create view public.reach_summary as
   union all select 'front', coalesce(sum(views), 0)::int from recent where path = '/'
   union all select substring(path from 8), sum(views)::int from recent where path like '/\_from/%' group by path;
 grant select on public.reach_daily, public.reach_pages, public.reach_summary to anon, authenticated;
+-- For the Facebook posts the counter powers: page views in the last 7 days (Friday's "most read this week" and the
+-- weekly neighbor shout-out) and today so far (the 6 p.m. "trending now" link post).
+drop view if exists public.reach_week;
+create view public.reach_week as
+  select path, sum(views)::int as views from public.page_views
+  where day > (now() at time zone 'America/New_York')::date - 7 and path not like '/\_from/%'
+  group by path;
+drop view if exists public.reach_today;
+create view public.reach_today as
+  select path, views from public.page_views
+  where day = (now() at time zone 'America/New_York')::date and path not like '/\_from/%';
+grant select on public.reach_week, public.reach_today to anon, authenticated;
