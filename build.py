@@ -5078,24 +5078,26 @@ def live_reach(cfg, stories):
                        "spots": [{"code": c, "name": n, "where": w, "price": spot_price(c)} for c, n, w in
                                  [("A1", "Top banner", "all"), ("A4", "Story page banner", "story")] if spot_price(c)]})
     sources = "; ".join(f'<a class="link" href="{e(u)}" target="_blank" rel="noopener">{e(t)}</a>' for t, u in MARKET["sources"])
-    return f"""<section class="wrap latest reach" id="reach"><h2 class="label">Live reach</h2>
-<p class="reach-lede">These numbers come straight from our own page counter, live, every time this page loads. Nothing is typed in by hand,
-rounded up or estimated. What you see is what your ad would be seen next to.</p>
+    return f"""<section class="wrap latest reach" id="reach"><h2 class="label">Grow with us</h2>
+<p class="reach-lede"><b>Sunny Mansfield is new, local and growing every week, and we'd rather show you than tell you.</b>
+Every number here comes live from our own page counter each time this page loads. Nothing is typed in by hand, rounded up or guessed,
+so you can watch us grow, and grow right along with us.</p>
+<p class="reach-lede">Get in early: founding sponsors lock in today's price for a full year. As the numbers climb, your cost per view keeps falling.</p>
 <div class="reach-tiles" id="reach-tiles"><p class="hint">Loading live numbers…</p></div>
 <div class="reach-bar" role="group" aria-label="Time range"><button type="button" class="tab" data-range="30" aria-pressed="true">30 days</button>
 <button type="button" class="tab" data-range="90" aria-pressed="false">90 days</button><button type="button" class="tab" data-range="0" aria-pressed="false">All</button></div>
 <figure class="reach-chart"><figcaption class="caps kicker">Page views per day</figcaption><div id="reach-plot" class="reach-plot"></div>
 <div class="reach-tip" id="reach-tip" hidden></div></figure>
 <details class="reach-table"><summary>See the numbers as a table</summary><div id="reach-rows"></div></details>
-<h3 class="hed" style="margin:26px 0 6px">What it's worth</h3>
+<h3 class="hed" style="margin:26px 0 6px">Where we're headed, and what it's worth</h3>
 <p class="hint">Live math on the same numbers: what this many views would cost as Facebook ads, where the next month is heading,
-and what each of our ad spots works out to per 1,000 views.</p>
+and what each ad spot works out to per 1,000 views today. Locked-in founding prices get cheaper per view as we grow.</p>
 <div class="reach-tiles" id="reach-worth"></div><div id="reach-spots"></div>
 <h3 class="hed" style="margin:26px 0 6px">Where readers come from, last 30 days</h3>
 <p class="hint">Counted once per visit: did they tap a link on Facebook, Instagram or another site, find us on Google, or come straight here?</p>
 <div id="reach-src"></div>
 <div class="reach-cols"><div><h3 class="hed">Most read, last 30 days</h3><ol id="reach-top" class="reach-top"></ol></div>
-<div><h3 class="hed">On the site right now</h3><ul class="reach-top"><li><b>{len(month)}</b> good news stories in the last 30 days</li>
+<div><h3 class="hed">Growing every day</h3><ul class="reach-top"><li><b>{len(month)}</b> good news stories in the last 30 days</li>
 <li><b>{neighbors}</b> of them posted by neighbors</li><li>New stories every 15 minutes, posted to our <a class="link" href="{e(cfg['facebook_page'])}" target="_blank" rel="noopener">Facebook Page</a> every day</li></ul></div></div>
 <p class="note"><b>How we count:</b> each time someone opens a page, that page's count for the day goes up by one (once per visit, so
 refreshing doesn't add more). Robots, link previews and our own admin page are left out. No cookies and nothing about who visited is stored,
