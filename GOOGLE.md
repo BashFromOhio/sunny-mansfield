@@ -24,6 +24,15 @@ realistic first wins are searches like "Sunny Mansfield", "things to do in Mansf
 5. Open **Sitemaps** and submit `sitemap.xml`, then `news-sitemap.xml`.
 6. Open **URL inspection**, type `https://sunnymansfield.com/` and press **Request indexing**.
 
+## Google Analytics vs Search Console: which numbers are which
+
+| Tool | What it counts | Where to look |
+|---|---|---|
+| **Google Analytics** (analytics.google.com, account and property "Sunny Mansfield", Measurement ID `G-X41ZCEZNXY`) | **Everyone** who opens a page, from any source: Facebook, Google, direct visits, shares, the newsletter | Reports > Realtime (right now), Reports > Engagement > Pages and screens (views per story), Reports > Acquisition > Traffic acquisition (where visitors came from) |
+| **Search Console** (search.google.com/search-console) | Only people who found the site in a **Google search**: impressions (times it showed up in results) and clicks | Performance |
+
+You want both. The Analytics ID is in `config.json` as `"google_tag": "G-X41ZCEZNXY, AW-970158379"` (Analytics first, then the Google Ads tag). Analytics says "No data received" until the site has rebuilt with the tag, then Realtime fills in within minutes. The Google Analytics phone app shows the same reports.
+
 ## 2. Google Business Profile (free, needs a person to verify)
 
 1. Go to business.google.com and add **Sunny Mansfield**.
