@@ -610,11 +610,19 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
         im = photo_post(fake, f"Event · {when}", photo, credit) if photo else text_post(fake, f"Event · {when}", credit, "Save the date!")
         link, title, text = f"{site}/#events", f["title"], f"\U0001F4C5 {when}\n\n{f['title']}\n\n{teaser(f['title'], f.get('summary') or '')}".strip()
     elif wd == 4:
-        top = [s for s in stories if s["section"] != "life"][:5]
-        if top:
-            im = roundup_post([s["title"] for s in top], credit)
-            link, title = f"{site}/", "5 good things this week in Mansfield"
-            text = "5 good things this week in Richland County:\n" + "\n".join(f"{i}. {s['title']}" for i, s in enumerate(top, 1))
+        # The stories Mansfield actually read most this week (our page counter); the newest five until there are 3.
+        read = sorted([s for s in stories if s.get("views_week") and s["section"] != "life"], key=lambda s: -s["views_week"])[:5]
+        if len(read) >= 3:
+            im = roundup_post([s["title"] for s in read], credit)
+            theme, link, title = "Most read this week", f"{site}/", f"The {len(read)} most-read stories this week"
+            text = (f"\U0001F4F0 What Mansfield read most this week:\n" + "\n".join(f"{i}. {s['title']}" for i, s in enumerate(read, 1))
+                    + "\n\nMissed one? They're all on the site.")
+        else:
+            top = [s for s in stories if s["section"] != "life"][:5]
+            if top:
+                im = roundup_post([s["title"] for s in top], credit)
+                link, title = f"{site}/", "5 good things this week in Mansfield"
+                text = "5 good things this week in Richland County:\n" + "\n".join(f"{i}. {s['title']}" for i, s in enumerate(top, 1))
     elif wd == 5 and funds:
         f = funds[0]
         fake = {"title": f["title"], "source": f.get("by") or ""}
@@ -622,8 +630,13 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
         im = photo_post(fake, "Fundraiser", photo, credit) if photo else text_post(fake, "Fundraiser", credit, "Lend a hand!")
         link, title = f"{site}/give/{f['id']}.html", f["title"]
         text = f"{f['title']}\n\n{teaser(f['title'], f.get('summary') or '')}\n\nGive if you can, share if you can't.".replace("\n\n\n\n", "\n\n")
+    shout = None
+    if im is None and wd == 0:
+        # Neighbor shout-out: the most-read story a neighbor posted through the site this week, thanking them by name.
+        mine = [s for s in stories if s.get("community") and s.get("views_week") and s["section"] != "life"]
+        shout = max(mine, key=lambda s: s["views_week"]) if mine else None
     if im is None:
-        s = {0: pick(stories, "hoods", "good"), 3: pick(stories, "sports", athletes=True) or pick(stories, "sports"),
+        s = shout or {0: pick(stories, "hoods", "good"), 3: pick(stories, "sports", athletes=True) or pick(stories, "sports"),
              6: pick(stories, "good", "biz", "seniors")}.get(wd) or pick(stories, "good", "hoods", "biz", "seniors", "sports") or next((x for x in stories if x["section"] != "life"), None)
         if s is None:
             note("Daily post: nothing to post")
@@ -633,20 +646,51 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
         im = photo_post(s, section, photo, credit) if photo else text_post(s, section, credit)
         link, title = page_url(s), s["title"]
         text = f"{s['title']}\n\n{teaser(s['title'], story_text(s))}".strip()
+        if s is shout and s.get("source"):
+            theme = "Neighbor shout-out"
+            text = (f"\U0001F49B Thank you, {s['source']}! Your post was the most-read neighbor story on Sunny Mansfield this week.\n\n"
+                    + text + "\n\nGot good news? Share it at sunnymansfield.com/submit.html")
     folder = Path(out) / "social"
     folder.mkdir(parents=True, exist_ok=True)
     name = f"{day:%Y-%m-%d}.jpg"
     im.save(folder / name, quality=86, optimize=True, progressive=False)
     image = f"{site}/social/{name}"
     caption = f"{theme} ☀️\n👉 Full story: {fb_link(link, 'daily')}\n\n{text}\n\n{TAGS} {tag}"
+    milestone = milestone_item(cfg, folder, credit, day, e, format_datetime, note)
     (Path(out) / "social.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])} daily post</title>
 <link>{e(site)}/</link><description>One ready-made post a day for Facebook and Instagram</description>
 <item><title>{e(theme + ': ' + title)}</title><link>{e(image)}</link><guid isPermaLink="false">sunny-daily2-{day:%Y-%m-%d}</guid>
 <pubDate>{format_datetime(day)}</pubDate><description>{e(caption)}</description>
-<enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>
+<enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>{milestone}
 </channel></rss>""")
     note(f"Daily post: {theme} - {title}")
+
+
+MILESTONES = [1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000]
+
+
+def milestone_item(cfg, folder, credit, day, e, format_datetime, note=print):
+    """A thank-you post when the 30-day page views pass a milestone. Its guid is fixed per milestone, so the
+    Zapier RSS trigger posts each one only once, ever (even if the count dips and climbs back)."""
+    total = cfg.get("reach_total30") or 0
+    passed = [m for m in MILESTONES if total >= m]
+    if not passed:
+        return ""
+    m = passed[-1]
+    site = cfg["site_url"].rstrip("/")
+    name = f"milestone-{m}.jpg"
+    if not (Path(folder) / name).exists():
+        text_post({"title": f"{m:,} page views in 30 days", "source": ""}, "Thank you, Mansfield", credit, "Thank you!").save(
+            Path(folder) / name, quality=86, optimize=True, progressive=False)
+    image = f"{site}/social/{name}"
+    caption = (f"\u2600\ufe0f Thank you, Mansfield!\n\nYou helped Sunny Mansfield pass {m:,} page views in the last 30 days. "
+               f"Every share, every story you send in and every neighbor you tag is how good news gets around.\n\n"
+               f"\U0001F449 See what everyone's reading: {fb_link(site + '/', 'milestone')}\n\n{TAGS} #GoodNews")
+    note(f"Milestone post: {m:,} views")
+    return (f'\n<item><title>{e(f"Thank you, Mansfield: {m:,} page views")}</title><link>{e(image)}</link>'
+            f'<guid isPermaLink="false">sunny-milestone-30d-{m}</guid><pubDate>{format_datetime(day)}</pubDate>'
+            f'<description>{e(caption)}</description><enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>')
 
 
 def make_top_story_feed(cfg, stories, out, page_url, note=print):
@@ -677,13 +721,15 @@ def make_top_story_feed(cfg, stories, out, page_url, note=print):
     # posted at 6 p.m. Eastern so it doesn't crowd the photo posts. The item's link is the story page itself.
     evening = noon.replace(hour=18)
     card = ""
-    if fresh and now >= evening:
-        s = fresh[0]
-        summary = " ".join((s.get("summary") or "").split())
-        summary = summary if len(summary) <= 200 else summary[:197].rsplit(" ", 1)[0] + "\u2026"
-        message = f"☀️ {s['title']}" + (f"\n\n{summary}" if summary else "") + "\n\nTap below for the full story 👇"
+    # Trending now: the story with the most views today (our page counter, at least 5), else the day's top story.
+    hot = max((s for s in stories if s.get("views_today", 0) >= 5 and s["section"] != "life"), key=lambda s: s["views_today"], default=None)
+    if (hot or fresh) and now >= evening:
+        s = hot or fresh[0]
+        summary = teaser(s["title"], story_text(s), 200)
+        lead = "\U0001F525 Trending in Mansfield today: " if hot else "☀️ "
+        message = f"{lead}{s['title']}" + (f"\n\n{summary}" if summary else "") + "\n\nTap below for the full story 👇"
         card = (f"<item><title>{e(s['title'])}</title><link>{e(fb_link(page_url(s), 'link-post'))}</link>"
-                f"<guid isPermaLink=\"false\">sunny-link-{s['id']}</guid><pubDate>{format_datetime(evening)}</pubDate>"
+                f"<guid isPermaLink=\"false\">sunny-link-{evening:%Y-%m-%d}</guid><pubDate>{format_datetime(evening)}</pubDate>"
                 f"<description>{e(message)}</description></item>")
     (Path(out) / "links.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel><title>{e(cfg['site_name'])} link post</title>

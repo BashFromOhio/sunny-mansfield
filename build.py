@@ -5912,6 +5912,28 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 STORAGE_RE = re.compile(r"https://[a-z0-9]+\.supabase\.co/storage/v1/object/public/[^\s\"'<>()\\]+")
 
 
+def attach_views(cfg, stories, sample=False):
+    """Our own page counter (Supabase reach_* views) for the Facebook posts it powers: each story gets views_week and
+    views_today, and the 30-day total goes in cfg["reach_total30"]. Quietly does nothing if the counter isn't there."""
+    if sample or not backend_on(cfg):
+        return
+    key = cfg["supabase_anon_key"]
+    base = cfg["supabase_url"].rstrip("/") + "/rest/v1/"
+    get = lambda view: json.loads(fetch(base + view, limit=2_000_000, headers={"apikey": key, "Authorization": f"Bearer {key}"})[1])
+    try:
+        week = {r["path"]: r["views"] for r in get("reach_week?select=path,views")}
+        today = {r["path"]: r["views"] for r in get("reach_today?select=path,views")}
+        total = next((r["views"] for r in get("reach_summary?select=k,views&k=eq.all")), 0)
+    except Exception as exc:
+        note(f"Page counter: skipped ({exc})")
+        return
+    for st in stories:
+        path = urllib.parse.urlparse(page_url(cfg, st)).path
+        st["views_week"], st["views_today"] = week.get(path, 0), today.get(path, 0)
+    cfg["reach_total30"] = total
+    note(f"Page counter: {total:,} views in 30 days")
+
+
 def localize_photos(cfg, out):
     """Copy every Supabase photo the pages use into /photos/, so visitors only ever see our own domain."""
     files = [f for f in out.rglob("*") if f.suffix in (".html", ".xml", ".json", ".txt") and f.is_file()]
@@ -6003,6 +6025,7 @@ def main():
         from posts import (make_birthday_invite_image, make_community_feed, make_daily_post, make_post_images,
                            make_quote_feed, make_quote_image, make_series_feed, make_top_story_feed)
         credit = "sunnymansfield.com"  # the line along the bottom of every post image
+        attach_views(cfg, stories, args.sample)
         make_post_images(stories, out, SECTION_NAMES, UA, credit, outlet_photos=cfg.get("frame_outlet_photos", False), note=note)
         make_daily_post(cfg, stories, businesses, flyers, got["fundraisers"], listings, out, SECTION_NAMES, UA, credit,
                         lambda s: page_url(cfg, s), note=note)
