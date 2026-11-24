@@ -5074,7 +5074,25 @@ def facebook_posts():
         return None
 
 
-def live_reach(cfg, stories):
+REACH_PENDING = [
+    ("Facebook reach, clicks and reactions", "Facebook won't share per-post numbers for the Page yet (it answers "
+     "\u201cinsights not available\u201d). That usually lifts once the Page has about 100 followers, or the Zapier Facebook "
+     "connection may need the insights permission. Checked November 24, 2026; the daily workflow can add them once Facebook allows it."),
+    ("Facebook followers", "Needs a direct Facebook access key for the Page. Zapier's Facebook steps don't offer a follower count."),
+    ("Facebook posts per day", "Pending: GitHub needs to be connected to Zapier so the daily \u201cCount Facebook posts\u201d workflow can "
+     "save the count. Until then the number below is the 25 posts read on November 24."),
+    ("Instagram, Threads, Bluesky and X posts and followers", "Not connected yet. Visits that come from these apps are counted "
+     "below; their own numbers need each account connected (Zapier or each app's access key)."),
+    ("Google Analytics reports", "Analytics (G-X41ZCEZNXY) collects everything from the day the tag went live, but its reports stay "
+     "in analytics.google.com. Showing them here needs a Google service account with read access to the property."),
+    ("Google Search Console", "Search clicks and impressions stay in search.google.com/search-console. Showing them here needs "
+     "the same kind of Google service account, added as a user on the property."),
+    ("History before November 24, 2026", "Our own counter started that day, so the chart has nothing earlier. Facebook and "
+     "Search Console have their own history in their apps."),
+]
+
+
+def live_reach(cfg, stories, admin=False):
     """'Live reach' on the Advertise page: real page views from our own counter (Supabase count_view), drawn in the
     reader's browser straight from the database, so the numbers are never typed in by hand."""
     if not backend_on(cfg):
@@ -5099,7 +5117,13 @@ def live_reach(cfg, stories):
                        "spots": [{"code": c, "name": n, "where": w, "price": spot_price(c)} for c, n, w in
                                  [("A1", "Top banner", "all"), ("A4", "Story page banner", "story")] if spot_price(c)]})
     sources = "; ".join(f'<a class="link" href="{e(u)}" target="_blank" rel="noopener">{e(t)}</a>' for t, u in MARKET["sources"])
-    return f"""<section class="wrap latest reach" id="reach"><h2 class="label">Grow with us</h2>
+    pending = ""
+    if admin:
+        pending = ('<div class="box reach-pending"><span class="caps kicker">Not captured yet</span><h3 class="hed">What\'s missing, and why</h3><ul>'
+                   + "".join(f"<li><b>{e(t)}.</b> {e(d)}</li>" for t, d in REACH_PENDING) + "</ul></div>")
+    preview = ('<p class="hint"><b>Editors only for now.</b> This is the reach section we plan to show advertisers. It stays here until the '
+               'numbers have grown; nothing on this tab is on the public site.</p>') if admin else ""
+    return f"""<section class="wrap latest reach" id="reach">{preview}{pending}<h2 class="label">Grow with us</h2>
 <p class="reach-lede"><b>Sunny Mansfield is new, local and growing every week, and we'd rather show you than tell you.</b>
 Every number here comes live from our own page counter each time this page loads. Nothing is typed in by hand, rounded up or guessed,
 so you can watch us grow, and grow right along with us.</p>
@@ -5126,7 +5150,7 @@ only the date, the page and the number. Counting started in November 2026, so th
 and can share those reports with any advertiser who asks.<br><b>Market prices</b> are published averages, not quotes: {sources}.
 A projection is the straight-line trend of recent days carried forward, so it can be wrong in either direction.</p></section>
 <style>
-.reach-lede{{max-width:62ch}}.reach-tiles{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}}
+.reach-lede{{max-width:62ch}}.reach-pending{{margin:0 0 22px}}.reach-pending li{{margin:8px 0}}.reach-tiles{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}}
 .reach-tile{{background:#fff;border:3px solid #2e1a10;padding:14px 16px}}.reach-tile b{{display:block;font-size:34px;line-height:1.1;color:#2e1a10;font-variant-numeric:tabular-nums}}
 .reach-tile span{{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#8a6f5c}}.reach-tile small{{display:block;margin-top:4px;color:#5c4636}}
 .reach-bar{{display:flex;gap:8px;margin:8px 0}}.reach-chart{{position:relative;margin:0;background:#fff;border:3px solid #2e1a10;padding:14px 12px 6px}}
@@ -5211,8 +5235,7 @@ def render_ads_soon(cfg, stories):
     site = cfg["site_url"].rstrip("/")
     inner = f"""{page_title("Coming soon", "Advertising is paused", "We're not selling ad spots right now. Local businesses can still share news, deals and events for free.")}
 <section class="wrap" style="text-align:center"><p><a class="btn solid" href="{e(site)}/submit.html">Share your news</a></p>
-<p class="note">Questions? Email <a href="mailto:{e(cfg['submit_email'])}">{e(cfg['submit_email'])}</a>.</p></section>
-{live_reach(cfg, stories)}"""
+<p class="note">Questions? Email <a href="mailto:{e(cfg['submit_email'])}">{e(cfg['submit_email'])}</a>.</p></section>"""
     return shell(cfg, f"Advertising · {cfg['site_name']}", "Advertising on Sunny Mansfield is paused for now.",
                  f"{site}/advertise.html", inner, stories, index=False)
 
@@ -5230,7 +5253,6 @@ def render_advertise(cfg, stories):
     kit = (f'<a class="btn" href="{e(site)}/brand/Sunny-Mansfield-Media-Kit.pdf" download>Download the media kit (PDF)</a>'
            if (HERE / "brand" / "Sunny-Mansfield-Media-Kit.pdf").exists() else "")
     inner = f"""{page_title("Shop local!", "Advertise with us", "Put your business in front of neighbors who read, share and shop local. Every ad is labeled, and sponsors never decide what we cover.")}
-{live_reach(cfg, stories)}
 <section class="wrap latest" id="spots"><h2 class="label">Ad spots</h2><div class="spots">{spots}</div>
 <div class="more-row"><a class="btn solid" href="#ask">Ask about a spot</a>{kit}</div>
 <p class="note" style="text-align:center">Prices are founding sponsor rates. Every paid sponsor is also thanked by name at the bottom of every page. Business spotlights and community posts are always free.</p></section>
@@ -5303,7 +5325,8 @@ The site also skips a news story by itself when it matches a story posted throug
 <button class="tab" type="button" data-q="headline">Headline &amp; remove</button>
 <button class="tab" type="button" data-q="brackets">Brackets</button>
 <button class="tab" type="button" data-q="rejected">Rejected</button>
-<button class="tab" type="button" data-q="verified">Verified people</button></div></nav>
+<button class="tab" type="button" data-q="verified">Verified people</button>
+<button class="tab" type="button" data-q="reach">Reach</button></div></nav>
 <div class="row"><p class="hint">Signed in as <b id="me"></b>. <button class="textbtn" type="button" id="logout">Sign out</button></p>
 <input type="password" id="pw-new" placeholder="new password" aria-label="New password" autocomplete="new-password" style="flex:0 1 200px">
 <button class="btn sm" type="button" id="pw-btn">Set password</button></div></div>
@@ -5324,7 +5347,7 @@ The site also skips a news story by itself when it matches a story posted throug
 <label class="fld"><span class="caps">Headline</span><input id="l-title" maxlength="200" placeholder="Optional"></label>
 <label class="fld wide"><span class="caps">Summary</span><textarea id="l-sum" rows="3" maxlength="400" placeholder="Optional: leave blank to use the article's"></textarea></label>
 <div class="wide submitrow"><button class="btn solid" type="submit" id="l-btn">Post it</button><span class="formmsg" id="l-msg" role="status" aria-live="polite"></span></div></form></div>
-{picker}<div id="list" class="queue"></div></div>
+{picker}<div id="reach-ed" hidden>{live_reach(cfg, stories, admin=True)}</div><div id="list" class="queue"></div></div>
 <p class="formmsg" id="desk-msg"></p></section>"""
     script = f"""<script src="{SB_JS}"></script><script>
 (()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);const $=id=>document.getElementById(id);
@@ -5367,8 +5390,8 @@ function item(r){{const when=new Date(r.created_at).toLocaleString();
  ${{r.photo_url?`<span class="qphoto"><img src="${{esc(r.photo_url.split(/\\s+/)[0])}}" alt="">${{r.photo_url.trim().split(/\\s+/).length>1?`<span class="caps kicker">${{r.photo_url.trim().split(/\\s+/).length}} photos</span>`:''}}</span>`:''}}
  <div class="qbody"><span class="caps kicker">${{esc(r.section)}}</span><h3 class="hed">${{esc(r.title)}}</h3><p class="qtext">${{esc(r.summary||'')}}</p>
  <dl class="facts">${{facts.map(([k,v])=>`<dt>${{k}}</dt><dd>${{esc(v)}}</dd>`).join('')}}</dl>${{link}}<div class="share">${{acts}}</div></div></article>`}}
-async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';$('headline-ed').hidden=q!=='headline';counts();
- const list=$('list');list.innerHTML=q==='headline'?'':'<p class="hint">Loading…</p>';if(q==='headline'){{hiddenList();return}}
+async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';$('headline-ed').hidden=q!=='headline';$('reach-ed').hidden=q!=='reach';$('link-ed').hidden=q==='reach';counts();
+ const list=$('list');list.innerHTML=q==='headline'?'':'<p class="hint">Loading…</p>';if(q==='headline'){{hiddenList();return}}if(q==='reach'){{list.innerHTML='';return}}
  if(q==='verified'){{const {{data,error}}=await sb.from('verified').select('*').order('added_at',{{ascending:false}});
   if(error){{list.innerHTML='';say(error.message);return}}
   list.innerHTML=data.length?data.map(v=>`<article class="qitem"><div class="qbody"><h3 class="hed">${{esc(v.name||v.email)}}</h3><p class="hint">${{esc(v.email)}} ${{v.role?'· '+esc(v.role):''}}</p>
