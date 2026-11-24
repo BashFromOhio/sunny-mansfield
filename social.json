@@ -1,0 +1,12 @@
+{
+  "_how_to": "Written once a day by the Zapier workflow 'Count Facebook posts' (Facebook Pages > GitHub). facebook.days holds how many posts went out on the Sunny Mansfield Facebook Page each day (Eastern time). The admin Reach tab shows the last 30 days. Safe to edit by hand.",
+  "facebook": {
+    "updated": "2026-11-24",
+    "days": {
+      "2026-11-20": 6,
+      "2026-11-21": 11,
+      "2026-11-22": 6,
+      "2026-11-23": 2
+    }
+  }
+}
