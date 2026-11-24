@@ -1845,9 +1845,12 @@ def google_head(cfg):
         out += f'\n<meta name="google-site-verification" content="{e(cfg["google_site_verification"])}">'
     ids = [x.strip() for x in (cfg.get("google_tag") or "").split(",") if x.strip()]
     if ids:
-        configs = "".join(f"gtag('config',{json.dumps(i)});" for i in ids)
+        # Editors' own visits (this browser signed into admin.html once) are tagged internal, and the Analytics
+        # "Internal Traffic" data filter drops them, so checking the site doesn't inflate the numbers.
+        configs = "".join(f"gtag('config',{json.dumps(i)},T);" for i in ids)
         out += (f'\n<script async src="https://www.googletagmanager.com/gtag/js?id={e(ids[0])}"></script>'
                 f"<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}"
+                f"var T={{}};try{{if(localStorage.getItem('sm-editor')==='1')T={{traffic_type:'internal'}}}}catch(x){{}}"
                 f"gtag('js',new Date());{configs}</script>")
     out += visit_counter(cfg)
     pub = adsense_pub(cfg)
@@ -1865,7 +1868,7 @@ def visit_counter(cfg):
         return ""
     conf = json.dumps({"u": cfg["supabase_url"].rstrip("/") + "/rest/v1/rpc/count_view", "k": cfg["supabase_anon_key"]})
     return ("\n<script>(()=>{try{const C=" + conf + ";let p=location.pathname.replace(/index\\.html$/,'')||'/';"
-            "if(/admin\\.html$/.test(p)||navigator.webdriver||/bot|crawl|spider|slurp|preview|facebookexternalhit|lighthouse|headless/i.test(navigator.userAgent))return;"
+            "if(/admin\\.html$/.test(p)||localStorage.getItem('sm-editor')==='1'||navigator.webdriver||/bot|crawl|spider|slurp|preview|facebookexternalhit|lighthouse|headless/i.test(navigator.userAgent))return;"
             "const send=q=>fetch(C.u,{method:'POST',keepalive:true,headers:{apikey:C.k,Authorization:'Bearer '+C.k,'Content-Type':'application/json'},"
             "body:JSON.stringify({p:q.slice(0,200)})}).catch(()=>{});"
             "if(!sessionStorage.getItem('sm-src')){const u=(new URLSearchParams(location.search).get('utm_source')||'').toLowerCase();"
@@ -5368,7 +5371,7 @@ $('logout').onclick=()=>sb.auth.signOut().then(()=>location.reload());
 async function start(s){{if(me&&s&&s.user.email===me)return;if(!s){{$('login').hidden=false;$('desk').hidden=true;return}}
  me=s.user.email;const {{data}}=await sb.from('admins').select('email').limit(1);
  if(!data||!data.length){{$('login').hidden=false;$('login-msg').textContent=me+' is not on the admin list.';return}}
- $('login').hidden=true;$('desk').hidden=false;$('me').textContent=me;load()}}
+ $('login').hidden=true;$('desk').hidden=false;$('me').textContent=me;try{{localStorage.setItem('sm-editor','1')}}catch(x){{}};load()}}
 sb.auth.getSession().then(r=>start(r.data.session));sb.auth.onAuthStateChange((_,s)=>{{if(s&&!me)start(s)}});
 function base(){{return sb.from('submissions').select('*').order('created_at',{{ascending:false}}).limit(200)}}
 let NOV=false;const ok=x=>NOV?x:x.or('section.neq.Birthday,verified_at.not.is.null');  // unconfirmed birthday shout-outs wait for their code
