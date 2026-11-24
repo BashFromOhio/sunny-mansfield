@@ -177,3 +177,60 @@ create policy "admins remove photos" on storage.objects for delete to authentica
 
 -- Last step: put your own email here, then run this file.
 -- insert into public.admins (email) values ('you@example.com') on conflict do nothing;
+
+-- Live reach for the Advertise page: page views per day, counted by the site itself.
+-- No cookies, no IP addresses, nothing about who visited: only the day (Mansfield time), the page address and a count.
+create table if not exists public.page_views (
+  day date not null,
+  path text not null check (char_length(path) <= 200),
+  views integer not null default 0,
+  primary key (day, path)
+);
+alter table public.page_views enable row level security;  -- no policies: only the function and views below touch it
+
+-- Every page calls this once per visit (per browser tab). Only plain site paths count, so junk can't pile up.
+create or replace function public.count_view(p text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if p is null or p !~ '^/[A-Za-z0-9/_.~-]{0,199}$' then
+    return;
+  end if;
+  insert into page_views (day, path, views)
+  values ((now() at time zone 'America/New_York')::date, p, 1)
+  on conflict (day, path) do update set views = page_views.views + 1;
+end $$;
+revoke all on function public.count_view(text) from public;
+grant execute on function public.count_view(text) to anon, authenticated;
+
+-- What the Advertise page shows. Visit sources are counted as "/_from/<source>" (once per visit) and kept out of page totals.
+drop view if exists public.reach_daily;
+create view public.reach_daily as
+  select day, sum(views)::int as views from public.page_views
+  where day > (now() at time zone 'America/New_York')::date - 400 and path not like '/\_from/%'
+  group by day;
+drop view if exists public.reach_pages;
+create view public.reach_pages as
+  select path, sum(views)::int as views from public.page_views
+  where day > (now() at time zone 'America/New_York')::date - 30 and path not like '/\_from/%'
+  group by path;
+-- Last 30 days in a few numbers: all page views, story pages, the front page, and visits by where they came from.
+drop view if exists public.reach_summary;
+create view public.reach_summary as
+  with recent as (select path, views from public.page_views where day > (now() at time zone 'America/New_York')::date - 30)
+  select 'all'::text as k, coalesce(sum(views), 0)::int as views from recent where path not like '/\_from/%'
+  union all select 'story', coalesce(sum(views), 0)::int from recent where path like '/s/%'
+  union all select 'front', coalesce(sum(views), 0)::int from recent where path = '/'
+  union all select substring(path from 8), sum(views)::int from recent where path like '/\_from/%' group by path;
+grant select on public.reach_daily, public.reach_pages, public.reach_summary to anon, authenticated;
+-- For the Facebook posts the counter powers: page views in the last 7 days (Friday's "most read this week" and the
+-- weekly neighbor shout-out) and today so far (the 6 p.m. "trending now" link post).
+drop view if exists public.reach_week;
+create view public.reach_week as
+  select path, sum(views)::int as views from public.page_views
+  where day > (now() at time zone 'America/New_York')::date - 7 and path not like '/\_from/%'
+  group by path;
+drop view if exists public.reach_today;
+create view public.reach_today as
+  select path, views from public.page_views
+  where day = (now() at time zone 'America/New_York')::date and path not like '/\_from/%';
+grant select on public.reach_week, public.reach_today to anon, authenticated;

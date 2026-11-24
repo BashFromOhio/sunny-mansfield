@@ -756,8 +756,11 @@ def youtube_id(link):
 
 
 def add_photos(stories, limit=80):
-    """Fill in missing photos from each article's own share image (og:image)."""
-    todo = [s for s in stories if not s.get("image") and s.get("photos", True)][:limit]
+    """Fill in missing photos from each article's own share image (og:image). Bing News thumbnails are checked the
+    same way and swapped for the article's own image when we can read it: Bing sometimes attaches a photo from a
+    different story (a basketball game on a legal-clinic story, November 2026)."""
+    bing = lambda s: "bing.com/th" in (s.get("image") or "")
+    todo = [s for s in stories if (not s.get("image") or bing(s)) and s.get("photos", True)][:limit]
     fails = {}
     for s in todo:
         try:
@@ -778,8 +781,12 @@ def add_photos(stories, limit=80):
             if image.startswith("//"):
                 image = "https:" + image
             if image.startswith("https://") and is_image(image):
+                if bing(s):
+                    STATS["bing_swapped"] = STATS.get("bing_swapped", 0) + 1
                 s["image"] = image
         except Exception as exc:
+            if bing(s):
+                continue  # couldn't read the article; keep Bing's thumbnail from the feed
             if bing_photo(s):
                 STATS["bing"] = STATS.get("bing", 0) + 1
                 continue
@@ -787,7 +794,8 @@ def add_photos(stories, limit=80):
             fails[key] = fails.get(key, 0) + 1
     have = sum(1 for s in stories if s.get("image"))
     note(f"Photos: {have} of {len(stories)} stories ({len(todo)} looked up, "
-         f"{STATS.get('google_decoded', 0)} Google links decoded, {STATS.get('bing', 0)} photos from Bing)")
+         f"{STATS.get('google_decoded', 0)} Google links decoded, {STATS.get('bing', 0)} photos from Bing, "
+         f"{STATS.get('bing_swapped', 0)} Bing thumbnails swapped for the article's own)")
     if fails:  # one line, so the notice limit (10 per run) leaves room for the rest
         note("Photo lookups failed: " + "; ".join(f"{k.split(':')[0]} x{n}" for k, n in sorted(fails.items(), key=lambda kv: -kv[1])[:10]))
 
@@ -1845,15 +1853,39 @@ def google_head(cfg):
         out += f'\n<meta name="google-site-verification" content="{e(cfg["google_site_verification"])}">'
     ids = [x.strip() for x in (cfg.get("google_tag") or "").split(",") if x.strip()]
     if ids:
-        configs = "".join(f"gtag('config',{json.dumps(i)});" for i in ids)
+        # Editors' own visits (this browser signed into admin.html once) are tagged internal, and the Analytics
+        # "Internal Traffic" data filter drops them, so checking the site doesn't inflate the numbers.
+        configs = "".join(f"gtag('config',{json.dumps(i)},T);" for i in ids)
         out += (f'\n<script async src="https://www.googletagmanager.com/gtag/js?id={e(ids[0])}"></script>'
                 f"<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}"
+                f"var T={{}};try{{if(localStorage.getItem('sm-editor')==='1')T={{traffic_type:'internal'}}}}catch(x){{}}"
                 f"gtag('js',new Date());{configs}</script>")
+    out += visit_counter(cfg)
     pub = adsense_pub(cfg)
     if pub:
         out += (f'\n<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-{e(pub)}" '
                 f'crossorigin="anonymous"></script>')
     return out
+
+
+def visit_counter(cfg):
+    """Our own page-view counter for the live reach chart on the Advertise page: one count per page per browser tab,
+    sent to the count_view function in Supabase. No cookies and nothing about the visitor, only the page address.
+    Robots, link previews and the admin page don't count."""
+    if not backend_on(cfg):
+        return ""
+    conf = json.dumps({"u": cfg["supabase_url"].rstrip("/") + "/rest/v1/rpc/count_view", "k": cfg["supabase_anon_key"]})
+    return ("\n<script>(()=>{try{const C=" + conf + ";let p=location.pathname.replace(/index\\.html$/,'')||'/';"
+            "if(/admin\\.html$/.test(p)||localStorage.getItem('sm-editor')==='1'||navigator.webdriver||/bot|crawl|spider|slurp|preview|facebookexternalhit|lighthouse|headless/i.test(navigator.userAgent))return;"
+            "const send=q=>fetch(C.u,{method:'POST',keepalive:true,headers:{apikey:C.k,Authorization:'Bearer '+C.k,'Content-Type':'application/json'},"
+            "body:JSON.stringify({p:q.slice(0,200)})}).catch(()=>{});"
+            "if(!sessionStorage.getItem('sm-src')){const u=(new URLSearchParams(location.search).get('utm_source')||'').toLowerCase();"
+            "let r='';try{r=document.referrer?new URL(document.referrer).hostname:''}catch(x){}"
+            "const h=u+' '+r;const src=/facebook|fb\\.com|fb\\.me/.test(h)?'facebook':/instagram/.test(h)?'instagram':/threads\\./.test(h)?'threads':"
+            "/bsky/.test(h)?'bluesky':/(^|\\.)(t\\.co|x\\.com|twitter\\.com)$/.test(r)?'x':/google\\./.test(h)?'google':/bing\\.|duckduckgo|yahoo\\./.test(h)?'other-search':"
+            "/beehiiv|newsletter|email/.test(h)?'newsletter':r&&r!==location.hostname?'other-sites':'direct';"
+            "sessionStorage.setItem('sm-src',src);send('/_from/'+src)}"
+            "const k='sm-v:'+p;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');send(p)}catch(x){}})()</script>")
 
 
 def adsense_pub(cfg):
@@ -3844,6 +3876,9 @@ LEGAL = {
 }
 
 
+COUNTER_PRIVACY = ("Each page you open adds one to that page's count for the day, so we can show advertisers honest "
+                   "reach numbers on our Advertise page. The count stores only the date, the page address and the number. "
+                   "No cookies, no IP address and nothing that says who you are.")
 GOOGLE_PRIVACY = ("We advertise Sunny Mansfield on Google and use the Google tag to learn which ads bring readers here. It "
                   "sets cookies that tell Google you visited, which pages you opened and whether you came from one of our ads. "
                   "We see only totals, never who you are, and we don't sell or share anything you type into our forms. Google's "
@@ -4223,6 +4258,9 @@ def render_legal(cfg, stories, kind):
         extra = ([("Google ads and measurement", GOOGLE_PRIVACY)] if cfg.get("google_tag") else []) + \
                 ([("Ads on this site", ADSENSE_PRIVACY)] if adsense_pub(cfg) else [])
         parts[2:2] = extra
+    if kind == "privacy" and backend_on(cfg):
+        parts = list(parts)
+        parts[2:2] = [("Our visit counter", COUNTER_PRIVACY)]
     parts = list(parts) + [("Contact us", "Email {email}, or write to us at {address}.")]
     body = "".join(f'<h2 class="hed">{e(h)}</h2><p>{e(t).replace("{address}", mailing_address(cfg)).replace("{email}", email)}</p>'
                    for h, t in parts)
@@ -5015,6 +5053,195 @@ AD_RULES = [
 ]
 
 
+# What the same reach costs elsewhere, for the "What it's worth" part of Live reach. Checked November 2026; update yearly.
+MARKET = {
+    "cpm": 11.62, "cpm_low": 8, "cpm_high": 14, "cpc": 0.60,
+    "sources": [("Facebook ads average CPM $11.62, 2026 (Neal Schaffer)", "https://nealschaffer.com/facebook-ads-cost-calculator/"),
+                ("US Meta CPM $8 to $14 across placements, 2026 (Stackmatix)", "https://stackmatix.com/blog/facebook-ads-costs-what-to-expect-2026"),
+                ("Facebook traffic campaigns $0.60 per click, 2026 (WordStream via Single Grain)", "https://singlegrain.com/blog-posts/facebook-ads-cost")],
+}
+
+
+def spot_price(code):
+    """(low, high) monthly price of an ad spot, read from its price text like "$150 to $300 a month"."""
+    x = next((a for a in AD_SPOTS if a["spot"] == code), None)
+    nums = [int(n) for n in re.findall(r"\$(\d+)", x["price"])] if x else []
+    return (nums[0], nums[-1]) if nums else None
+
+
+def facebook_posts():
+    """Facebook posts in the last 30 days from social.json, which a daily Zapier workflow updates. None if missing."""
+    try:
+        fb = json.loads((HERE / "social.json").read_text())["facebook"]
+        today = eastern().date()
+        days = {datetime.strptime(k, "%Y-%m-%d").date(): int(v) for k, v in fb["days"].items()}
+        recent = {d: v for d, v in days.items() if timedelta(0) <= today - d < timedelta(days=30)}
+        if not recent:
+            return None
+        span = min(30, (today - min(recent)).days + 1)
+        updated = datetime.fromisoformat(fb["updated"]).strftime("%B %-d")
+        return {"posts": sum(recent.values()), "span": span, "per_day": round(sum(recent.values()) / span), "updated": updated}
+    except Exception:
+        return None
+
+
+REACH_PENDING = [
+    ("Facebook reach, clicks and reactions", "Facebook won't share per-post numbers for the Page yet (it answers "
+     "\u201cinsights not available\u201d). That usually lifts once the Page has about 100 followers, or the Zapier Facebook "
+     "connection may need the insights permission. Checked November 24, 2026; the daily workflow can add them once Facebook allows it."),
+    ("Facebook followers", "Needs a direct Facebook access key for the Page. Zapier's Facebook steps don't offer a follower count."),
+    ("Facebook posts before November 20, 2026", "The nightly \u201cCount Facebook posts\u201d Zapier workflow (11:45 p.m.) reads the "
+     "Page's 25 newest posts, so the count starts November 20 and builds up from there. It runs nightly because the Page "
+     "posts about 5 to 10 times a day: a weekly run would only see the last few days."),
+    ("Instagram, Threads, Bluesky and X posts and followers", "Not connected yet. Visits that come from these apps are counted "
+     "below; their own numbers need each account connected (Zapier or each app's access key)."),
+    ("Google Analytics reports", "Analytics (G-X41ZCEZNXY) collects everything from the day the tag went live, but its reports stay "
+     "in analytics.google.com. Showing them here needs a Google service account with read access to the property."),
+    ("Google Search Console", "Search clicks and impressions stay in search.google.com/search-console. Showing them here needs "
+     "the same kind of Google service account, added as a user on the property."),
+    ("History before November 24, 2026", "Our own counter started that day, so the chart has nothing earlier. Facebook and "
+     "Search Console have their own history in their apps."),
+]
+
+
+def live_reach(cfg, stories, admin=False):
+    """'Live reach' on the Advertise page: real page views from our own counter (Supabase count_view), drawn in the
+    reader's browser straight from the database, so the numbers are never typed in by hand."""
+    if not backend_on(cfg):
+        return ""
+    site = cfg["site_url"].rstrip("/")
+    now = datetime.now(timezone.utc)
+    month = [s for s in stories if s["date"] > now - timedelta(days=30)]
+    neighbors = sum(1 for s in month if s.get("community"))
+    fb_line = ""
+    social = facebook_posts()
+    if social:
+        fb_line = (f'<li><b>{social["posts"]:,}</b> posts on our <a class="link" href="{e(cfg["facebook_page"])}" target="_blank" rel="noopener">Facebook Page</a> '
+                   f'in the last {social["span"]} days, about {social["per_day"]} a day (counted daily, last on {social["updated"]})</li>')
+    names = {"/": "Front page"}
+    for path, _, _ in PAGES:
+        if path:
+            names["/" + path] = path.replace(".html", "").replace("-", " ").capitalize()
+    for s in stories[:300]:
+        names[urllib.parse.urlparse(page_url(cfg, s)).path] = s["title"]
+    conf = json.dumps({"url": cfg["supabase_url"].rstrip("/") + "/rest/v1/", "key": cfg["supabase_anon_key"], "names": names,
+                       "m": {k: v for k, v in MARKET.items() if k != "sources"},
+                       "spots": [{"code": c, "name": n, "where": w, "price": spot_price(c)} for c, n, w in
+                                 [("A1", "Top banner", "all"), ("A4", "Story page banner", "story")] if spot_price(c)]})
+    sources = "; ".join(f'<a class="link" href="{e(u)}" target="_blank" rel="noopener">{e(t)}</a>' for t, u in MARKET["sources"])
+    pending = ""
+    if admin:
+        pending = ('<div class="box reach-pending"><span class="caps kicker">Not captured yet</span><h3 class="hed">What\'s missing, and why</h3><ul>'
+                   + "".join(f"<li><b>{e(t)}.</b> {e(d)}</li>" for t, d in REACH_PENDING) + "</ul></div>")
+    preview = ('<p class="hint"><b>Editors only for now.</b> This is the reach section we plan to show advertisers. It stays here until the '
+               'numbers have grown; nothing on this tab is on the public site.</p>') if admin else ""
+    return f"""<section class="wrap latest reach" id="reach">{preview}{pending}<h2 class="label">Grow with us</h2>
+<p class="reach-lede"><b>Sunny Mansfield is new, local and growing every week, and we'd rather show you than tell you.</b>
+Every number here comes live from our own page counter each time this page loads. Nothing is typed in by hand, rounded up or guessed,
+so you can watch us grow, and grow right along with us.</p>
+<p class="reach-lede">Get in early: founding sponsors lock in today's price for a full year. As the numbers climb, your cost per view keeps falling.</p>
+<div class="reach-tiles" id="reach-tiles"><p class="hint">Loading live numbers…</p></div>
+<div class="reach-bar" role="group" aria-label="Time range"><button type="button" class="tab" data-range="30" aria-pressed="true">30 days</button>
+<button type="button" class="tab" data-range="90" aria-pressed="false">90 days</button><button type="button" class="tab" data-range="0" aria-pressed="false">All</button></div>
+<figure class="reach-chart"><figcaption class="caps kicker">Page views per day</figcaption><div id="reach-plot" class="reach-plot"></div>
+<div class="reach-tip" id="reach-tip" hidden></div></figure>
+<details class="reach-table"><summary>See the numbers as a table</summary><div id="reach-rows"></div></details>
+<h3 class="hed" style="margin:26px 0 6px">Where we're headed, and what it's worth</h3>
+<p class="hint">Live math on the same numbers: what this many views would cost as Facebook ads, where the next month is heading,
+and what each ad spot works out to per 1,000 views today. Locked-in founding prices get cheaper per view as we grow.</p>
+<div class="reach-tiles" id="reach-worth"></div><div id="reach-spots"></div>
+<h3 class="hed" style="margin:26px 0 6px">Where readers come from, last 30 days</h3>
+<p class="hint">Counted once per visit: did they tap a link on Facebook, Instagram or another site, find us on Google, or come straight here?</p>
+<div id="reach-src"></div>
+<div class="reach-cols"><div><h3 class="hed">Most read, last 30 days</h3><ol id="reach-top" class="reach-top"></ol></div>
+<div><h3 class="hed">Growing every day</h3><ul class="reach-top"><li><b>{len(month)}</b> good news stories in the last 30 days</li>
+<li><b>{neighbors}</b> of them posted by neighbors</li>{fb_line or f'<li>New stories every 15 minutes, posted to our <a class="link" href="{e(cfg["facebook_page"])}" target="_blank" rel="noopener">Facebook Page</a> every day</li>'}</ul></div></div>
+<p class="note"><b>How we count:</b> each time someone opens a page, that page's count for the day goes up by one (once per visit, so
+refreshing doesn't add more). Robots, link previews and our own admin page are left out. No cookies and nothing about who visited is stored,
+only the date, the page and the number. Counting started in November 2026, so the chart grows from there. We also run Google Analytics
+and can share those reports with any advertiser who asks.<br><b>Market prices</b> are published averages, not quotes: {sources}.
+A projection is the straight-line trend of recent days carried forward, so it can be wrong in either direction.</p></section>
+<style>
+.reach-lede{{max-width:62ch}}.reach-pending{{margin:0 0 22px}}.reach-pending li{{margin:8px 0}}.reach-tiles{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}}
+.reach-tile{{background:#fff;border:3px solid #2e1a10;padding:14px 16px}}.reach-tile b{{display:block;font-size:34px;line-height:1.1;color:#2e1a10;font-variant-numeric:tabular-nums}}
+.reach-tile span{{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#8a6f5c}}.reach-tile small{{display:block;margin-top:4px;color:#5c4636}}
+.reach-bar{{display:flex;gap:8px;margin:8px 0}}.reach-chart{{position:relative;margin:0;background:#fff;border:3px solid #2e1a10;padding:14px 12px 6px}}
+.reach-plot svg{{display:block;width:100%;height:auto}}.reach-tip{{position:absolute;pointer-events:none;background:#2e1a10;color:#fbf6ec;padding:6px 10px;font-size:13px;white-space:nowrap;transform:translate(-50%,-110%)}}
+.reach-cols{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;margin-top:22px}}.reach-top{{padding-left:20px}}.reach-top li{{margin:6px 0}}
+.reach-srcrow{{display:grid;grid-template-columns:110px 1fr 70px;gap:10px;align-items:center;margin:6px 0;font-variant-numeric:tabular-nums}}
+.reach-srcbar{{height:14px;background:#f3ead8}}.reach-srcbar i{{display:block;height:100%;background:#d9531e;border-radius:0 4px 4px 0}}
+.reach-spot{{border-left:4px solid #d9531e;background:#fff;padding:10px 14px;margin:8px 0}}
+.reach-table summary{{cursor:pointer;margin:12px 0;font-weight:700}}.reach-table table{{border-collapse:collapse;font-variant-numeric:tabular-nums}}.reach-table td,.reach-table th{{padding:3px 14px 3px 0;text-align:left}}
+</style>
+<script>(()=>{{const C={conf};const H={{apikey:C.key,Authorization:'Bearer '+C.key}};const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));
+const n=x=>Number(x).toLocaleString('en-US');const ymd=d=>d.toISOString().slice(0,10);
+const nice=s=>new Date(s+'T12:00:00').toLocaleDateString('en-US',{{month:'short',day:'numeric'}});
+const today=()=>{{const t=new Date(new Date().toLocaleString('en-US',{{timeZone:'America/New_York'}}));return ymd(new Date(Date.UTC(t.getFullYear(),t.getMonth(),t.getDate())))}};
+let days=[],range=30;
+function fill(rows){{if(!rows.length)return[];const m=Object.fromEntries(rows.map(r=>[r.day,r.views]));const out=[];
+ for(let d=new Date(rows[0].day+'T00:00:00Z');ymd(d)<=today();d.setUTCDate(d.getUTCDate()+1))out.push({{day:ymd(d),views:m[ymd(d)]||0}});return out}}
+const sum=a=>a.reduce((t,r)=>t+r.views,0);
+function tiles(){{const t=$('reach-tiles');if(!days.length){{t.innerHTML='<p class="hint">Counting just started. Check back tomorrow for the first full day.</p>';return}}
+ const last=k=>days.slice(-k),prev=k=>days.slice(-2*k,-k);const full=days.slice(0,-1);
+ const tile=(v,l,sm)=>`<div class="reach-tile"><b>${{v}}</b><span>${{l}}</span>${{sm?`<small>${{sm}}</small>`:''}}</div>`;
+ const k=days.length>=60?30:days.length>=14?7:0;let growth='';
+ if(k){{const a=sum(last(k)),b=sum(prev(k));const pct=b?Math.round((a-b)/b*100):null;
+  growth=tile(pct===null?'New':(pct>=0?'+':'')+pct+'%',`Growth, last ${{k}} days`,`${{n(a)}} views vs ${{n(b)}} the ${{k}} days before`)}}
+ else growth=tile(n(days.length),'Days counted so far',`Since ${{nice(days[0].day)}}. Growth shows after two full weeks.`);
+ const best=full.length?full.reduce((x,r)=>r.views>x.views?r:x,full[0]):days[0];
+ t.innerHTML=tile(n(sum(last(7))),'Page views, last 7 days')+tile(n(sum(last(30))),'Page views, last 30 days')+
+  tile(n(Math.round(sum(last(Math.min(30,days.length)))/Math.min(30,days.length))),'Average per day')+growth+
+  tile(n(best.views),'Best day',nice(best.day))}}
+function chart(){{const p=$('reach-plot'),tip=$('reach-tip');const d=range?days.slice(-range):days;
+ if(d.length<2){{p.innerHTML='<p class="hint">The chart appears after the first two days of counting.</p>';$('reach-rows').innerHTML='';return}}
+ const W=640,Hh=220,L=44,R=12,T=10,B=26;const max=Math.max(4,...d.map(r=>r.views));const step=Math.pow(10,Math.floor(Math.log10(max)));
+ const top=Math.ceil(max/step)*step;const x=i=>L+(W-L-R)*i/(d.length-1),y=v=>T+(Hh-T-B)*(1-v/top);
+ let g='';for(let k=0;k<=2;k++){{const v=Math.round(top*k/2);g+=`<line x1="${{L}}" x2="${{W-R}}" y1="${{y(v)}}" y2="${{y(v)}}" stroke="#e8dcc8" stroke-width="1"/><text x="${{L-6}}" y="${{y(v)+4}}" text-anchor="end" font-size="11" fill="#8a6f5c">${{n(v)}}</text>`}}
+ const lab=[0,Math.floor((d.length-1)/2),d.length-1].map(i=>`<text x="${{x(i)}}" y="${{Hh-6}}" text-anchor="${{i?i===d.length-1?'end':'middle':'start'}}" font-size="11" fill="#8a6f5c">${{nice(d[i].day)}}</text>`).join('');
+ const pts=d.map((r,i)=>`${{x(i).toFixed(1)}},${{y(r.views).toFixed(1)}}`).join(' ');
+ p.innerHTML=`<svg viewBox="0 0 ${{W}} ${{Hh}}" role="img" aria-label="Page views per day, ${{nice(d[0].day)}} to ${{nice(d[d.length-1].day)}}">${{g}}${{lab}}
+ <polygon points="${{L}},${{y(0)}} ${{pts}} ${{x(d.length-1)}},${{y(0)}}" fill="#d9531e" opacity=".08"/><polyline points="${{pts}}" fill="none" stroke="#d9531e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+ <line id="rx" y1="${{T}}" y2="${{y(0)}}" stroke="#2e1a10" stroke-width="1" visibility="hidden"/><circle id="rd" r="5" fill="#d9531e" stroke="#fff" stroke-width="2" visibility="hidden"/>
+ <rect x="${{L}}" y="0" width="${{W-L-R}}" height="${{Hh}}" fill="transparent" id="rh"/></svg>`;
+ const svg=p.querySelector('svg'),rx=svg.querySelector('#rx'),rd=svg.querySelector('#rd');
+ const move=ev=>{{const b=svg.getBoundingClientRect();const cx=((ev.touches?ev.touches[0].clientX:ev.clientX)-b.left)*W/b.width;
+  const i=Math.max(0,Math.min(d.length-1,Math.round((cx-L)/(W-L-R)*(d.length-1))));const X=x(i),Y=y(d[i].views);
+  rx.setAttribute('x1',X);rx.setAttribute('x2',X);rd.setAttribute('cx',X);rd.setAttribute('cy',Y);rx.style.visibility=rd.style.visibility='visible';
+  tip.hidden=false;tip.innerHTML=`<b>${{n(d[i].views)}}</b> views · ${{nice(d[i].day)}}${{i===d.length-1?' (today so far)':''}}`;
+  tip.style.left=(X*b.width/W+12)+'px';tip.style.top=(Y*b.height/Hh+14)+'px'}};
+ const out=()=>{{tip.hidden=true;rx.style.visibility=rd.style.visibility='hidden'}};
+ const h=svg.querySelector('#rh');h.addEventListener('mousemove',move);h.addEventListener('touchmove',move,{{passive:true}});h.addEventListener('touchstart',move,{{passive:true}});
+ h.addEventListener('mouseleave',out);h.addEventListener('touchend',()=>setTimeout(out,1500));
+ $('reach-rows').innerHTML='<table><tr><th>Day</th><th>Page views</th></tr>'+d.slice().reverse().map(r=>`<tr><td>${{nice(r.day)}}</td><td>${{n(r.views)}}</td></tr>`).join('')+'</table>'}}
+document.querySelectorAll('[data-range]').forEach(b=>b.addEventListener('click',()=>{{range=+b.dataset.range;
+ document.querySelectorAll('[data-range]').forEach(x=>x.setAttribute('aria-pressed',x===b));chart()}}));
+const $$=x=>'$'+(x>=100?Math.round(x).toLocaleString('en-US'):x.toFixed(2));
+function trend(){{const d=days.slice(0,-1).slice(-30);if(d.length<14)return null;const k=d.length,mx=(k-1)/2,my=sum(d)/k;
+ let a=0,b=0;d.forEach((r,i)=>{{a+=(i-mx)*(r.views-my);b+=(i-mx)*(i-mx)}});const slope=b?a/b:0;let t=0;
+ for(let i=k;i<k+30;i++)t+=Math.max(0,my+slope*(i-mx));return Math.round(t)}}
+function worth(S){{const all=S.all||0,m=C.m,box=$('reach-worth');if(!all){{box.innerHTML='<p class="hint">Fills in once the first views are counted.</p>';return}}
+ const tile=(v,l,sm)=>`<div class="reach-tile"><b>${{v}}</b><span>${{l}}</span>${{sm?`<small>${{sm}}</small>`:''}}</div>`;
+ const fb=S.facebook||0,next=trend();
+ box.innerHTML=tile($$(all*m.cpm/1000),'Market value, last 30 days',`What ${{n(all)}} views would cost as Facebook ads at $${{m.cpm}} per 1,000 (range ${{$$(all*m.cpm_low/1000)}} to ${{$$(all*m.cpm_high/1000)}})`)+
+  tile(next===null?'Soon':n(next),'Projected views, next 30 days',next===null?'Needs two full weeks of counting first.':`If the trend of the last ${{Math.min(30,days.length-1)}} days holds`)+
+  (fb?tile($$(fb*m.cpc),'Facebook visits, as ad clicks',`${{n(fb)}} visits from Facebook at $${{m.cpc.toFixed(2)}} per click`):'');
+ $('reach-spots').innerHTML=C.spots.map(sp=>{{const v=sp.where==='story'?(S.story||0):all;const base=next!==null&&sp.where==='all'?next:v;
+  if(!base)return '';const lo=sp.price[0]/base*1000,hi=sp.price[1]/base*1000;
+  return `<p class="reach-spot"><b>${{esc(sp.name)}} (${{sp.code}})</b>: $${{sp.price[0]}} to $${{sp.price[1]}} a month, seen on ${{n(base)}} ${{sp.where==='story'?'story page ':''}}views
+  ${{next!==null&&sp.where==='all'?'(projected next 30 days)':'(last 30 days)'}}. That's <b>${{$$(lo)}} to ${{$$(hi)}} per 1,000 views</b>, compared with about $${{m.cpm}} on Facebook.</p>`}}).join('')}}
+const SRC={{facebook:'Facebook',instagram:'Instagram',threads:'Threads',bluesky:'Bluesky',x:'X',google:'Google search','other-search':'Other search',newsletter:'Newsletter','other-sites':'Other websites',direct:'Direct / typed in'}};
+function sources(S){{const rows=Object.keys(SRC).filter(k=>S[k]).map(k=>[SRC[k],S[k]]).sort((a,b)=>b[1]-a[1]);const top=rows.length?rows[0][1]:0;
+ $('reach-src').innerHTML=rows.length?rows.map(([l,v])=>`<div class="reach-srcrow"><span>${{l}}</span><span class="reach-srcbar"><i style="width:${{Math.max(2,v/top*100)}}%"></i></span><b>${{n(v)}}</b></div>`).join(''):'<p class="hint">Fills in as visits are counted.</p>'}}
+Promise.all([fetch(C.url+'reach_daily?select=day,views&order=day.asc',{{headers:H}}).then(r=>r.ok?r.json():Promise.reject(r.status)),
+ fetch(C.url+'reach_summary?select=k,views',{{headers:H}}).then(r=>r.ok?r.json():[]).catch(()=>[])])
+ .then(([rows,sm])=>{{days=fill(rows);tiles();chart();const S=Object.fromEntries(sm.map(r=>[r.k,r.views]));worth(S);sources(S)}})
+ .catch(()=>{{$('reach-tiles').innerHTML='<p class="hint">Live numbers are unavailable right now. Please try again in a minute.</p>'}});
+fetch(C.url+'reach_pages?select=path,views&order=views.desc&limit=5',{{headers:H}}).then(r=>r.ok?r.json():[]).then(rows=>{{
+ $('reach-top').innerHTML=rows.length?rows.map(r=>`<li><a class="link" href="${{esc(r.path)}}">${{esc(C.names[r.path]||r.path)}}</a>: ${{n(r.views)}} views</li>`).join(''):'<li>Fills in as people read.</li>'}}).catch(()=>{{}});
+}})();</script>"""
+
+
 def render_ads_soon(cfg, stories):
     """Stand-in while advertising is paused, so old links don't 404. Kept out of search."""
     site = cfg["site_url"].rstrip("/")
@@ -5110,7 +5337,8 @@ The site also skips a news story by itself when it matches a story posted throug
 <button class="tab" type="button" data-q="headline">Headline &amp; remove</button>
 <button class="tab" type="button" data-q="brackets">Brackets</button>
 <button class="tab" type="button" data-q="rejected">Rejected</button>
-<button class="tab" type="button" data-q="verified">Verified people</button></div></nav>
+<button class="tab" type="button" data-q="verified">Verified people</button>
+<button class="tab" type="button" data-q="reach">Reach</button></div></nav>
 <div class="row"><p class="hint">Signed in as <b id="me"></b>. <button class="textbtn" type="button" id="logout">Sign out</button></p>
 <input type="password" id="pw-new" placeholder="new password" aria-label="New password" autocomplete="new-password" style="flex:0 1 200px">
 <button class="btn sm" type="button" id="pw-btn">Set password</button></div></div>
@@ -5131,7 +5359,7 @@ The site also skips a news story by itself when it matches a story posted throug
 <label class="fld"><span class="caps">Headline</span><input id="l-title" maxlength="200" placeholder="Optional"></label>
 <label class="fld wide"><span class="caps">Summary</span><textarea id="l-sum" rows="3" maxlength="400" placeholder="Optional: leave blank to use the article's"></textarea></label>
 <div class="wide submitrow"><button class="btn solid" type="submit" id="l-btn">Post it</button><span class="formmsg" id="l-msg" role="status" aria-live="polite"></span></div></form></div>
-{picker}<div id="list" class="queue"></div></div>
+{picker}<div id="reach-ed" hidden>{live_reach(cfg, stories, admin=True)}</div><div id="list" class="queue"></div></div>
 <p class="formmsg" id="desk-msg"></p></section>"""
     script = f"""<script src="{SB_JS}"></script><script>
 (()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);const $=id=>document.getElementById(id);
@@ -5151,7 +5379,7 @@ $('logout').onclick=()=>sb.auth.signOut().then(()=>location.reload());
 async function start(s){{if(me&&s&&s.user.email===me)return;if(!s){{$('login').hidden=false;$('desk').hidden=true;return}}
  me=s.user.email;const {{data}}=await sb.from('admins').select('email').limit(1);
  if(!data||!data.length){{$('login').hidden=false;$('login-msg').textContent=me+' is not on the admin list.';return}}
- $('login').hidden=true;$('desk').hidden=false;$('me').textContent=me;load()}}
+ $('login').hidden=true;$('desk').hidden=false;$('me').textContent=me;try{{localStorage.setItem('sm-editor','1')}}catch(x){{}};load()}}
 sb.auth.getSession().then(r=>start(r.data.session));sb.auth.onAuthStateChange((_,s)=>{{if(s&&!me)start(s)}});
 function base(){{return sb.from('submissions').select('*').order('created_at',{{ascending:false}}).limit(200)}}
 let NOV=false;const ok=x=>NOV?x:x.or('section.neq.Birthday,verified_at.not.is.null');  // unconfirmed birthday shout-outs wait for their code
@@ -5174,8 +5402,8 @@ function item(r){{const when=new Date(r.created_at).toLocaleString();
  ${{r.photo_url?`<span class="qphoto"><img src="${{esc(r.photo_url.split(/\\s+/)[0])}}" alt="">${{r.photo_url.trim().split(/\\s+/).length>1?`<span class="caps kicker">${{r.photo_url.trim().split(/\\s+/).length}} photos</span>`:''}}</span>`:''}}
  <div class="qbody"><span class="caps kicker">${{esc(r.section)}}</span><h3 class="hed">${{esc(r.title)}}</h3><p class="qtext">${{esc(r.summary||'')}}</p>
  <dl class="facts">${{facts.map(([k,v])=>`<dt>${{k}}</dt><dd>${{esc(v)}}</dd>`).join('')}}</dl>${{link}}<div class="share">${{acts}}</div></div></article>`}}
-async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';$('headline-ed').hidden=q!=='headline';counts();
- const list=$('list');list.innerHTML=q==='headline'?'':'<p class="hint">Loading…</p>';if(q==='headline'){{hiddenList();return}}
+async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';$('headline-ed').hidden=q!=='headline';$('reach-ed').hidden=q!=='reach';$('link-ed').hidden=q==='reach';counts();
+ const list=$('list');list.innerHTML=q==='headline'?'':'<p class="hint">Loading…</p>';if(q==='headline'){{hiddenList();return}}if(q==='reach'){{list.innerHTML='';return}}
  if(q==='verified'){{const {{data,error}}=await sb.from('verified').select('*').order('added_at',{{ascending:false}});
   if(error){{list.innerHTML='';say(error.message);return}}
   list.innerHTML=data.length?data.map(v=>`<article class="qitem"><div class="qbody"><h3 class="hed">${{esc(v.name||v.email)}}</h3><p class="hint">${{esc(v.email)}} ${{v.role?'· '+esc(v.role):''}}</p>
@@ -5684,6 +5912,28 @@ link to the original reporting; neighbors' own posts are original to Sunny Mansf
 STORAGE_RE = re.compile(r"https://[a-z0-9]+\.supabase\.co/storage/v1/object/public/[^\s\"'<>()\\]+")
 
 
+def attach_views(cfg, stories, sample=False):
+    """Our own page counter (Supabase reach_* views) for the Facebook posts it powers: each story gets views_week and
+    views_today, and the 30-day total goes in cfg["reach_total30"]. Quietly does nothing if the counter isn't there."""
+    if sample or not backend_on(cfg):
+        return
+    key = cfg["supabase_anon_key"]
+    base = cfg["supabase_url"].rstrip("/") + "/rest/v1/"
+    get = lambda view: json.loads(fetch(base + view, limit=2_000_000, headers={"apikey": key, "Authorization": f"Bearer {key}"})[1])
+    try:
+        week = {r["path"]: r["views"] for r in get("reach_week?select=path,views")}
+        today = {r["path"]: r["views"] for r in get("reach_today?select=path,views")}
+        total = next((r["views"] for r in get("reach_summary?select=k,views&k=eq.all")), 0)
+    except Exception as exc:
+        note(f"Page counter: skipped ({exc})")
+        return
+    for st in stories:
+        path = urllib.parse.urlparse(page_url(cfg, st)).path
+        st["views_week"], st["views_today"] = week.get(path, 0), today.get(path, 0)
+    cfg["reach_total30"] = total
+    note(f"Page counter: {total:,} views in 30 days")
+
+
 def localize_photos(cfg, out):
     """Copy every Supabase photo the pages use into /photos/, so visitors only ever see our own domain."""
     files = [f for f in out.rglob("*") if f.suffix in (".html", ".xml", ".json", ".txt") and f.is_file()]
@@ -5775,6 +6025,7 @@ def main():
         from posts import (make_birthday_invite_image, make_community_feed, make_daily_post, make_post_images,
                            make_quote_feed, make_quote_image, make_series_feed, make_top_story_feed)
         credit = "sunnymansfield.com"  # the line along the bottom of every post image
+        attach_views(cfg, stories, args.sample)
         make_post_images(stories, out, SECTION_NAMES, UA, credit, outlet_photos=cfg.get("frame_outlet_photos", False), note=note)
         make_daily_post(cfg, stories, businesses, flyers, got["fundraisers"], listings, out, SECTION_NAMES, UA, credit,
                         lambda s: page_url(cfg, s), note=note)

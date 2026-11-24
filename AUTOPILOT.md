@@ -75,3 +75,14 @@ Up to two posts a day for the Facebook Page, each with a framed image and a read
 The dog of the day posts with the dog's own photo from the shelter listing, credited to the shelter and linked to its adoption page. A new home posts the day after it's approved; when nothing is new, the homes go round recent listings, each at most once a week, and the slot skips the day if there are none.
 
 To post it: add a Zap like the daily post one. **Trigger:** RSS by Zapier → New Item in Feed → `https://sunnymansfield.com/series.xml`. **Action:** Facebook Pages → Create Page Photo, with the item's *Link* as the photo and its *Description* as the message. This adds up to about 30 to 60 posts a month. Together with the other Zaps that's over the free plan's 100, so it needs Zapier's paid Starter plan (or dlvr.it, IFTTT or Buffer with the same feed).
+
+## Posts powered by our page counter
+
+The site's own page counter (the admin Reach tab) picks some posts. They ride on the feeds above, so they cost no extra Zapier tasks except milestones:
+
+| When | Post | Feed |
+|---|---|---|
+| Friday 8 a.m. | **Most read this week**: the stories Mansfield read most (replaces "5 good things" once at least 3 stories have views) | `/social.xml` |
+| Monday 8 a.m. | **Neighbor shout-out**: the most-read story a neighbor posted this week, thanking them by name (otherwise regular neighbor news) | `/social.xml` |
+| 6 p.m. | **Trending now**: the story with the most views today (at least 5), otherwise the day's top story | `/links.xml` |
+| When it happens | **Thank-you milestone** at 1,000, 2,500, 5,000, 10,000 ... page views in 30 days, each posted only once | `/social.xml` |
