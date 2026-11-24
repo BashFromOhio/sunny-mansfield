@@ -1866,9 +1866,15 @@ def visit_counter(cfg):
     conf = json.dumps({"u": cfg["supabase_url"].rstrip("/") + "/rest/v1/rpc/count_view", "k": cfg["supabase_anon_key"]})
     return ("\n<script>(()=>{try{const C=" + conf + ";let p=location.pathname.replace(/index\\.html$/,'')||'/';"
             "if(/admin\\.html$/.test(p)||navigator.webdriver||/bot|crawl|spider|slurp|preview|facebookexternalhit|lighthouse|headless/i.test(navigator.userAgent))return;"
-            "const k='sm-v:'+p;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');"
-            "fetch(C.u,{method:'POST',keepalive:true,headers:{apikey:C.k,Authorization:'Bearer '+C.k,'Content-Type':'application/json'},"
-            "body:JSON.stringify({p:p.slice(0,200)})}).catch(()=>{})}catch(x){}})()</script>")
+            "const send=q=>fetch(C.u,{method:'POST',keepalive:true,headers:{apikey:C.k,Authorization:'Bearer '+C.k,'Content-Type':'application/json'},"
+            "body:JSON.stringify({p:q.slice(0,200)})}).catch(()=>{});"
+            "if(!sessionStorage.getItem('sm-src')){const u=(new URLSearchParams(location.search).get('utm_source')||'').toLowerCase();"
+            "let r='';try{r=document.referrer?new URL(document.referrer).hostname:''}catch(x){}"
+            "const h=u+' '+r;const src=/facebook|fb\\.com|fb\\.me/.test(h)?'facebook':/instagram/.test(h)?'instagram':/threads\\./.test(h)?'threads':"
+            "/bsky/.test(h)?'bluesky':/(^|\\.)(t\\.co|x\\.com|twitter\\.com)$/.test(r)?'x':/google\\./.test(h)?'google':/bing\\.|duckduckgo|yahoo\\./.test(h)?'other-search':"
+            "/beehiiv|newsletter|email/.test(h)?'newsletter':r&&r!==location.hostname?'other-sites':'direct';"
+            "sessionStorage.setItem('sm-src',src);send('/_from/'+src)}"
+            "const k='sm-v:'+p;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');send(p)}catch(x){}})()</script>")
 
 
 def adsense_pub(cfg):
@@ -5036,6 +5042,22 @@ AD_RULES = [
 ]
 
 
+# What the same reach costs elsewhere, for the "What it's worth" part of Live reach. Checked November 2026; update yearly.
+MARKET = {
+    "cpm": 11.62, "cpm_low": 8, "cpm_high": 14, "cpc": 0.60,
+    "sources": [("Facebook ads average CPM $11.62, 2026 (Neal Schaffer)", "https://nealschaffer.com/facebook-ads-cost-calculator/"),
+                ("US Meta CPM $8 to $14 across placements, 2026 (Stackmatix)", "https://stackmatix.com/blog/facebook-ads-costs-what-to-expect-2026"),
+                ("Facebook traffic campaigns $0.60 per click, 2026 (WordStream via Single Grain)", "https://singlegrain.com/blog-posts/facebook-ads-cost")],
+}
+
+
+def spot_price(code):
+    """(low, high) monthly price of an ad spot, read from its price text like "$150 to $300 a month"."""
+    x = next((a for a in AD_SPOTS if a["spot"] == code), None)
+    nums = [int(n) for n in re.findall(r"\$(\d+)", x["price"])] if x else []
+    return (nums[0], nums[-1]) if nums else None
+
+
 def live_reach(cfg, stories):
     """'Live reach' on the Advertise page: real page views from our own counter (Supabase count_view), drawn in the
     reader's browser straight from the database, so the numbers are never typed in by hand."""
@@ -5051,7 +5073,11 @@ def live_reach(cfg, stories):
             names["/" + path] = path.replace(".html", "").replace("-", " ").capitalize()
     for s in stories[:300]:
         names[urllib.parse.urlparse(page_url(cfg, s)).path] = s["title"]
-    conf = json.dumps({"url": cfg["supabase_url"].rstrip("/") + "/rest/v1/", "key": cfg["supabase_anon_key"], "names": names})
+    conf = json.dumps({"url": cfg["supabase_url"].rstrip("/") + "/rest/v1/", "key": cfg["supabase_anon_key"], "names": names,
+                       "m": {k: v for k, v in MARKET.items() if k != "sources"},
+                       "spots": [{"code": c, "name": n, "where": w, "price": spot_price(c)} for c, n, w in
+                                 [("A1", "Top banner", "all"), ("A4", "Story page banner", "story")] if spot_price(c)]})
+    sources = "; ".join(f'<a class="link" href="{e(u)}" target="_blank" rel="noopener">{e(t)}</a>' for t, u in MARKET["sources"])
     return f"""<section class="wrap latest reach" id="reach"><h2 class="label">Live reach</h2>
 <p class="reach-lede">These numbers come straight from our own page counter, live, every time this page loads. Nothing is typed in by hand,
 rounded up or estimated. What you see is what your ad would be seen next to.</p>
@@ -5061,13 +5087,21 @@ rounded up or estimated. What you see is what your ad would be seen next to.</p>
 <figure class="reach-chart"><figcaption class="caps kicker">Page views per day</figcaption><div id="reach-plot" class="reach-plot"></div>
 <div class="reach-tip" id="reach-tip" hidden></div></figure>
 <details class="reach-table"><summary>See the numbers as a table</summary><div id="reach-rows"></div></details>
+<h3 class="hed" style="margin:26px 0 6px">What it's worth</h3>
+<p class="hint">Live math on the same numbers: what this many views would cost as Facebook ads, where the next month is heading,
+and what each of our ad spots works out to per 1,000 views.</p>
+<div class="reach-tiles" id="reach-worth"></div><div id="reach-spots"></div>
+<h3 class="hed" style="margin:26px 0 6px">Where readers come from, last 30 days</h3>
+<p class="hint">Counted once per visit: did they tap a link on Facebook, Instagram or another site, find us on Google, or come straight here?</p>
+<div id="reach-src"></div>
 <div class="reach-cols"><div><h3 class="hed">Most read, last 30 days</h3><ol id="reach-top" class="reach-top"></ol></div>
 <div><h3 class="hed">On the site right now</h3><ul class="reach-top"><li><b>{len(month)}</b> good news stories in the last 30 days</li>
 <li><b>{neighbors}</b> of them posted by neighbors</li><li>New stories every 15 minutes, posted to our <a class="link" href="{e(cfg['facebook_page'])}" target="_blank" rel="noopener">Facebook Page</a> every day</li></ul></div></div>
 <p class="note"><b>How we count:</b> each time someone opens a page, that page's count for the day goes up by one (once per visit, so
 refreshing doesn't add more). Robots, link previews and our own admin page are left out. No cookies and nothing about who visited is stored,
 only the date, the page and the number. Counting started in November 2026, so the chart grows from there. We also run Google Analytics
-and can share those reports with any advertiser who asks.</p></section>
+and can share those reports with any advertiser who asks.<br><b>Market prices</b> are published averages, not quotes: {sources}.
+A projection is the straight-line trend of recent days carried forward, so it can be wrong in either direction.</p></section>
 <style>
 .reach-lede{{max-width:62ch}}.reach-tiles{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}}
 .reach-tile{{background:#fff;border:3px solid #2e1a10;padding:14px 16px}}.reach-tile b{{display:block;font-size:34px;line-height:1.1;color:#2e1a10;font-variant-numeric:tabular-nums}}
@@ -5075,6 +5109,9 @@ and can share those reports with any advertiser who asks.</p></section>
 .reach-bar{{display:flex;gap:8px;margin:8px 0}}.reach-chart{{position:relative;margin:0;background:#fff;border:3px solid #2e1a10;padding:14px 12px 6px}}
 .reach-plot svg{{display:block;width:100%;height:auto}}.reach-tip{{position:absolute;pointer-events:none;background:#2e1a10;color:#fbf6ec;padding:6px 10px;font-size:13px;white-space:nowrap;transform:translate(-50%,-110%)}}
 .reach-cols{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;margin-top:22px}}.reach-top{{padding-left:20px}}.reach-top li{{margin:6px 0}}
+.reach-srcrow{{display:grid;grid-template-columns:110px 1fr 70px;gap:10px;align-items:center;margin:6px 0;font-variant-numeric:tabular-nums}}
+.reach-srcbar{{height:14px;background:#f3ead8}}.reach-srcbar i{{display:block;height:100%;background:#d9531e;border-radius:0 4px 4px 0}}
+.reach-spot{{border-left:4px solid #d9531e;background:#fff;padding:10px 14px;margin:8px 0}}
 .reach-table summary{{cursor:pointer;margin:12px 0;font-weight:700}}.reach-table table{{border-collapse:collapse;font-variant-numeric:tabular-nums}}.reach-table td,.reach-table th{{padding:3px 14px 3px 0;text-align:left}}
 </style>
 <script>(()=>{{const C={conf};const H={{apikey:C.key,Authorization:'Bearer '+C.key}};const $=id=>document.getElementById(id);
@@ -5120,7 +5157,26 @@ function chart(){{const p=$('reach-plot'),tip=$('reach-tip');const d=range?days.
  $('reach-rows').innerHTML='<table><tr><th>Day</th><th>Page views</th></tr>'+d.slice().reverse().map(r=>`<tr><td>${{nice(r.day)}}</td><td>${{n(r.views)}}</td></tr>`).join('')+'</table>'}}
 document.querySelectorAll('[data-range]').forEach(b=>b.addEventListener('click',()=>{{range=+b.dataset.range;
  document.querySelectorAll('[data-range]').forEach(x=>x.setAttribute('aria-pressed',x===b));chart()}}));
-fetch(C.url+'reach_daily?select=day,views&order=day.asc',{{headers:H}}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(rows=>{{days=fill(rows);tiles();chart()}})
+const $$=x=>'$'+(x>=100?Math.round(x).toLocaleString('en-US'):x.toFixed(2));
+function trend(){{const d=days.slice(0,-1).slice(-30);if(d.length<14)return null;const k=d.length,mx=(k-1)/2,my=sum(d)/k;
+ let a=0,b=0;d.forEach((r,i)=>{{a+=(i-mx)*(r.views-my);b+=(i-mx)*(i-mx)}});const slope=b?a/b:0;let t=0;
+ for(let i=k;i<k+30;i++)t+=Math.max(0,my+slope*(i-mx));return Math.round(t)}}
+function worth(S){{const all=S.all||0,m=C.m,box=$('reach-worth');if(!all){{box.innerHTML='<p class="hint">Fills in once the first views are counted.</p>';return}}
+ const tile=(v,l,sm)=>`<div class="reach-tile"><b>${{v}}</b><span>${{l}}</span>${{sm?`<small>${{sm}}</small>`:''}}</div>`;
+ const fb=S.facebook||0,next=trend();
+ box.innerHTML=tile($$(all*m.cpm/1000),'Market value, last 30 days',`What ${{n(all)}} views would cost as Facebook ads at $${{m.cpm}} per 1,000 (range ${{$$(all*m.cpm_low/1000)}} to ${{$$(all*m.cpm_high/1000)}})`)+
+  tile(next===null?'Soon':n(next),'Projected views, next 30 days',next===null?'Needs two full weeks of counting first.':`If the trend of the last ${{Math.min(30,days.length-1)}} days holds`)+
+  (fb?tile($$(fb*m.cpc),'Facebook visits, as ad clicks',`${{n(fb)}} visits from Facebook at $${{m.cpc.toFixed(2)}} per click`):'');
+ $('reach-spots').innerHTML=C.spots.map(sp=>{{const v=sp.where==='story'?(S.story||0):all;const base=next!==null&&sp.where==='all'?next:v;
+  if(!base)return '';const lo=sp.price[0]/base*1000,hi=sp.price[1]/base*1000;
+  return `<p class="reach-spot"><b>${{esc(sp.name)}} (${{sp.code}})</b>: $${{sp.price[0]}} to $${{sp.price[1]}} a month, seen on ${{n(base)}} ${{sp.where==='story'?'story page ':''}}views
+  ${{next!==null&&sp.where==='all'?'(projected next 30 days)':'(last 30 days)'}}. That's <b>${{$$(lo)}} to ${{$$(hi)}} per 1,000 views</b>, compared with about $${{m.cpm}} on Facebook.</p>`}}).join('')}}
+const SRC={{facebook:'Facebook',instagram:'Instagram',threads:'Threads',bluesky:'Bluesky',x:'X',google:'Google search','other-search':'Other search',newsletter:'Newsletter','other-sites':'Other websites',direct:'Direct / typed in'}};
+function sources(S){{const rows=Object.keys(SRC).filter(k=>S[k]).map(k=>[SRC[k],S[k]]).sort((a,b)=>b[1]-a[1]);const top=rows.length?rows[0][1]:0;
+ $('reach-src').innerHTML=rows.length?rows.map(([l,v])=>`<div class="reach-srcrow"><span>${{l}}</span><span class="reach-srcbar"><i style="width:${{Math.max(2,v/top*100)}}%"></i></span><b>${{n(v)}}</b></div>`).join(''):'<p class="hint">Fills in as visits are counted.</p>'}}
+Promise.all([fetch(C.url+'reach_daily?select=day,views&order=day.asc',{{headers:H}}).then(r=>r.ok?r.json():Promise.reject(r.status)),
+ fetch(C.url+'reach_summary?select=k,views',{{headers:H}}).then(r=>r.ok?r.json():[]).catch(()=>[])])
+ .then(([rows,sm])=>{{days=fill(rows);tiles();chart();const S=Object.fromEntries(sm.map(r=>[r.k,r.views]));worth(S);sources(S)}})
  .catch(()=>{{$('reach-tiles').innerHTML='<p class="hint">Live numbers are unavailable right now. Please try again in a minute.</p>'}});
 fetch(C.url+'reach_pages?select=path,views&order=views.desc&limit=5',{{headers:H}}).then(r=>r.ok?r.json():[]).then(rows=>{{
  $('reach-top').innerHTML=rows.length?rows.map(r=>`<li><a class="link" href="${{esc(r.path)}}">${{esc(C.names[r.path]||r.path)}}</a>: ${{n(r.views)}} views</li>`).join(''):'<li>Fills in as people read.</li>'}}).catch(()=>{{}});

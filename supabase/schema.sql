@@ -202,13 +202,23 @@ end $$;
 revoke all on function public.count_view(text) from public;
 grant execute on function public.count_view(text) to anon, authenticated;
 
--- What the Advertise page shows: total views per day, and the most-read pages of the last 30 days.
+-- What the Advertise page shows. Visit sources are counted as "/_from/<source>" (once per visit) and kept out of page totals.
 drop view if exists public.reach_daily;
 create view public.reach_daily as
   select day, sum(views)::int as views from public.page_views
-  where day > (now() at time zone 'America/New_York')::date - 400 group by day;
+  where day > (now() at time zone 'America/New_York')::date - 400 and path not like '/\_from/%'
+  group by day;
 drop view if exists public.reach_pages;
 create view public.reach_pages as
   select path, sum(views)::int as views from public.page_views
-  where day > (now() at time zone 'America/New_York')::date - 30 group by path;
-grant select on public.reach_daily, public.reach_pages to anon, authenticated;
+  where day > (now() at time zone 'America/New_York')::date - 30 and path not like '/\_from/%'
+  group by path;
+-- Last 30 days in a few numbers: all page views, story pages, the front page, and visits by where they came from.
+drop view if exists public.reach_summary;
+create view public.reach_summary as
+  with recent as (select path, views from public.page_views where day > (now() at time zone 'America/New_York')::date - 30)
+  select 'all'::text as k, coalesce(sum(views), 0)::int as views from recent where path not like '/\_from/%'
+  union all select 'story', coalesce(sum(views), 0)::int from recent where path like '/s/%'
+  union all select 'front', coalesce(sum(views), 0)::int from recent where path = '/'
+  union all select substring(path from 8), sum(views)::int from recent where path like '/\_from/%' group by path;
+grant select on public.reach_daily, public.reach_pages, public.reach_summary to anon, authenticated;
