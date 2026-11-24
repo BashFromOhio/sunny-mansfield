@@ -5079,8 +5079,9 @@ REACH_PENDING = [
      "\u201cinsights not available\u201d). That usually lifts once the Page has about 100 followers, or the Zapier Facebook "
      "connection may need the insights permission. Checked November 24, 2026; the daily workflow can add them once Facebook allows it."),
     ("Facebook followers", "Needs a direct Facebook access key for the Page. Zapier's Facebook steps don't offer a follower count."),
-    ("Facebook posts per day", "Pending: GitHub needs to be connected to Zapier so the daily \u201cCount Facebook posts\u201d workflow can "
-     "save the count. Until then the number below is the 25 posts read on November 24."),
+    ("Facebook posts before November 20, 2026", "The nightly \u201cCount Facebook posts\u201d Zapier workflow (11:45 p.m.) reads the "
+     "Page's 25 newest posts, so the count starts November 20 and builds up from there. It runs nightly because the Page "
+     "posts about 5 to 10 times a day: a weekly run would only see the last few days."),
     ("Instagram, Threads, Bluesky and X posts and followers", "Not connected yet. Visits that come from these apps are counted "
      "below; their own numbers need each account connected (Zapier or each app's access key)."),
     ("Google Analytics reports", "Analytics (G-X41ZCEZNXY) collects everything from the day the tag went live, but its reports stay "
