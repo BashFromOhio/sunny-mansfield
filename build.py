@@ -1849,11 +1849,26 @@ def google_head(cfg):
         out += (f'\n<script async src="https://www.googletagmanager.com/gtag/js?id={e(ids[0])}"></script>'
                 f"<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}"
                 f"gtag('js',new Date());{configs}</script>")
+    out += visit_counter(cfg)
     pub = adsense_pub(cfg)
     if pub:
         out += (f'\n<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-{e(pub)}" '
                 f'crossorigin="anonymous"></script>')
     return out
+
+
+def visit_counter(cfg):
+    """Our own page-view counter for the live reach chart on the Advertise page: one count per page per browser tab,
+    sent to the count_view function in Supabase. No cookies and nothing about the visitor, only the page address.
+    Robots, link previews and the admin page don't count."""
+    if not backend_on(cfg):
+        return ""
+    conf = json.dumps({"u": cfg["supabase_url"].rstrip("/") + "/rest/v1/rpc/count_view", "k": cfg["supabase_anon_key"]})
+    return ("\n<script>(()=>{try{const C=" + conf + ";let p=location.pathname.replace(/index\\.html$/,'')||'/';"
+            "if(/admin\\.html$/.test(p)||navigator.webdriver||/bot|crawl|spider|slurp|preview|facebookexternalhit|lighthouse|headless/i.test(navigator.userAgent))return;"
+            "const k='sm-v:'+p;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');"
+            "fetch(C.u,{method:'POST',keepalive:true,headers:{apikey:C.k,Authorization:'Bearer '+C.k,'Content-Type':'application/json'},"
+            "body:JSON.stringify({p:p.slice(0,200)})}).catch(()=>{})}catch(x){}})()</script>")
 
 
 def adsense_pub(cfg):
@@ -3844,6 +3859,9 @@ LEGAL = {
 }
 
 
+COUNTER_PRIVACY = ("Each page you open adds one to that page's count for the day, so we can show advertisers honest "
+                   "reach numbers on our Advertise page. The count stores only the date, the page address and the number. "
+                   "No cookies, no IP address and nothing that says who you are.")
 GOOGLE_PRIVACY = ("We advertise Sunny Mansfield on Google and use the Google tag to learn which ads bring readers here. It "
                   "sets cookies that tell Google you visited, which pages you opened and whether you came from one of our ads. "
                   "We see only totals, never who you are, and we don't sell or share anything you type into our forms. Google's "
@@ -4223,6 +4241,9 @@ def render_legal(cfg, stories, kind):
         extra = ([("Google ads and measurement", GOOGLE_PRIVACY)] if cfg.get("google_tag") else []) + \
                 ([("Ads on this site", ADSENSE_PRIVACY)] if adsense_pub(cfg) else [])
         parts[2:2] = extra
+    if kind == "privacy" and backend_on(cfg):
+        parts = list(parts)
+        parts[2:2] = [("Our visit counter", COUNTER_PRIVACY)]
     parts = list(parts) + [("Contact us", "Email {email}, or write to us at {address}.")]
     body = "".join(f'<h2 class="hed">{e(h)}</h2><p>{e(t).replace("{address}", mailing_address(cfg)).replace("{email}", email)}</p>'
                    for h, t in parts)
@@ -5015,12 +5036,104 @@ AD_RULES = [
 ]
 
 
+def live_reach(cfg, stories):
+    """'Live reach' on the Advertise page: real page views from our own counter (Supabase count_view), drawn in the
+    reader's browser straight from the database, so the numbers are never typed in by hand."""
+    if not backend_on(cfg):
+        return ""
+    site = cfg["site_url"].rstrip("/")
+    now = datetime.now(timezone.utc)
+    month = [s for s in stories if s["date"] > now - timedelta(days=30)]
+    neighbors = sum(1 for s in month if s.get("community"))
+    names = {"/": "Front page"}
+    for path, _, _ in PAGES:
+        if path:
+            names["/" + path] = path.replace(".html", "").replace("-", " ").capitalize()
+    for s in stories[:300]:
+        names[urllib.parse.urlparse(page_url(cfg, s)).path] = s["title"]
+    conf = json.dumps({"url": cfg["supabase_url"].rstrip("/") + "/rest/v1/", "key": cfg["supabase_anon_key"], "names": names})
+    return f"""<section class="wrap latest reach" id="reach"><h2 class="label">Live reach</h2>
+<p class="reach-lede">These numbers come straight from our own page counter, live, every time this page loads. Nothing is typed in by hand,
+rounded up or estimated. What you see is what your ad would be seen next to.</p>
+<div class="reach-tiles" id="reach-tiles"><p class="hint">Loading live numbers…</p></div>
+<div class="reach-bar" role="group" aria-label="Time range"><button type="button" class="tab" data-range="30" aria-pressed="true">30 days</button>
+<button type="button" class="tab" data-range="90" aria-pressed="false">90 days</button><button type="button" class="tab" data-range="0" aria-pressed="false">All</button></div>
+<figure class="reach-chart"><figcaption class="caps kicker">Page views per day</figcaption><div id="reach-plot" class="reach-plot"></div>
+<div class="reach-tip" id="reach-tip" hidden></div></figure>
+<details class="reach-table"><summary>See the numbers as a table</summary><div id="reach-rows"></div></details>
+<div class="reach-cols"><div><h3 class="hed">Most read, last 30 days</h3><ol id="reach-top" class="reach-top"></ol></div>
+<div><h3 class="hed">On the site right now</h3><ul class="reach-top"><li><b>{len(month)}</b> good news stories in the last 30 days</li>
+<li><b>{neighbors}</b> of them posted by neighbors</li><li>New stories every 15 minutes, posted to our <a class="link" href="{e(cfg['facebook_page'])}" target="_blank" rel="noopener">Facebook Page</a> every day</li></ul></div></div>
+<p class="note"><b>How we count:</b> each time someone opens a page, that page's count for the day goes up by one (once per visit, so
+refreshing doesn't add more). Robots, link previews and our own admin page are left out. No cookies and nothing about who visited is stored,
+only the date, the page and the number. Counting started in November 2026, so the chart grows from there. We also run Google Analytics
+and can share those reports with any advertiser who asks.</p></section>
+<style>
+.reach-lede{{max-width:62ch}}.reach-tiles{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}}
+.reach-tile{{background:#fff;border:3px solid #2e1a10;padding:14px 16px}}.reach-tile b{{display:block;font-size:34px;line-height:1.1;color:#2e1a10;font-variant-numeric:tabular-nums}}
+.reach-tile span{{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#8a6f5c}}.reach-tile small{{display:block;margin-top:4px;color:#5c4636}}
+.reach-bar{{display:flex;gap:8px;margin:8px 0}}.reach-chart{{position:relative;margin:0;background:#fff;border:3px solid #2e1a10;padding:14px 12px 6px}}
+.reach-plot svg{{display:block;width:100%;height:auto}}.reach-tip{{position:absolute;pointer-events:none;background:#2e1a10;color:#fbf6ec;padding:6px 10px;font-size:13px;white-space:nowrap;transform:translate(-50%,-110%)}}
+.reach-cols{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px;margin-top:22px}}.reach-top{{padding-left:20px}}.reach-top li{{margin:6px 0}}
+.reach-table summary{{cursor:pointer;margin:12px 0;font-weight:700}}.reach-table table{{border-collapse:collapse;font-variant-numeric:tabular-nums}}.reach-table td,.reach-table th{{padding:3px 14px 3px 0;text-align:left}}
+</style>
+<script>(()=>{{const C={conf};const H={{apikey:C.key,Authorization:'Bearer '+C.key}};const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));
+const n=x=>Number(x).toLocaleString('en-US');const ymd=d=>d.toISOString().slice(0,10);
+const nice=s=>new Date(s+'T12:00:00').toLocaleDateString('en-US',{{month:'short',day:'numeric'}});
+const today=()=>{{const t=new Date(new Date().toLocaleString('en-US',{{timeZone:'America/New_York'}}));return ymd(new Date(Date.UTC(t.getFullYear(),t.getMonth(),t.getDate())))}};
+let days=[],range=30;
+function fill(rows){{if(!rows.length)return[];const m=Object.fromEntries(rows.map(r=>[r.day,r.views]));const out=[];
+ for(let d=new Date(rows[0].day+'T00:00:00Z');ymd(d)<=today();d.setUTCDate(d.getUTCDate()+1))out.push({{day:ymd(d),views:m[ymd(d)]||0}});return out}}
+const sum=a=>a.reduce((t,r)=>t+r.views,0);
+function tiles(){{const t=$('reach-tiles');if(!days.length){{t.innerHTML='<p class="hint">Counting just started. Check back tomorrow for the first full day.</p>';return}}
+ const last=k=>days.slice(-k),prev=k=>days.slice(-2*k,-k);const full=days.slice(0,-1);
+ const tile=(v,l,sm)=>`<div class="reach-tile"><b>${{v}}</b><span>${{l}}</span>${{sm?`<small>${{sm}}</small>`:''}}</div>`;
+ const k=days.length>=60?30:days.length>=14?7:0;let growth='';
+ if(k){{const a=sum(last(k)),b=sum(prev(k));const pct=b?Math.round((a-b)/b*100):null;
+  growth=tile(pct===null?'New':(pct>=0?'+':'')+pct+'%',`Growth, last ${{k}} days`,`${{n(a)}} views vs ${{n(b)}} the ${{k}} days before`)}}
+ else growth=tile(n(days.length),'Days counted so far',`Since ${{nice(days[0].day)}}. Growth shows after two full weeks.`);
+ const best=full.length?full.reduce((x,r)=>r.views>x.views?r:x,full[0]):days[0];
+ t.innerHTML=tile(n(sum(last(7))),'Page views, last 7 days')+tile(n(sum(last(30))),'Page views, last 30 days')+
+  tile(n(Math.round(sum(last(Math.min(30,days.length)))/Math.min(30,days.length))),'Average per day')+growth+
+  tile(n(best.views),'Best day',nice(best.day))}}
+function chart(){{const p=$('reach-plot'),tip=$('reach-tip');const d=range?days.slice(-range):days;
+ if(d.length<2){{p.innerHTML='<p class="hint">The chart appears after the first two days of counting.</p>';$('reach-rows').innerHTML='';return}}
+ const W=640,Hh=220,L=44,R=12,T=10,B=26;const max=Math.max(4,...d.map(r=>r.views));const step=Math.pow(10,Math.floor(Math.log10(max)));
+ const top=Math.ceil(max/step)*step;const x=i=>L+(W-L-R)*i/(d.length-1),y=v=>T+(Hh-T-B)*(1-v/top);
+ let g='';for(let k=0;k<=2;k++){{const v=Math.round(top*k/2);g+=`<line x1="${{L}}" x2="${{W-R}}" y1="${{y(v)}}" y2="${{y(v)}}" stroke="#e8dcc8" stroke-width="1"/><text x="${{L-6}}" y="${{y(v)+4}}" text-anchor="end" font-size="11" fill="#8a6f5c">${{n(v)}}</text>`}}
+ const lab=[0,Math.floor((d.length-1)/2),d.length-1].map(i=>`<text x="${{x(i)}}" y="${{Hh-6}}" text-anchor="${{i?i===d.length-1?'end':'middle':'start'}}" font-size="11" fill="#8a6f5c">${{nice(d[i].day)}}</text>`).join('');
+ const pts=d.map((r,i)=>`${{x(i).toFixed(1)}},${{y(r.views).toFixed(1)}}`).join(' ');
+ p.innerHTML=`<svg viewBox="0 0 ${{W}} ${{Hh}}" role="img" aria-label="Page views per day, ${{nice(d[0].day)}} to ${{nice(d[d.length-1].day)}}">${{g}}${{lab}}
+ <polygon points="${{L}},${{y(0)}} ${{pts}} ${{x(d.length-1)}},${{y(0)}}" fill="#d9531e" opacity=".08"/><polyline points="${{pts}}" fill="none" stroke="#d9531e" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+ <line id="rx" y1="${{T}}" y2="${{y(0)}}" stroke="#2e1a10" stroke-width="1" visibility="hidden"/><circle id="rd" r="5" fill="#d9531e" stroke="#fff" stroke-width="2" visibility="hidden"/>
+ <rect x="${{L}}" y="0" width="${{W-L-R}}" height="${{Hh}}" fill="transparent" id="rh"/></svg>`;
+ const svg=p.querySelector('svg'),rx=svg.querySelector('#rx'),rd=svg.querySelector('#rd');
+ const move=ev=>{{const b=svg.getBoundingClientRect();const cx=((ev.touches?ev.touches[0].clientX:ev.clientX)-b.left)*W/b.width;
+  const i=Math.max(0,Math.min(d.length-1,Math.round((cx-L)/(W-L-R)*(d.length-1))));const X=x(i),Y=y(d[i].views);
+  rx.setAttribute('x1',X);rx.setAttribute('x2',X);rd.setAttribute('cx',X);rd.setAttribute('cy',Y);rx.style.visibility=rd.style.visibility='visible';
+  tip.hidden=false;tip.innerHTML=`<b>${{n(d[i].views)}}</b> views · ${{nice(d[i].day)}}${{i===d.length-1?' (today so far)':''}}`;
+  tip.style.left=(X*b.width/W+12)+'px';tip.style.top=(Y*b.height/Hh+14)+'px'}};
+ const out=()=>{{tip.hidden=true;rx.style.visibility=rd.style.visibility='hidden'}};
+ const h=svg.querySelector('#rh');h.addEventListener('mousemove',move);h.addEventListener('touchmove',move,{{passive:true}});h.addEventListener('touchstart',move,{{passive:true}});
+ h.addEventListener('mouseleave',out);h.addEventListener('touchend',()=>setTimeout(out,1500));
+ $('reach-rows').innerHTML='<table><tr><th>Day</th><th>Page views</th></tr>'+d.slice().reverse().map(r=>`<tr><td>${{nice(r.day)}}</td><td>${{n(r.views)}}</td></tr>`).join('')+'</table>'}}
+document.querySelectorAll('[data-range]').forEach(b=>b.addEventListener('click',()=>{{range=+b.dataset.range;
+ document.querySelectorAll('[data-range]').forEach(x=>x.setAttribute('aria-pressed',x===b));chart()}}));
+fetch(C.url+'reach_daily?select=day,views&order=day.asc',{{headers:H}}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(rows=>{{days=fill(rows);tiles();chart()}})
+ .catch(()=>{{$('reach-tiles').innerHTML='<p class="hint">Live numbers are unavailable right now. Please try again in a minute.</p>'}});
+fetch(C.url+'reach_pages?select=path,views&order=views.desc&limit=5',{{headers:H}}).then(r=>r.ok?r.json():[]).then(rows=>{{
+ $('reach-top').innerHTML=rows.length?rows.map(r=>`<li><a class="link" href="${{esc(r.path)}}">${{esc(C.names[r.path]||r.path)}}</a>: ${{n(r.views)}} views</li>`).join(''):'<li>Fills in as people read.</li>'}}).catch(()=>{{}});
+}})();</script>"""
+
+
 def render_ads_soon(cfg, stories):
     """Stand-in while advertising is paused, so old links don't 404. Kept out of search."""
     site = cfg["site_url"].rstrip("/")
     inner = f"""{page_title("Coming soon", "Advertising is paused", "We're not selling ad spots right now. Local businesses can still share news, deals and events for free.")}
 <section class="wrap" style="text-align:center"><p><a class="btn solid" href="{e(site)}/submit.html">Share your news</a></p>
-<p class="note">Questions? Email <a href="mailto:{e(cfg['submit_email'])}">{e(cfg['submit_email'])}</a>.</p></section>"""
+<p class="note">Questions? Email <a href="mailto:{e(cfg['submit_email'])}">{e(cfg['submit_email'])}</a>.</p></section>
+{live_reach(cfg, stories)}"""
     return shell(cfg, f"Advertising · {cfg['site_name']}", "Advertising on Sunny Mansfield is paused for now.",
                  f"{site}/advertise.html", inner, stories, index=False)
 
@@ -5038,6 +5151,7 @@ def render_advertise(cfg, stories):
     kit = (f'<a class="btn" href="{e(site)}/brand/Sunny-Mansfield-Media-Kit.pdf" download>Download the media kit (PDF)</a>'
            if (HERE / "brand" / "Sunny-Mansfield-Media-Kit.pdf").exists() else "")
     inner = f"""{page_title("Shop local!", "Advertise with us", "Put your business in front of neighbors who read, share and shop local. Every ad is labeled, and sponsors never decide what we cover.")}
+{live_reach(cfg, stories)}
 <section class="wrap latest" id="spots"><h2 class="label">Ad spots</h2><div class="spots">{spots}</div>
 <div class="more-row"><a class="btn solid" href="#ask">Ask about a spot</a>{kit}</div>
 <p class="note" style="text-align:center">Prices are founding sponsor rates. Every paid sponsor is also thanked by name at the bottom of every page. Business spotlights and community posts are always free.</p></section>
