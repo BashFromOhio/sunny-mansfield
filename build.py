@@ -1227,6 +1227,8 @@ footer .credit .legal{flex-basis:100%;display:flex;flex-wrap:wrap;justify-conten
 footer .credit .legal a{color:inherit;text-decoration:underline;text-underline-offset:3px}
 .note.report{font-size:14px;opacity:.85;margin-bottom:32px}
 footer .credit .legal.towns{font-weight:400;opacity:.85}
+footer .credit .legal.joinin{align-items:baseline;padding:10px 0 4px;border-top:1px dashed rgba(251,246,236,.25)}
+footer .credit .legal.joinin .script{font-size:24px;text-decoration:none;margin-right:4px}
 .note.towns{font-size:15px;margin-top:8px}
 .grid.events .slide.flyer{width:auto}
 .vh{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -1830,7 +1832,7 @@ def publisher(cfg):
            "publishingPrinciples": f"{site}/rules.html#rules", "correctionsPolicy": f"{site}/about.html#corrections",
            "contactPoint": {"@type": "ContactPoint", "contactType": "editorial", "email": cfg["submit_email"], "url": f"{site}/contact.html"},
            "email": cfg["submit_email"], "parentOrganization": {"@type": "Organization", "name": "Ofgeneration LLC"}}
-    same = [u for u in (cfg.get("facebook_page"), cfg.get("instagram")) if u]
+    same = [u for _, u in social_links(cfg)]
     if same:
         org["sameAs"] = same
     return org
@@ -2004,7 +2006,7 @@ def masthead(cfg, site, stories, quote=None, current=""):
 <div class="topbar"><div class="wrap topbar-in"><span class="caps">{today}</span>
 <span class="caps topbar-mid">{len(stories)} good stories this week · Free · Updated all day</span>
 <nav class="caps toplinks" aria-label="About the paper"><button class="navbtn" type="button" data-about>About</button>
-<a href="{e(site)}/rules.html"{on("rules.html")}>Join the team</a>{f'<a href="{e(site)}/advertise.html"{on("advertise.html")}>Advertise</a>' if ads_open(cfg) else ""}
+<a href="{e(site)}/start.html"{on("start.html")}>Start here</a><a href="{e(site)}/rules.html"{on("rules.html")}>Join the team</a>{f'<a href="{e(site)}/advertise.html"{on("advertise.html")}>Advertise</a>' if ads_open(cfg) else ""}
 <a class="topshare" href="{e(fb_share(site + '/'))}" target="_blank" rel="noopener" aria-label="Share the paper on Facebook">{FB_ICON}<span>Share the paper</span></a></nav></div></div>
 <div class="wrap plate">
 <a class="logo" href="{e(site)}/" aria-label="{e(cfg['site_name'])} home">{logo("logo-retro.svg")}</a>
@@ -2230,9 +2232,17 @@ def report_link(cfg, s=None):
     return f"mailto:{cfg['submit_email']}?subject={urllib.parse.quote(subject[:150])}&body={urllib.parse.quote(body)}"
 
 
+SOCIAL = [("Facebook", "facebook_page"), ("Instagram", "instagram"), ("Threads", "threads"), ("Bluesky", "bluesky"), ("X", "x")]
+
+
+def social_links(cfg):
+    """(name, address) for each social account in config.json; blank ones are skipped."""
+    return [(n, cfg[k]) for n, k in SOCIAL if cfg.get(k)]
+
+
 def follow_links(cfg):
     """A "Follow us" line in the footer for the social pages config.json lists; nothing when none are set."""
-    links = [(n, cfg.get(k)) for n, k in (("Facebook", "facebook_page"), ("Instagram", "instagram")) if cfg.get(k)]
+    links = social_links(cfg)
     if not links:
         return ""
     return ('<nav class="legal follow">Follow us on ' +
@@ -2242,6 +2252,19 @@ def follow_links(cfg):
 def newsletter_link(cfg):
     page = (cfg.get("newsletter") or {}).get("page")
     return f'<a href="{e(page)}" target="_blank" rel="noopener" data-nl>Email newsletter</a>' if page else ""
+
+
+def join_in(cfg):
+    """The footer's "Join in" column: every way to take part, in one place (our take on a newspaper's
+    "Services & Membership" list, minus paywalls and accounts)."""
+    site = cfg["site_url"].rstrip("/")
+    items = [("start.html", "Start here"), ("submit.html", "Share good news"), ("submit.html#flyer", "Post an event"),
+             ("submit.html#job", "Post a job"), ("submit.html#free", "Give away free stuff"), ("birthdays.html", "Birthday shout-outs"),
+             ("partners.html", "Become a Sunny Partner"), ("rules.html", "Join the team"), ("write.html", "Student writers")]
+    if ads_open(cfg):
+        items.append(("advertise.html", "Advertise"))
+    links = "".join(f'<a href="{e(site)}/{h}">{e(t)}</a>' for h, t in items)
+    return (f'<nav class="legal joinin" aria-label="Join in"><span class="script">Join in!</span>{links}{newsletter_link(cfg)}</nav>')
 
 
 def footer(cfg):
@@ -2254,7 +2277,8 @@ Please read and support Richland Source, the Mansfield News Journal and our othe
 {sponsor_strip(cfg)}
 <div class="wrap credit"><span class="script">Made in Mansfield</span> <span>by Ofgeneration LLC</span>
 {follow_links(cfg)}<nav class="legal towns">Good news in {" ".join(f'<a href="{e(town_url(cfg, t))}">{e(t)}</a>' for t, _ in TOWNS)}</nav>
-<nav class="legal"><a href="{e(site)}/about.html">About</a><a href="{e(site)}/contact.html">Contact</a><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/write.html">Write for us</a><a href="{e(site)}/link.html">Link to us</a><a href="{e(site)}/birthdays.html">Birthday shout-outs</a>{newsletter_link(cfg)}<a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
+{join_in(cfg)}
+<nav class="legal"><a href="{e(site)}/about.html">About</a><a href="{e(site)}/contact.html">Contact</a><a href="{e(site)}/privacy.html">Privacy</a><a href="{e(site)}/terms.html">Terms</a><a href="{e(site)}/rules.html#rules">Sunny rules</a><a href="{e(site)}/link.html">Link to us</a><a href="{e(report_link(cfg))}">Report or remove a post</a></nav>
 <small>&copy; {datetime.now(timezone.utc).year} Ofgeneration LLC. All rights reserved. {e(cfg['site_name'])} is a publication of Ofgeneration LLC.
 Stories from other outlets belong to their publishers.</small>
 <small class="addr">{e(mailing_address(cfg, " · "))}</small></div></footer>"""
@@ -3974,6 +3998,88 @@ def badge_box(cfg, target, kind, intro, more=True):
 <textarea class="badgecode" readonly rows="3" aria-label="Badge code" onclick="this.select()">{e(code)}</textarea>
 <div class="share"><button class="btn solid" type="button" data-copy="{e(code)}" data-said="Badge code copied. Paste it into your website.">Copy badge code</button>
 {f'<a class="textbtn" href="{e(site)}/link.html">More badges</a>' if more else ""}</div></div></div></section>"""
+
+
+def render_start(cfg, stories):
+    """start.html: what Sunny Mansfield is and every way to use it, for neighbors arriving from Facebook or Google."""
+    site = cfg["site_url"].rstrip("/")
+    nl = (cfg.get("newsletter") or {}).get("page")
+    follow = " ".join(f'<a class="btn sm" href="{e(u)}" rel="me noopener" target="_blank">{e(n)}</a>' for n, u in social_links(cfg))
+    ways = [
+        ("good", "Read the good news", "New local stories all day: wins, openings, events, helping hands and high school sports from "
+         "Mansfield, Ontario, Lexington, Shelby, Bellville and all of Richland County.", f"{site}/", "Front page"),
+        ("hoods", "Share your good news", "Anyone can send a story, photo or flyer. An editor gives it a quick look, then it goes up "
+         "on the site and our Facebook Page. Add up to 10 photos for a gallery.", f"{site}/submit.html", "Share a story"),
+        ("sales", "Things to do", "Event flyers, fundraisers and free stuff from neighbors. Post your own for free.", f"{site}/events.html", "See events"),
+        ("biz", "Jobs, homes and local business", "Post a job or a home for free. Replies come through the site, so your phone "
+         "and email stay private. Local businesses get a free spotlight.", f"{site}/submit.html#job", "Post for free"),
+        ("seniors", "Birthday shout-outs", "Their name and birthday, plus a message if you like. It shows on the front page and "
+         "our Facebook Page on their big day.", f"{site}/birthdays.html", "Send a shout-out"),
+        ("research", "Become a Sunny Partner", "Schools, churches, nonprofits, teams, clubs and businesses: get verified and your good "
+         "news posts on its own, no waiting.", f"{site}/partners.html", "Partner with us"),
+    ]
+    cards = "".join(f"""<article class="card path"><span class="art sm"><svg viewBox="0 0 100 100" aria-hidden="true">{ART[a]}</svg></span>
+<h2 class="hed">{t}</h2><p class="dek">{d}</p><div class="share"><a class="btn solid" href="{e(h)}">{c}</a></div></article>""" for a, t, d, h, c in ways)
+    inner = f"""{page_title("Welcome, neighbor!", "Start here", "Sunny Mansfield is a free, positive news site for Mansfield and Richland County, made with the people who live here. No paywall, no account, no bad news. Here's how to get the most out of it.")}
+<section class="wrap latest"><div class="grid">{cards}</div></section>
+<section class="wrap civic">
+<div class="box"><span class="caps kicker">Never miss the good stuff</span><h2 class="hed">Follow along</h2>
+<p>Good news lands on our pages every day. Follow us wherever you scroll{", or get the best of the week by email" if nl else ""}.</p>
+<div class="share">{follow}{f'<a class="btn solid sm" href="{e(nl)}" target="_blank" rel="noopener" data-nl>Get the newsletter</a>' if nl else ""}</div></div>
+<div class="box"><span class="caps kicker">Like an app, for free</span><h2 class="hed">Put Sunny on your home screen</h2>
+<ol class="steps"><li><span class="n">1</span><span><b>iPhone:</b> open sunnymansfield.com in Safari, tap Share, then <b>Add to Home Screen</b>.</span></li>
+<li><span class="n">2</span><span><b>Android:</b> open it in Chrome, tap the &#8942; menu, then <b>Add to Home screen</b>.</span></li></ol>
+<p class="note">The sunrise icon opens straight to today's good news.</p></div>
+<div class="box"><span class="caps kicker">Questions</span><h2 class="hed">Need a hand?</h2>
+<ul class="reach-top"><li>Is it free? <b>Yes, always.</b> Reading, posting and shout-outs cost nothing.</li>
+<li>Something wrong, or you're in a post and want it changed? <a class="link" href="{e(report_link(cfg))}">Tell an editor</a> and we'll fix it fast.</li>
+<li>How we decide what runs: <a class="link" href="{e(site)}/rules.html#rules">the Sunny rules</a>.</li>
+<li>Anything else: <a class="link" href="{e(site)}/contact.html">contact us</a>.</li></ul></div>
+</section>"""
+    data = [breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Start here", f"{site}/start.html")])]
+    return shell(cfg, f"Start Here: How Sunny Mansfield Works · {cfg['site_name']}",
+                 "New to Sunny Mansfield? Free, positive local news for Mansfield and Richland County, Ohio. Read, share your news, "
+                 "post events and jobs, send birthday shout-outs and follow along.", f"{site}/start.html", inner, stories, data=data)
+
+
+PARTNER_TYPES = ["School or PTO", "Church or faith group", "Nonprofit or charity", "Team, league or club", "Local business",
+                 "Library, city or county office", "Other group"]
+
+
+def render_partners(cfg, stories):
+    """partners.html: Sunny Partners, our take on a newsroom partner program. Groups get verified so their good news
+    posts on its own. Applications land in the admin page's Team applications tab ("Approve and verify")."""
+    site = cfg["site_url"].rstrip("/")
+    perks = [
+        ("Post without waiting", "Once verified, your posts go live on their own within minutes, with your group's name on them."),
+        ("Shared on Facebook", "Your stories, events and fundraisers go out on the Sunny Mansfield Facebook Page automatically."),
+        ("Your own pages", "Every post gets a page to share, with a photo gallery, and your events show on the Events page."),
+        ("A badge for your site", "Show you're a Sunny Partner with a badge that sends neighbors to your good news."),
+        ("Free, always", "No fees, no contracts. Just good news from Richland County."),
+    ]
+    items = "".join(f"<li><b>{t}.</b> {d}</li>" for t, d in perks)
+    inner = f"""{page_title("Good news travels together", "Become a Sunny Partner", "Schools, churches, nonprofits, teams, clubs and local businesses: you make the good news happen. Get verified and share it with your neighbors in minutes.")}
+<section class="wrap civic">
+<div class="box"><span class="caps kicker">What partners get</span><h2 class="hed">Your news, front and center</h2><ul class="reqs">{items}</ul></div>
+<div class="box"><span class="caps kicker">How it works</span><h2 class="hed">Three steps</h2>
+<ol class="steps"><li><span class="n">1</span><span><b>Apply below.</b> Two minutes: your group, who'll post, and what you'd share.</span></li>
+<li><span class="n">2</span><span><b>Quick check.</b> An editor confirms you're the real group with a Richland County connection.</span></li>
+<li><span class="n">3</span><span><b>Post freely.</b> Sign in on the <a class="link" href="{e(site)}/submit.html">Share your news</a> page with the email you used, and your posts skip the line.</span></li></ol>
+<p class="note">Partners follow <a class="link" href="{e(site)}/rules.html#rules">the Sunny rules</a> like everyone else: lift people up.</p></div>
+</section>
+<section class="wrap formbox" id="apply"><h2 class="label">Apply to be a Sunny Partner</h2>{sunny_form(cfg, "partner-form", "Join the team", [
+        field("business", "Group or business name", req=True),
+        field("role", "What kind of group?", "select", True, opts=PARTNER_TYPES),
+        field("name", "Your name", req=True),
+        field("email", "Email you'll post with", "email", True, "We'll email you when you're verified. Use this email to sign in when you post."),
+        field("town", "Town"),
+        field("summary", "What good news would you share?", "textarea", True, "Games, events, fundraisers, honors, new programs..."),
+        field("link", "Website or Facebook page", "url"),
+    ], "Send my application", title_tpl="Sunny Partner: {business}")}</section>"""
+    data = [breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Sunny Partners", f"{site}/partners.html")])]
+    return shell(cfg, f"Become a Sunny Partner · {cfg['site_name']}",
+                 "Richland County schools, churches, nonprofits, teams and businesses: get verified and post your good news on "
+                 "Sunny Mansfield and our Facebook Page, free.", f"{site}/partners.html", inner, stories, data=data, extra=form_script(cfg))
 
 
 def render_link(cfg, stories):
@@ -5793,7 +5899,7 @@ def merge_community(cfg, stories, community):
 
 PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("students.html", "daily", "0.7"), ("write.html", "monthly", "0.5"), ("send-a-story.html", "monthly", "0.4"), ("pets.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
          ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"), ("homes.html", "daily", "0.7"), ("watch.html", "daily", "0.7"),
-         ("submit.html", "monthly", "0.6"), ("birthdays.html", "daily", "0.6"), ("rules.html", "monthly", "0.4"), ("about.html", "monthly", "0.5"), ("contact.html", "yearly", "0.4"), ("link.html", "monthly", "0.4"),
+         ("submit.html", "monthly", "0.6"), ("birthdays.html", "daily", "0.6"), ("rules.html", "monthly", "0.4"), ("about.html", "monthly", "0.5"), ("contact.html", "yearly", "0.4"), ("link.html", "monthly", "0.4"), ("start.html", "monthly", "0.6"), ("partners.html", "monthly", "0.5"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
 
 
@@ -6070,6 +6176,8 @@ def main():
     (out / "about.html").write_text(rebase(render_about(cfg, stories)))
     (out / "contact.html").write_text(rebase(render_contact(cfg, stories)))
     (out / "link.html").write_text(rebase(render_link(cfg, stories)))
+    (out / "start.html").write_text(rebase(render_start(cfg, stories)))
+    (out / "partners.html").write_text(rebase(render_partners(cfg, stories)))
     (out / "students.html").write_text(rebase(render_students(cfg, stories)))
     (out / "write.html").write_text(rebase(render_write_guide(cfg, stories)))
     (out / "send-a-story.html").write_text(rebase(render_send_pictures(cfg, stories)))
