@@ -459,8 +459,9 @@ SECTION_BY_LABEL = {**{n.lower(): k for k, n in SECTIONS}, "cool research": "goo
                     "event flyer": "flyer", "free stuff": "market", "buy & sell": "market", "buy and sell": "market",
                     "job": "job", "jobs": "job", "home for rent or sale": "home", "home": "home", "homes": "home",
                     "athlete spotlight": "athlete", "bracket": "bracket", "fundraiser": "fund",
-                    "headline": "headline", "link": "link", "birthday": "birthday"}
+                    "headline": "headline", "link": "link", "birthday": "birthday", "hide": "hide"}
 FUND_DAYS = 90  # fundraisers without an end date come down after this
+MAX_PHOTOS = 10  # photos per post: the first leads the story, all of them make the gallery on its page
 ATHLETE_FACTS = ("Sport", "School", "Class of")  # folded into the summary by the submit form
 STUDENT_FACTS = ("Story type", "School", "Class of")  # the same, for Student Voices posts
 STUDENT_TYPES = ["CTE Spotlight", "Yearbook Throwback", "Athlete's View", "School News"]
@@ -576,7 +577,7 @@ def fetch_published(config):
 def load_submissions(config, sample):
     """Approved posts: from Supabase on the live site, from sample_submissions.csv in the preview."""
     got = {"stories": [], "spotlights": [], "flyers": [], "listings": [], "jobs": [], "brackets": [], "fundraisers": [],
-           "headlines": [], "links": [], "birthdays": [], "homes": []}
+           "headlines": [], "links": [], "birthdays": [], "homes": [], "hidden": []}
     try:
         if sample:
             rows = list(csv.reader(io.StringIO((HERE / "sample_submissions.csv").read_text())))
@@ -599,8 +600,10 @@ def load_submissions(config, sample):
         except ValueError:
             date = parse_date(row["when"])
         row["link"] = full_link(row["link"])  # only http(s), so a typed javascript: or data: link never becomes an href
-        image = drive_image(row["photo"])
-        image = image if image.startswith("https://") or (sample and image.startswith("assets/")) else None
+        # photo_url can hold several photos, one per line (the submit form takes up to 10). The first is the main photo.
+        photos = [p for p in (drive_image(x) for x in row["photo"].split())
+                  if p.startswith("https://") or (sample and p.startswith("assets/"))]
+        image = photos[0] if photos else None
         sid = hashlib.sha1(("community" + row.get("id", "") + row["when"] + row["title"]).encode()).hexdigest()[:10]
         if section == "flyer":
             day = parse_day(row["event_date"])
@@ -691,6 +694,9 @@ def load_submissions(config, sample):
             got["links"].append({"link": row["link"], "title": row["title"], "summary": row["summary"],
                                  "section": row["business"], "date": date})
             continue
+        if section == "hide":  # an editor took a news-feed story off the site (admin page, Remove from site)
+            got["hidden"].append({"title": row["title"], "link": row["link"]})
+            continue
         if section == "headline":  # an editor pinned this story to the top of the front page
             got["headlines"].append({"title": row["title"], "link": row["link"], "date": date})
             continue
@@ -728,7 +734,7 @@ def load_submissions(config, sample):
                         "student": facts if section == "students" else None, "id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
                         "body": paragraphs(row["summary"]), "link": link, "video": video, "source": byline,
                         "role": row["role"], "image": image, "date": date, "section": section, "community": True,
-                        "town": row["town"]})
+                        "town": row["town"], "gallery": photos[:MAX_PHOTOS] if len(photos) > 1 else []})
     got["flyers"].sort(key=lambda f: f["day"] or f["date"] + timedelta(days=LISTING_DAYS))
     got["listings"].sort(key=lambda x: x["date"], reverse=True)
     got["birthdays"].sort(key=lambda b: (not b["today"], b["date"]))  # today's first, then yesterday's
@@ -3324,7 +3330,8 @@ EXTRA_SECTIONS = ["Fundraiser", "Athlete Spotlight", "Business Spotlight", "Even
 PRIVATE_REPLY = ["Free Stuff", "Job", "Home for Rent or Sale"]  # people answer these through the reply form, so the poster's email is required
 
 
-def field(name, label, kind="text", req=False, hint="", show=None, opts=None, extra=None, wide=False, consent=None, need=False):
+def field(name, label, kind="text", req=False, hint="", show=None, opts=None, extra=None, wide=False, consent=None, need=False,
+          multiple=False):
     """One labeled input. show = sections it appears for; extra = label to fold it into the summary;
     consent = label to keep it in the private consent record that only editors see;
     need = required, but only when its section shows it (browsers can't check hidden required fields)."""
@@ -3342,7 +3349,7 @@ def field(name, label, kind="text", req=False, hint="", show=None, opts=None, ex
     elif kind == "textarea":
         ctl = f'<textarea{attrs} rows="5" maxlength="2000"></textarea>'
     elif kind == "file":
-        ctl = f'<input type="file" accept="image/jpeg,image/png,image/webp,image/gif"{attrs}>'
+        ctl = f'<input type="file" accept="image/jpeg,image/png,image/webp,image/gif"{attrs}{" multiple" if multiple else ""}>'
     elif kind == "url":  # plain text so "sunnymansfield.com" is accepted; https:// is added for them
         ctl = f'<input type="text" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="sunnymansfield.com" data-url{attrs}>'
     else:
@@ -3440,13 +3447,15 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
   if(extras.length)row.summary=[row.summary,...extras].filter(Boolean).join('\\n');
   if(f.dataset.title)row.title=f.dataset.title.replace(/\{{(\w+)\}}/g,(_,k)=>String(fd.get(k)||'').trim()).slice(0,200);
   btn.disabled=true;msg.textContent='Sending…';
-  try{{const file=fd.get('photo');
-   if(file&&file.size&&!f.querySelector('[name=photo]').closest('[hidden]')){{
-    if(file.size>6*1024*1024)throw new Error('That photo is over 6 MB. Try a smaller one.');
-    msg.textContent='Uploading photo…';const pic=await clean(file);const ext=pic.type==='image/png'?'png':'jpg';
-    const rid=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);const path=new Date().getFullYear()+'/'+rid+'.'+ext;
-    const up=await sb.storage.from('photos').upload(path,pic,{{contentType:pic.type}});if(up.error)throw up.error;
-    row.photo_url=sb.storage.from('photos').getPublicUrl(path).data.publicUrl}}
+  try{{const files=fd.getAll('photo').filter(x=>x&&x.size).slice(0,10);
+   if(files.length&&!f.querySelector('[name=photo]').closest('[hidden]')){{
+    if(files.some(x=>x.size>6*1024*1024))throw new Error('A photo is over 6 MB. Try a smaller one.');
+    const urls=[];for(const [k,file] of files.entries()){{
+     msg.textContent=files.length>1?'Uploading photo '+(k+1)+' of '+files.length+'…':'Uploading photo…';const pic=await clean(file);const ext=pic.type==='image/png'?'png':'jpg';
+     const rid=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,12);const path=new Date().getFullYear()+'/'+rid+'.'+ext;
+     const up=await sb.storage.from('photos').upload(path,pic,{{contentType:pic.type}});if(up.error)throw up.error;
+     urls.push(sb.storage.from('photos').getPublicUrl(path).data.publicUrl)}}
+    row.photo_url=urls.join('\\n')}}
    if(f.dataset.verify)row.id=uuid();
    let {{error}}=await sb.from('submissions').insert(row);
    if(error&&/consent/.test(error.message||'')){{delete row.consent;({{error}}=await sb.from('submissions').insert(row))}}  // until the consent column exists
@@ -3629,7 +3638,8 @@ def render_submit(cfg, stories):
         field("title", "Headline", req=True, hint="Short and specific, like \u201cOntario band raises $3,000 with a car wash\u201d."),
         field("summary", "Tell us about it", "textarea", True, "Two to four sentences. Who, what, where, when. "
               "Student Voices stories can run up to 300 words: leave a blank line between paragraphs."),
-        field("photo", "Photo or flyer", "file", hint="JPG or PNG up to 6 MB. Your own photo, or one you have permission to use."),
+        field("photo", "Photos or flyer", "file", hint="JPG or PNG up to 6 MB each. Pick up to 10: the first is the main photo and the rest "
+              "make a photo gallery on your story's page. Your own photos, or ones you have permission to use.", multiple=True),
         f'<p class="formnote" data-for="{HOME_LABEL}" hidden><b>Professional photos only.</b> {e(HOME_PHOTOS)}</p>',
         field("event_date", "Event date", "date", show=["Event Flyer"]),
         field("category", "Category", "select", show=["Free Stuff"], opts=[n for _, n, _ in MARKET_CATS], extra="Category"),
@@ -5063,6 +5073,11 @@ def render_admin(cfg, stories, headline=None):
         now = s is headline
         btn = ('<span class="caps kicker">Headline now</span>' if now else
                f'<button class="btn sm solid" type="button" data-head="{e(json.dumps({"title": s["title"], "link": s["link"]}))}">Make headline</button>')
+        if s.get("community"):
+            btn += '<span class="hint">Posted through the site: take it down under Approved.</span>'
+        else:
+            btn += (f'<button class="btn sm ghost" type="button" data-hide="{e(json.dumps({"title": s["title"], "link": s["link"]}))}">'
+                    'Remove from site</button>')
         return (f'<article class="qitem pick{" on" if now else ""}"><span class="qphoto">{img}</span><div class="qbody">'
                 f'<span class="caps kicker">{e(SECTION_NAMES[s["section"]])} · {e(s["source"])}</span><h3 class="hed">{e(s["title"])}</h3>'
                 f'<div class="share">{btn}</div></div></article>')
@@ -5070,7 +5085,12 @@ def render_admin(cfg, stories, headline=None):
                else "Right now the site picks the headline on its own: the newest story with a photo.")
     picker = f"""<div id="headline-ed" hidden><div class="box"><span class="caps kicker">Front page</span><h2 class="hed">Pick the headline</h2>
 <p class="hint">{current} Your pick stays at the top until you pick another one or the story leaves the site. Changes show within 15 minutes.</p>
-<div class="share"><button class="btn sm" type="button" id="head-auto">Go back to automatic</button></div></div>
+<div class="share"><button class="btn sm" type="button" id="head-auto">Go back to automatic</button></div>
+<h2 class="hed" style="margin-top:20px">Remove a news story</h2>
+<p class="hint">Don't want a news-feed story on the site, for example because neighbors already posted their own story about it? Tap <b>Remove from site</b> on it below.
+It comes off the site within 15 minutes and won't be posted to Facebook after that. If Facebook already posted it, delete that post on Facebook too.
+The site also skips a news story by itself when it matches a story posted through the site the same week.</p>
+<div id="hidden-list"></div></div>
 <div class="queue" style="margin-top:16px">{"".join(pick_row(s) for s in news)}</div></div>"""
     inner = f"""{page_title("Editors only", "Review queue", "Approve posts to put them on the site. Approved posts appear within 20 minutes.")}
 <section class="wrap admin">
@@ -5087,7 +5107,7 @@ def render_admin(cfg, stories, headline=None):
 <button class="tab" type="button" data-q="apps">Team applications <span class="n"></span></button>
 <button class="tab" type="button" data-q="ads">Ad inquiries <span class="n"></span></button>
 <button class="tab" type="button" data-q="approved">Approved</button>
-<button class="tab" type="button" data-q="headline">Headline</button>
+<button class="tab" type="button" data-q="headline">Headline &amp; remove</button>
 <button class="tab" type="button" data-q="brackets">Brackets</button>
 <button class="tab" type="button" data-q="rejected">Rejected</button>
 <button class="tab" type="button" data-q="verified">Verified people</button></div></nav>
@@ -5116,7 +5136,7 @@ def render_admin(cfg, stories, headline=None):
     script = f"""<script src="{SB_JS}"></script><script>
 (()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));
-const SPECIAL=['Join the team','Advertise'];const NOTQ='("Join the team","Advertise","Bracket","Headline")';let me=null,q='pending';
+const SPECIAL=['Join the team','Advertise'];const NOTQ='("Join the team","Advertise","Bracket","Headline","Hide")';let me=null,q='pending';
 const say=t=>{{$('desk-msg').textContent=t}};
 $('login-form').onsubmit=async ev=>{{ev.preventDefault();const em=$('login-email').value.trim(),pw=$('login-pass').value;
  if(!em||!pw){{$('login-msg').textContent='Type your email and password.';return}}$('login-btn').disabled=true;
@@ -5151,11 +5171,11 @@ function item(r){{const when=new Date(r.created_at).toLocaleString();
  else if(r.status!=='approved')acts=btn('approve','Approve','solid')+btn('reject','Reject')+(r.email?btn('verify-approve','Approve and verify sender'):'');
  else acts=btn('reject','Take down');acts+=btn('delete','Delete','ghost');
  return `<article class="qitem" data-row='${{esc(JSON.stringify({{email:r.email,name:r.name,role:r.role,title:r.title,summary:r.summary,link:r.link,photo:r.photo_url}}))}}'>
- ${{r.photo_url?`<span class="qphoto"><img src="${{esc(r.photo_url)}}" alt=""></span>`:''}}
+ ${{r.photo_url?`<span class="qphoto"><img src="${{esc(r.photo_url.split(/\\s+/)[0])}}" alt="">${{r.photo_url.trim().split(/\\s+/).length>1?`<span class="caps kicker">${{r.photo_url.trim().split(/\\s+/).length}} photos</span>`:''}}</span>`:''}}
  <div class="qbody"><span class="caps kicker">${{esc(r.section)}}</span><h3 class="hed">${{esc(r.title)}}</h3><p class="qtext">${{esc(r.summary||'')}}</p>
  <dl class="facts">${{facts.map(([k,v])=>`<dt>${{k}}</dt><dd>${{esc(v)}}</dd>`).join('')}}</dl>${{link}}<div class="share">${{acts}}</div></div></article>`}}
 async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';$('headline-ed').hidden=q!=='headline';counts();
- const list=$('list');list.innerHTML=q==='headline'?'':'<p class="hint">Loading…</p>';if(q==='headline')return;
+ const list=$('list');list.innerHTML=q==='headline'?'':'<p class="hint">Loading…</p>';if(q==='headline'){{hiddenList();return}}
  if(q==='verified'){{const {{data,error}}=await sb.from('verified').select('*').order('added_at',{{ascending:false}});
   if(error){{list.innerHTML='';say(error.message);return}}
   list.innerHTML=data.length?data.map(v=>`<article class="qitem"><div class="qbody"><h3 class="hed">${{esc(v.name||v.email)}}</h3><p class="hint">${{esc(v.email)}} ${{v.role?'· '+esc(v.role):''}}</p>
@@ -5163,7 +5183,16 @@ async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAtt
  let {{data,error}}=await QUERIES[q]();if(error&&/verified_at/.test(error.message||'')){{NOV=true;(({{data,error}}=await QUERIES[q]()))}}  // schema not updated yet
  if(error){{list.innerHTML='';say(error.message);return}}
  list.innerHTML=data.length?data.map(item).join(''):'<p class="hint">All caught up. Nothing waiting here.</p>'}}
+async function hiddenList(){{const {{data,error}}=await base().eq('section','Hide');const box=$('hidden-list');if(error){{box.innerHTML='';return}}
+ box.innerHTML=data.length?'<p class="caps kicker" style="margin-top:12px">Removed stories</p>'+data.map(r=>`<p class="hint">${{esc(r.title)}}
+ <button class="textbtn" type="button" data-unhide="${{r.id}}">Put back</button></p>`).join(''):''}}
 document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q]');if(t){{q=t.dataset.q;load();return}}
+ const hd=ev.target.closest('[data-hide]');if(hd){{if(!hd.dataset.sure){{hd.dataset.sure=1;hd.textContent='Tap again to remove';return}}
+  hd.disabled=true;const p=JSON.parse(hd.dataset.hide);let {{data,error}}=await sb.from('submissions').insert({{section:'Hide',title:p.title.slice(0,200),link:p.link,name:'Sunny Mansfield'}}).select('id');
+  if(!error)(({{error}}=await sb.from('submissions').update({{status:'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',data[0].id)));
+  if(error){{say(error.message);hd.disabled=false;return}}hd.closest('.pick').remove();say('Removed. It will be off the site within 15 minutes.');rebuild();hiddenList();return}}
+ const uh=ev.target.closest('[data-unhide]');if(uh){{uh.disabled=true;const {{error}}=await sb.from('submissions').delete().eq('id',uh.dataset.unhide);
+  if(error){{say(error.message);uh.disabled=false;return}}say('Put back. It will return to the site within 15 minutes if the feed still has it.');rebuild();hiddenList();return}}
  const h=ev.target.closest('[data-head]'),auto=ev.target.closest('#head-auto');
  if(h||auto){{(h||auto).disabled=true;let {{error}}=await sb.from('submissions').delete().eq('section','Headline');let data;
   if(!error&&h){{const p=JSON.parse(h.dataset.head);(({{data,error}}=await sb.from('submissions').insert({{section:'Headline',title:p.title,link:p.link,name:'Sunny Mansfield'}}).select('id')));
@@ -5178,8 +5207,9 @@ document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q
   $('b-head').textContent='Edit bracket';$('bracket-ed').scrollIntoView({{behavior:'smooth'}});return}}
  if(act==='delete'&&!b.dataset.sure){{b.dataset.sure=1;b.textContent='Tap again to delete';return}}
  b.disabled=true;let error;
- if(act==='delete'){{(({{error}}=await sb.from('submissions').delete().eq('id',id)));const m=(row.photo||'').match(/\/object\/public\/photos\/(.+)$/);
-  if(!error&&m)await sb.storage.from('photos').remove([decodeURIComponent(m[1])])}}
+ if(act==='delete'){{(({{error}}=await sb.from('submissions').delete().eq('id',id)));
+  const paths=(row.photo||'').split(/\\s+/).map(u=>(u.match(/\/object\/public\/photos\/(.+)$/)||[])[1]).filter(Boolean).map(decodeURIComponent);
+  if(!error&&paths.length)await sb.storage.from('photos').remove(paths)}}
  else{{if(act==='verify-approve'&&row.email){{({{error}}=await sb.from('verified').upsert({{email:row.email.toLowerCase(),name:row.name,role:row.role}}));}}
   if(!error)(({{error}}=await sb.from('submissions').update({{status:act==='reject'?'rejected':'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',id)));}}
  if(error){{say(error.message);b.disabled=false;return}}say(act==='reject'?'Done. It will not appear on the site.':act==='delete'?'Deleted.':b.closest('.qitem').querySelector('.kicker').textContent==='Birthday'?'Approved. It will show on their birthday (and on Facebook that morning).':'Approved. It will be on the site within 20 minutes.');rebuild();load()}});
@@ -5211,6 +5241,30 @@ $('v-add').onclick=async()=>{{const em=$('v-email').value.trim().toLowerCase();i
 }})();
 </script>"""
     return shell(cfg, f"Admin · {cfg['site_name']}", "Editors only.", f"{site}/admin.html", inner, stories, extra=script, index=False)
+
+
+# Tap a gallery photo to see it big; swipe or use the arrows for the next one. Works without a library.
+GALLERY_VIEWER = """<style>
+.gallery{margin-top:18px}.gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.gal-tile{display:block;aspect-ratio:1;overflow:hidden;border:3px solid #2e1a10;background:#f3ead8}
+.gal-tile img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}.gal-tile:hover img{transform:scale(1.04)}
+.gal-view{position:fixed;inset:0;z-index:99;background:rgba(20,12,6,.94);display:flex;align-items:center;justify-content:center}
+.gal-view[hidden]{display:none}.gal-view img{max-width:94vw;max-height:84vh;object-fit:contain;border:4px solid #fbf6ec}
+.gal-view button{position:absolute;background:#d9531e;color:#fff;border:0;font:700 26px/1 sans-serif;width:48px;height:48px;border-radius:50%;cursor:pointer}
+.gal-x{top:14px;right:14px}.gal-prev{left:10px;top:50%}.gal-next{right:10px;top:50%}
+.gal-n{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:#fbf6ec;font:700 14px/1 sans-serif;letter-spacing:.1em}
+</style><div class="gal-view" id="gal-view" hidden role="dialog" aria-label="Photo viewer"><img alt="">
+<button class="gal-x" type="button" aria-label="Close">&times;</button><button class="gal-prev" type="button" aria-label="Previous photo">&lsaquo;</button>
+<button class="gal-next" type="button" aria-label="Next photo">&rsaquo;</button><p class="gal-n"></p></div>
+<script>(()=>{const v=document.getElementById('gal-view'),im=v.querySelector('img'),n=v.querySelector('.gal-n');
+const t=[...document.querySelectorAll('[data-gal]')];let i=0,x0=null;
+const show=k=>{i=(k+t.length)%t.length;im.src=t[i].href;n.textContent=(i+1)+' of '+t.length;v.hidden=false};
+t.forEach((a,k)=>a.addEventListener('click',ev=>{ev.preventDefault();show(k)}));
+v.querySelector('.gal-x').onclick=()=>v.hidden=true;v.querySelector('.gal-prev').onclick=()=>show(i-1);v.querySelector('.gal-next').onclick=()=>show(i+1);
+v.addEventListener('click',ev=>{if(ev.target===v)v.hidden=true});
+document.addEventListener('keydown',ev=>{if(v.hidden)return;if(ev.key==='Escape')v.hidden=true;if(ev.key==='ArrowLeft')show(i-1);if(ev.key==='ArrowRight')show(i+1)});
+v.addEventListener('touchstart',ev=>{x0=ev.touches[0].clientX},{passive:true});
+v.addEventListener('touchend',ev=>{if(x0===null)return;const d=ev.changedTouches[0].clientX-x0;if(Math.abs(d)>40)show(i+(d<0?1:-1));x0=null})})();</script>"""
 
 
 def render_story_page(cfg, s, stories):
@@ -5250,6 +5304,14 @@ def render_story_page(cfg, s, stories):
     extra = ""
     if s.get("community") and s.get("more"):
         extra = f'<a class="btn" href="{e(s["more"])}" target="_blank" rel="noopener nofollow ugc">Read more</a>'
+    gallery = ""
+    if s.get("gallery"):
+        pics = [p if p.startswith("https://") else "/" + p for p in s["gallery"]]
+        tiles = "".join(f'<a class="gal-tile" href="{e(p)}" data-gal="{i}" aria-label="Photo {i + 1} of {len(pics)}">'
+                        f'<img src="{e(p)}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>' for i, p in enumerate(pics))
+        gallery = (f'<section class="wu-card open gallery" aria-labelledby="gal-h"><h2 class="wu-head" id="gal-h">Photos ({len(pics)})</h2>'
+                   f'<div class="gal-grid">{tiles}</div></section>{GALLERY_VIEWER}')
+        extra = f'<a class="btn" href="#gal-h">See all {len(pics)} photos</a>' + extra
     url = page_url(cfg, s)
     rows = "".join(thumb(o) for o in same[:6])
     aside = (f'<aside class="watch-aside">{section_head("More Celebrations of Life" if life else "More good news")}<div class="side-list">{rows}</div>'
@@ -5265,7 +5327,7 @@ def render_story_page(cfg, s, stories):
 <button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button></div></header>
 {facts_html}
 <section class="wu-card open" aria-labelledby="st-h"><h2 class="wu-head" id="st-h">{card_head}</h2><div class="wu-body">{story}</div></section>
-{towns}<p class="note story-note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
+{gallery}{towns}<p class="note story-note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
 </article>{aside}</section>
 {banner(cfg, "A4")}
 {submit_band(cfg, site)}<div class="stripes" aria-hidden="true"></div></main>{footer(cfg)}</div>
@@ -5438,6 +5500,59 @@ def add_links(cfg, stories, links, sample=False):
     if added:
         note(f"Pasted links: {len(added)} stories")
     return sorted(stories + added, key=lambda s: s["date"], reverse=True)
+
+
+def link_key(url):
+    """A link without https://, www. and a trailing slash, so the same article matches however it was typed."""
+    url = re.sub(r"^https?://(www\.)?", "", (url or "").strip().lower())
+    return re.sub(r"[?#].*$", "", url).rstrip("/") if "news.google." not in url else url
+
+
+def title_key(title):
+    return re.sub(r"\W+", "", (title or "").lower())[:80]
+
+
+def drop_hidden(stories, hidden):
+    """Leave out the stories an editor removed in the admin page (matched by link or headline)."""
+    links = {link_key(h["link"]) for h in hidden if h.get("link")}
+    titles = {title_key(h["title"]) for h in hidden if h.get("title")}
+    keep = [s for s in stories if link_key(s.get("more") or s["link"]) not in links and link_key(s["link"]) not in links
+            and title_key(s["title"]) not in titles]
+    if len(keep) < len(stories):
+        note(f"Removed by editors: {len(stories) - len(keep)} stories")
+    return keep
+
+
+SAME_WORDS = set("the a an and or of for to in on at by with from as is are was were be its it this that his her their our "
+                 "your new 2nd 3rd 1st annual mansfield ohio richland county local area".split())
+
+
+def story_words(text):
+    return {w for w in re.findall(r"[a-z0-9]+", (text or "").lower()) if len(w) > 2 and w not in SAME_WORDS}
+
+
+def drop_feed_duplicates(stories):
+    """When neighbors post their own story about something, skip the news-feed article on the same event,
+    so the site and the Facebook Page don't run it twice. Same event = most of the shorter headline's words
+    in common (at least 3), within a week of each other."""
+    ours = [(s, story_words(s["title"])) for s in stories if s.get("community")]
+    keep, dropped = [], []
+    for s in stories:
+        if not s.get("community") and ours:
+            words = story_words(s["title"])
+            for c, cw in ours:
+                both = words & cw
+                if (len(both) >= 3 and len(both) >= 0.6 * min(len(words), len(cw))
+                        and abs((s["date"] - c["date"]).total_seconds()) < 7 * 86400):
+                    dropped.append(f'{s["title"]} (same as "{c["title"]}")')
+                    break
+            else:
+                keep.append(s)
+            continue
+        keep.append(s)
+    for d in dropped:
+        note(f"Skipped duplicate: {d}")
+    return keep
 
 
 def merge_community(cfg, stories, community):
@@ -5620,6 +5735,7 @@ def main():
     got = load_submissions(cfg, args.sample)
     stories = add_links(cfg, stories, got["links"], args.sample)
     stories = merge_community(cfg, stories, got["stories"])
+    stories = drop_feed_duplicates(drop_hidden(stories, got["hidden"]))
     series, series_extra = collect_series(cfg, stories, args.sample)
     dogs = fetch_shelter_dogs(cfg, args.sample)
     flyers, listings = got["flyers"], got["listings"]
