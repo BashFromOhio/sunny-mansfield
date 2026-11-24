@@ -5078,7 +5078,7 @@ def facebook_posts():
         recent = {d: v for d, v in days.items() if timedelta(0) <= today - d < timedelta(days=30)}
         if not recent:
             return None
-        span = min(30, (today - min(recent)).days + 1)
+        span = min(30, (max(recent) - min(recent)).days + 1)  # today's posts are counted tonight, so stop at the last counted day
         updated = datetime.fromisoformat(fb["updated"]).strftime("%B %-d")
         return {"posts": sum(recent.values()), "span": span, "per_day": round(sum(recent.values()) / span), "updated": updated}
     except Exception:
@@ -5192,7 +5192,7 @@ function tiles(){{const t=$('reach-tiles');if(!days.length){{t.innerHTML='<p cla
  const best=full.length?full.reduce((x,r)=>r.views>x.views?r:x,full[0]):days[0];
  t.innerHTML=tile(n(sum(last(7))),'Page views, last 7 days')+tile(n(sum(last(30))),'Page views, last 30 days')+
   tile(n(Math.round(sum(last(Math.min(30,days.length)))/Math.min(30,days.length))),'Average per day')+growth+
-  tile(n(best.views),'Best day',nice(best.day))}}
+  tile(n(best.views),'Best day',nice(best.day)+(best.day===days[days.length-1].day?' (today so far)':''))}}
 function chart(){{const p=$('reach-plot'),tip=$('reach-tip');const d=range?days.slice(-range):days;
  if(d.length<2){{p.innerHTML='<p class="hint">The chart appears after the first two days of counting.</p>';$('reach-rows').innerHTML='';return}}
  const W=640,Hh=220,L=44,R=12,T=10,B=26;const max=Math.max(4,...d.map(r=>r.views));const step=Math.pow(10,Math.floor(Math.log10(max)));
@@ -5226,6 +5226,7 @@ function worth(S){{const all=S.all||0,m=C.m,box=$('reach-worth');if(!all){{box.i
  box.innerHTML=tile($$(all*m.cpm/1000),'Market value, last 30 days',`What ${{n(all)}} views would cost as Facebook ads at $${{m.cpm}} per 1,000 (range ${{$$(all*m.cpm_low/1000)}} to ${{$$(all*m.cpm_high/1000)}})`)+
   tile(next===null?'Soon':n(next),'Projected views, next 30 days',next===null?'Needs two full weeks of counting first.':`If the trend of the last ${{Math.min(30,days.length-1)}} days holds`)+
   (fb?tile($$(fb*m.cpc),'Facebook visits, as ad clicks',`${{n(fb)}} visits from Facebook at $${{m.cpc.toFixed(2)}} per click`):'');
+ if(days.length<15){{$('reach-spots').innerHTML='<p class="hint">What each ad spot costs per 1,000 views shows after two full weeks of counting. Before that, a monthly price divided by a few days of views gives silly numbers.</p>';return}}
  $('reach-spots').innerHTML=C.spots.map(sp=>{{const v=sp.where==='story'?(S.story||0):all;const base=next!==null&&sp.where==='all'?next:v;
   if(!base)return '';const lo=sp.price[0]/base*1000,hi=sp.price[1]/base*1000;
   return `<p class="reach-spot"><b>${{esc(sp.name)}} (${{sp.code}})</b>: $${{sp.price[0]}} to $${{sp.price[1]}} a month, seen on ${{n(base)}} ${{sp.where==='story'?'story page ':''}}views
@@ -5238,7 +5239,7 @@ Promise.all([fetch(C.url+'reach_daily?select=day,views&order=day.asc',{{headers:
  .then(([rows,sm])=>{{days=fill(rows);tiles();chart();const S=Object.fromEntries(sm.map(r=>[r.k,r.views]));worth(S);sources(S)}})
  .catch(()=>{{$('reach-tiles').innerHTML='<p class="hint">Live numbers are unavailable right now. Please try again in a minute.</p>'}});
 fetch(C.url+'reach_pages?select=path,views&order=views.desc&limit=5',{{headers:H}}).then(r=>r.ok?r.json():[]).then(rows=>{{
- $('reach-top').innerHTML=rows.length?rows.map(r=>`<li><a class="link" href="${{esc(r.path)}}">${{esc(C.names[r.path]||r.path)}}</a>: ${{n(r.views)}} views</li>`).join(''):'<li>Fills in as people read.</li>'}}).catch(()=>{{}});
+ $('reach-top').innerHTML=rows.length?rows.map(r=>`<li><a class="link" href="${{esc(r.path)}}">${{esc(C.names[r.path]||r.path)}}</a>: ${{n(r.views)}} ${{r.views===1?'view':'views'}}</li>`).join(''):'<li>Fills in as people read.</li>'}}).catch(()=>{{}});
 }})();</script>"""
 
 
