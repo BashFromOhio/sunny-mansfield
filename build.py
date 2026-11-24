@@ -5058,6 +5058,22 @@ def spot_price(code):
     return (nums[0], nums[-1]) if nums else None
 
 
+def facebook_posts():
+    """Facebook posts in the last 30 days from social.json, which a daily Zapier workflow updates. None if missing."""
+    try:
+        fb = json.loads((HERE / "social.json").read_text())["facebook"]
+        today = eastern().date()
+        days = {datetime.strptime(k, "%Y-%m-%d").date(): int(v) for k, v in fb["days"].items()}
+        recent = {d: v for d, v in days.items() if timedelta(0) <= today - d < timedelta(days=30)}
+        if not recent:
+            return None
+        span = min(30, (today - min(recent)).days + 1)
+        updated = datetime.fromisoformat(fb["updated"]).strftime("%B %-d")
+        return {"posts": sum(recent.values()), "span": span, "per_day": round(sum(recent.values()) / span), "updated": updated}
+    except Exception:
+        return None
+
+
 def live_reach(cfg, stories):
     """'Live reach' on the Advertise page: real page views from our own counter (Supabase count_view), drawn in the
     reader's browser straight from the database, so the numbers are never typed in by hand."""
@@ -5067,6 +5083,11 @@ def live_reach(cfg, stories):
     now = datetime.now(timezone.utc)
     month = [s for s in stories if s["date"] > now - timedelta(days=30)]
     neighbors = sum(1 for s in month if s.get("community"))
+    fb_line = ""
+    social = facebook_posts()
+    if social:
+        fb_line = (f'<li><b>{social["posts"]:,}</b> posts on our <a class="link" href="{e(cfg["facebook_page"])}" target="_blank" rel="noopener">Facebook Page</a> '
+                   f'in the last {social["span"]} days, about {social["per_day"]} a day (counted daily, last on {social["updated"]})</li>')
     names = {"/": "Front page"}
     for path, _, _ in PAGES:
         if path:
@@ -5098,7 +5119,7 @@ and what each ad spot works out to per 1,000 views today. Locked-in founding pri
 <div id="reach-src"></div>
 <div class="reach-cols"><div><h3 class="hed">Most read, last 30 days</h3><ol id="reach-top" class="reach-top"></ol></div>
 <div><h3 class="hed">Growing every day</h3><ul class="reach-top"><li><b>{len(month)}</b> good news stories in the last 30 days</li>
-<li><b>{neighbors}</b> of them posted by neighbors</li><li>New stories every 15 minutes, posted to our <a class="link" href="{e(cfg['facebook_page'])}" target="_blank" rel="noopener">Facebook Page</a> every day</li></ul></div></div>
+<li><b>{neighbors}</b> of them posted by neighbors</li>{fb_line or f'<li>New stories every 15 minutes, posted to our <a class="link" href="{e(cfg["facebook_page"])}" target="_blank" rel="noopener">Facebook Page</a> every day</li>'}</ul></div></div>
 <p class="note"><b>How we count:</b> each time someone opens a page, that page's count for the day goes up by one (once per visit, so
 refreshing doesn't add more). Robots, link previews and our own admin page are left out. No cookies and nothing about who visited is stored,
 only the date, the page and the number. Counting started in November 2026, so the chart grows from there. We also run Google Analytics
