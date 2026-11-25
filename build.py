@@ -727,12 +727,15 @@ def load_submissions(config, sample):
         byline = row["name"] or "A neighbor"
         link = full_link(row["link"])
         video = youtube_id(link)
+        fb_video = "" if video or sample else facebook_video(link)
         if video:  # play it right on the story page instead of sending readers off to YouTube
             image = image or f"https://img.youtube.com/vi/{video}/hqdefault.jpg"
             link = ""
+        elif fb_video:  # a Facebook reel or video plays right on the story page too
+            link = ""
         got["stories"].append({"athlete": facts if section == "sports" and (facts or row["section"].lower() == "athlete spotlight") else None,
                         "student": facts if section == "students" else None, "id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
-                        "body": paragraphs(row["summary"]), "link": link, "video": video, "source": byline,
+                        "body": paragraphs(row["summary"]), "link": link, "video": video, "fb_video": fb_video, "source": byline,
                         "role": row["role"], "image": image, "date": date, "section": section, "community": True,
                         "town": row["town"], "gallery": photos[:MAX_PHOTOS] if len(photos) > 1 else []})
     got["flyers"].sort(key=lambda f: f["day"] or f["date"] + timedelta(days=LISTING_DAYS))
@@ -753,6 +756,38 @@ def full_link(link):
 def youtube_id(link):
     m = re.search(r"(?:youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/)|youtu\.be/)([\w-]{11})", link or "")
     return m.group(1) if m else ""
+
+
+FB_VIDEO = re.compile(r"(?i)^https?://(?:www\.|m\.|web\.)?facebook\.com/(?:reel/\d+|watch/?\?(?:.*&)?v=\d+|[^?#]+/videos/(?:[^/?#]+/)?\d+)")
+
+
+def facebook_video(link):
+    """A Facebook reel or video address the embedded player accepts, or "". Short share links
+    (facebook.com/share/r/..., /share/v/..., fb.watch/...) are followed to the reel or video they open."""
+    link = (link or "").strip()
+    if not re.search(r"(?i)^https?://((www|m|web)\.)?(facebook\.com|fb\.watch)/", link):
+        return ""
+    if FB_VIDEO.match(link):
+        return link.split("#")[0]
+    if not re.search(r"(?i)facebook\.com/share/[rv]/|fb\.watch/", link):
+        return ""
+    known = json.loads((HERE / "config.json").read_text()).get("facebook_videos") or {}  # short link -> full address
+    key = link.split("?")[0].rstrip("/")
+    if any(k.split("?")[0].rstrip("/") == key for k in known):
+        return next(v for k, v in known.items() if k.split("?")[0].rstrip("/") == key)
+    try:
+        req = urllib.request.Request(link, headers={"User-Agent": UA, "Accept-Language": "en-US,en"})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            final = resp.geturl()
+    except Exception as exc:
+        note(f"Facebook video link not followed ({exc})")
+        return ""
+    nxt = urllib.parse.parse_qs(urllib.parse.urlparse(final).query).get("next")  # sent to the login page first
+    final = nxt[0] if nxt else final
+    m = re.search(r"/reel/(\d+)", final)
+    if m:
+        return f"https://www.facebook.com/reel/{m.group(1)}"
+    return final.split("#")[0] if FB_VIDEO.match(final) else ""
 
 
 def add_photos(stories, limit=80):
@@ -1179,6 +1214,7 @@ footer .sponsors a{color:inherit}
 .play{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:rgba(46,26,16,.78);border:3px solid var(--tertiary)}
 .play::after{content:"";position:absolute;left:24px;top:17px;border-style:solid;border-width:12px 0 12px 19px;border-color:transparent transparent transparent var(--tertiary)}
 .photo.video{aspect-ratio:16/9;background:#000}.photo.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.photo.video.fb.tall{aspect-ratio:3/4;max-width:480px;margin-left:auto;margin-right:auto}
 .fund .tagline{font:700 10px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
 .fund .report{font-size:12px;color:var(--text-3);text-decoration:underline;justify-self:start}
 .fund .report:hover{color:var(--secondary)}
@@ -5615,6 +5651,12 @@ def render_story_page(cfg, s, stories):
     if s.get("video"):
         media = (f'<div class="photo video"><iframe src="https://www.youtube-nocookie.com/embed/{e(s["video"])}" title="{e(s["title"])}" '
                  f'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>')
+    elif s.get("fb_video"):  # reels are tall, so the player is phone-shaped and centered
+        tall = "/reel/" in s["fb_video"]
+        src = ("https://www.facebook.com/plugins/video.php?show_text=false&width=" + ("480" if tall else "720")
+               + "&href=" + urllib.parse.quote(s["fb_video"], safe=""))
+        media = (f'<div class="photo video fb{" tall" if tall else ""}"><iframe src="{e(src)}" title="{e(s["title"])}" scrolling="no" '
+                 f'allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe></div>')
     elif s.get("community") and "/s/" in s["link"] and s.get("image"):
         src = s["image"] if s["image"].startswith("https://") else "/" + s["image"]
         media = (f'<span class="photo"><img src="{e(src)}" alt="" referrerpolicy="no-referrer"></span>')  # plain photo, no link to its Supabase storage address
