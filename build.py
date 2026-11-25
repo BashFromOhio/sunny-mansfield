@@ -2106,6 +2106,18 @@ def newsletter_pop(cfg):
     form = (f'<div class="nl-form" data-form="{e(nl["beehiiv_form"])}"></div>' if nl.get("beehiiv_form") else
             f'<a class="btn solid" href="{e(nl["page"])}" target="_blank" rel="noopener">Subscribe</a>')
     day = f'every {e(nl["day"])}' if nl.get("day") else "a week"
+    g = giveaway_cfg(cfg)
+    if g:
+        end = datetime.strptime(g["ends"], "%Y-%m-%d")
+        rules = f'{cfg["site_url"].rstrip("/")}/giveaway.html'
+        return (f'<dialog class="nlpop" id="nlpop" aria-labelledby="nl-h"><div class="nl2">'
+                f'<button class="close" type="button" data-nl-close aria-label="Close">&times;</button>'
+                f'<div class="nl-top"><span class="nl-logo" role="img" aria-label="{e(cfg["site_name"])}">{logo("logo-retro.svg")}</span>'
+                f'<span class="script">Win a $50 gift card</span></div>'
+                f'<div class="nl-body"><h2 class="nl-hed" id="nl-h" tabindex="-1" autofocus>Subscribe free for a chance to win.</h2>'
+                f'<p class="nl-sub">Everyone subscribed by {end:%B} {end.day} is entered to win {e(g["prize"])}. Plus one short, free email {day} with the best of Mansfield and Richland County.</p>'
+                f'{form}<p class="nl-fine">We\'ll email you once to confirm. Unsubscribe anytime. Ohio, 18+. <a class="link" href="{e(rules)}">Rules</a></p>'
+                f'<button class="textbtn nl-no" type="button" data-nl-close>No thanks</button></div></div></dialog>')
     return (f'<dialog class="nlpop" id="nlpop" aria-labelledby="nl-h"><div class="nl2">'
             f'<button class="close" type="button" data-nl-close aria-label="Close">&times;</button>'
             f'<div class="nl-top"><span class="nl-logo" role="img" aria-label="{e(cfg["site_name"])}">{logo("logo-retro.svg")}</span>'
@@ -2122,6 +2134,15 @@ def newsletter_inline(cfg):
     """A sign-up box under every story. Its button opens the newsletter pop-up, which loads beehiiv's form."""
     if not (cfg.get("newsletter") or {}).get("page"):
         return ""
+    g = giveaway_cfg(cfg)
+    if g:
+        end = datetime.strptime(g["ends"], "%Y-%m-%d")
+        rules = f'{cfg["site_url"].rstrip("/")}/giveaway.html'
+        return (f'<aside class="nl-inline" aria-label="Email newsletter giveaway"><span class="script">Win a $50 gift card</span>'
+                f'<p class="nl-in-hed">Subscribe free by {end:%B} {end.day} for a chance to win {e(g["prize"])}.</p>'
+                f'<p class="nl-in-sub">Every subscriber is entered, and you get one short, free email a week with Mansfield\'s good news. '
+                f'Ohio, 18+. <a class="link" href="{e(rules)}">Rules</a></p>'
+                f'<button class="btn solid" type="button" data-nl>Enter free</button></aside>')
     return ('<aside class="nl-inline" aria-label="Email newsletter"><span class="script">Like good news?</span>'
             '<p class="nl-in-hed">Get Mansfield\'s good news in your inbox every Thursday.</p>'
             '<p class="nl-in-sub">One short, free email with the week\'s best stories and things to do. Unsubscribe anytime.</p>'
@@ -6006,6 +6027,8 @@ def write_search_files(cfg, stories, businesses, out, towns=(), flyers=(), jobs=
     now = datetime.now(timezone.utc)
     day = lambda d: d.strftime("%Y-%m-%d")
     urls = [(f"{site}/{p}", day(now), f, pr) for p, f, pr in PAGES if p != "advertise.html" or ads_open(cfg)]
+    if giveaway_cfg(cfg):
+        urls.append((f"{site}/giveaway.html", day(now), "weekly", "0.5"))
     urls += [(page_url(cfg, s), day(s["date"]), "weekly", "0.7") for s in stories if indexable(s)]
     urls += [(biz_url(cfg, b), day(now), "monthly", "0.6") for b in businesses if not b.get("sample")]
     urls += [(town_url(cfg, t), day(now), "daily", "0.8") for t in towns]
