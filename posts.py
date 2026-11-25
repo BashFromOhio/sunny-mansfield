@@ -746,7 +746,16 @@ def make_top_story_feed(cfg, stories, out, page_url, note=print):
     card = ""
     # Trending now: the story with the most views today (our page counter, at least 5), else the day's top story.
     hot = max((s for s in stories if s.get("views_today", 0) >= 5 and s["section"] != "life"), key=lambda s: s["views_today"], default=None)
-    if (hot or fresh) and now >= evening:
+    nl_page = ((cfg.get("newsletter") or {}).get("page") or "").rstrip("/")
+    if nl_page and evening.weekday() == 3 and now >= evening:
+        # Thursday: the evening link post points to this week's newsletter edition instead of the day's top story.
+        message = ("\U0001F4EC This week's Sunny Mansfield newsletter is out: the best good news, events and things to do "
+                   "in Mansfield and Richland County.\n\nRead it, and get next week's free in your inbox every Thursday \U0001F447")
+        card = (f"<item><title>{e('This week in Mansfield: the Sunny Mansfield newsletter')}</title>"
+                f"<link>{e(nl_page + '/?utm_source=facebook&utm_medium=social&utm_campaign=thursday-edition')}</link>"
+                f"<guid isPermaLink=\"false\">sunny-newsletter-{evening:%Y-%m-%d}</guid><pubDate>{format_datetime(evening)}</pubDate>"
+                f"<description>{e(message)}</description></item>")
+    elif (hot or fresh) and now >= evening:
         s = hot or fresh[0]
         summary = teaser(s["title"], story_text(s), 200)
         lead = "\U0001F525 Trending in Mansfield today: " if hot else "☀️ "

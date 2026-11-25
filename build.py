@@ -997,6 +997,10 @@ h1.hed,h2.hed,h3.hed{font-family:var(--serif);font-weight:700;margin:0;text-wrap
 .nl-form{min-height:47px}.nl-form iframe{max-width:100%}
 .nl-fine{font-size:13px;line-height:1.5;margin:0;color:var(--text-2)}
 .nl-no{justify-self:center;padding:6px 8px;color:var(--text-2)}
+.nl-inline{margin:24px 0;padding:22px clamp(16px,5vw,28px);background:var(--tertiary);border:2px solid var(--border-strong);border-top:6px solid var(--secondary);text-align:center;display:grid;gap:10px;justify-items:center}
+.nl-inline .script{font-size:24px;line-height:1.1;color:var(--secondary)}
+.nl-in-hed{font:700 clamp(20px,5vw,24px)/1.2 var(--serif);margin:0;color:var(--text)}
+.nl-in-sub{font-size:15px;line-height:1.5;margin:0;color:var(--text-2);max-width:52ch}
 .dogday{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:32px;align-items:center;background:var(--tertiary);border:2px solid var(--border-strong);padding:24px}
 .dogday .photo{aspect-ratio:1}.dogday .hed{font-size:clamp(30px,4vw,48px);line-height:1.05;margin:6px 0 12px}.dogday .dek{font-size:18px;line-height:1.6}
 @media (max-width:700px){.dogday{grid-template-columns:minmax(0,1fr);gap:16px;padding:16px}}
@@ -2114,6 +2118,16 @@ def newsletter_pop(cfg):
             f'<button class="textbtn nl-no" type="button" data-nl-close>No thanks</button></div></div></dialog>')
 
 
+def newsletter_inline(cfg):
+    """A sign-up box under every story. Its button opens the newsletter pop-up, which loads beehiiv's form."""
+    if not (cfg.get("newsletter") or {}).get("page"):
+        return ""
+    return ('<aside class="nl-inline" aria-label="Email newsletter"><span class="script">Like good news?</span>'
+            '<p class="nl-in-hed">Get Mansfield\'s good news in your inbox every Thursday.</p>'
+            '<p class="nl-in-sub">One short, free email with the week\'s best stories and things to do. Unsubscribe anytime.</p>'
+            '<button class="btn solid" type="button" data-nl>Get the free email</button></aside>')
+
+
 NL_ORANGE, NL_INK, NL_CREAM, NL_MUTED = "#D9531E", "#2E1A10", "#FBF6EC", "#6B5A4E"
 
 
@@ -2382,6 +2396,7 @@ if(nlpop&&nlpop.showModal){const box=nlpop.querySelector('.nl-form');const DAY=8
   document.addEventListener('click',ev=>{if(ev.target.closest('[data-about-close]'))met()});
   document.addEventListener('keydown',ev=>{if(ev.key==='Escape'&&about&&!about.hidden)met()},true);
   if(t0)setTimeout(go,20000);
+  document.addEventListener('mouseout',ev=>{if(!ev.relatedTarget&&ev.clientY<=0&&!done&&!document.querySelector('dialog[open]')&&!(about&&!about.hidden)){done=true;open()}});
   addEventListener('scroll',()=>{if(t0&&Date.now()-t0>2000&&scrollY>(document.documentElement.scrollHeight-innerHeight)*.5)go()},{passive:true})}}
 const toast=document.getElementById('toast');let timer;
 function say(msg){if(!toast)return;toast.textContent=msg;toast.hidden=false;clearTimeout(timer);timer=setTimeout(()=>toast.hidden=true,3600)}
@@ -5704,7 +5719,7 @@ def render_story_page(cfg, s, stories):
 <button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button></div></header>
 {facts_html}
 <section class="wu-card open" aria-labelledby="st-h"><h2 class="wu-head" id="st-h">{card_head}</h2><div class="wu-body">{story}</div></section>
-{gallery}{towns}<p class="note story-note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
+{newsletter_inline(cfg)}{gallery}{towns}<p class="note story-note report">Spot a mistake, or are you in this post and want it changed or taken down? <a class="link" href="{e(report_link(cfg, s))}">Tell an editor</a> and we'll fix it fast.</p>
 </article>{aside}</section>
 {banner(cfg, "A4")}
 {submit_band(cfg, site)}<div class="stripes" aria-hidden="true"></div></main>{footer(cfg)}</div>
