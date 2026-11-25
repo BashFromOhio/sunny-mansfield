@@ -86,3 +86,19 @@ The site's own page counter (the admin Reach tab) picks some posts. They ride on
 | Monday 8 a.m. | **Neighbor shout-out**: the most-read story a neighbor posted this week, thanking them by name (otherwise regular neighbor news) | `/social.xml` |
 | 6 p.m. | **Trending now**: the story with the most views today (at least 5), otherwise the day's top story | `/links.xml` |
 | When it happens | **Thank-you milestone** at 1,000, 2,500, 5,000, 10,000 ... page views in 30 days, each posted only once | `/social.xml` |
+
+## Posting without Zapier (fb_post.py)
+
+The site can post to the Facebook Page itself. After every scheduled build, `fb_post.py` reads `social.xml`,
+`community.xml`, `quotes.xml`, `series.xml` (photo posts) and `links.xml` (link posts) and posts each item that came due
+in the last 3 hours. It checks the Page's recent posts first and skips anything already there, so it never double-posts.
+
+To turn it on (repo Settings > Secrets and variables > Actions):
+
+1. Secret `FB_PAGE_ID`: the Page's numeric ID.
+2. Secret `FB_PAGE_TOKEN`: a long-lived Page access token from your own Meta developer app, with `pages_manage_posts`
+   and `pages_read_engagement`. Posting to a Page you admin doesn't need Meta's app review.
+3. Leave the variable `FB_POSTING` unset for a few days and read the "Post to Facebook" step in the Actions log:
+   it lists what it would post. Then turn off the RSS-to-Facebook Zaps and set `FB_POSTING` to `on`.
+
+If a post fails, the run fails and GitHub emails you.

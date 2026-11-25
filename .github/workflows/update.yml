@@ -37,3 +37,12 @@ jobs:
       - id: deploy2
         if: steps.deploy.outcome == 'failure'
         uses: actions/deploy-pages@v4
+      # Facebook posting (replaces the Zapier RSS Zaps). Runs only once the site is live, so every image is reachable.
+      # Dry run until the repo variable FB_POSTING is "on". If a post fails, this step fails and GitHub emails you.
+      - name: Post to Facebook
+        if: github.event_name != 'push' && (steps.deploy.outcome == 'success' || steps.deploy2.outcome == 'success')
+        run: python3 fb_post.py site
+        env:
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          FB_POSTING: ${{ vars.FB_POSTING }}
