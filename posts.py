@@ -225,6 +225,27 @@ def fb_link(url, campaign):
     return f"{base}{sep}utm_source=facebook&utm_medium=social&utm_campaign={campaign}" + (f"#{frag}" if frag else "")
 
 
+SIGNUP_TEXT = "\U0001F4EC Get the good news in your inbox every Thursday:"
+
+
+def signup_url(cfg, campaign="post"):
+    """The newsletter's sign-up page, tagged so beehiiv shows which posts brought each reader."""
+    page = ((cfg.get("newsletter") or {}).get("page") or "").rstrip("/")
+    return f"{page}/subscribe?utm_source=facebook&utm_medium=social&utm_campaign={campaign}" if page else ""
+
+
+def with_signup(caption, cfg, campaign="post"):
+    """Add the newsletter sign-up line to a post, just above its hashtags (or at the end when there are none)."""
+    url = signup_url(cfg, campaign)
+    if not url:
+        return caption
+    line = f"{SIGNUP_TEXT} {url}"
+    head, sep, last = caption.rpartition("\n\n")
+    if sep and last.lstrip().startswith("#"):
+        return f"{head}\n\n{line}\n\n{last}"
+    return f"{caption}\n\n{line}"
+
+
 # ---- Facebook captions: the headline once, one or two whole sentences, then the link ----
 _ABBR = re.compile(r"\b(?:Mr|Mrs|Ms|Dr|St|Jr|Sr|Ave|Rd|Blvd|Mt|No|Inc|Co|Corp|Ltd|vs|Jan|Feb|Mar|Apr|Jun|Jul|Aug|"
                    r"Sep|Sept|Oct|Nov|Dec|U\.S|a\.m|p\.m|[A-Z])\.$")
@@ -561,6 +582,7 @@ def make_quote_feed(cfg, quote, out, credit, birthdays=(), note=print):
         tags = " ".join(dict.fromkeys(TAGS.split() + [x for x in q.get("tags", "").split() if x.startswith("#")]))
         caption = (f"💬 Mansfield quote of the day\n\n\u201c{text}\u201d" + (f"\n\u2014 {q['author']}" if q.get("author") else "")
                    + f"\n\nMore good news: {site}/\n\n{tags}")
+        caption = with_signup(caption, cfg, "quote")
         image = f"{site}/social/quote-{key}.jpg"
         items.append((q["at"], f"""<item><title>{e("Quote of the day: " + text[:80])}</title><link>{e(image)}</link>
 <guid isPermaLink="false">sunny-quote-{key}</guid><pubDate>{format_datetime(q["at"])}</pubDate>
@@ -655,7 +677,7 @@ def make_daily_post(cfg, stories, businesses, flyers, funds, listings, out, sect
     name = f"{day:%Y-%m-%d}.jpg"
     im.save(folder / name, quality=86, optimize=True, progressive=False)
     image = f"{site}/social/{name}"
-    caption = f"{theme} ☀️\n👉 Full story: {fb_link(link, 'daily')}\n\n{text}\n\n{TAGS} {tag}"
+    caption = with_signup(f"{theme} ☀️\n👉 Full story: {fb_link(link, 'daily')}\n\n{text}\n\n{TAGS} {tag}", cfg, "daily")
     milestone = milestone_item(cfg, folder, credit, day, e, format_datetime, note)
     (Path(out) / "social.xml").write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>{e(cfg['site_name'])} daily post</title>
@@ -712,6 +734,7 @@ def make_top_story_feed(cfg, stories, out, page_url, note=print):
         link, image = page_url(s), f"{site}/{s['post_image']}"
         cta = photo_cta(s) if s.get("community") else "\U0001F449 Read more:"
         caption = fb_caption(s["title"], story_text(s), link, "#SunnyMansfield #MansfieldOhio #GoodNews", cta, campaign="top")
+        caption = with_signup(caption, cfg, "top")
         item = (f"<item><title>{e(s['title'])}</title><link>{e(image)}</link><guid isPermaLink=\"false\">sunny-top2-{s['id']}</guid>"
                 f"<pubDate>{format_datetime(noon)}</pubDate><description>{e(caption)}</description>"
                 f"<enclosure url=\"{e(image)}\" type=\"image/jpeg\" length=\"0\"/>"
@@ -727,7 +750,9 @@ def make_top_story_feed(cfg, stories, out, page_url, note=print):
         s = hot or fresh[0]
         summary = teaser(s["title"], story_text(s), 200)
         lead = "\U0001F525 Trending in Mansfield today: " if hot else "☀️ "
-        message = f"{lead}{s['title']}" + (f"\n\n{summary}" if summary else "") + "\n\nTap below for the full story 👇"
+        signup = signup_url(cfg, "link-post")
+        message = (f"{lead}{s['title']}" + (f"\n\n{summary}" if summary else "")
+                   + (f"\n\n{SIGNUP_TEXT} {signup}" if signup else "") + "\n\nTap below for the full story 👇")
         card = (f"<item><title>{e(s['title'])}</title><link>{e(fb_link(page_url(s), 'link-post'))}</link>"
                 f"<guid isPermaLink=\"false\">sunny-link-{evening:%Y-%m-%d}</guid><pubDate>{format_datetime(evening)}</pubDate>"
                 f"<description>{e(message)}</description></item>")
@@ -789,7 +814,7 @@ def make_community_feed(cfg, stories, flyers, funds, businesses, out, page_url, 
     items.sort(key=lambda x: x[0], reverse=True)
     body = "".join(
         f"<item><title>{e(t)}</title><link>{e(img)}</link><guid isPermaLink=\"false\">sunny2-{gid}</guid>"
-        f"<pubDate>{format_datetime(d)}</pubDate><description>{e(cap)}</description>"
+        f"<pubDate>{format_datetime(d)}</pubDate><description>{e(with_signup(cap, cfg, 'community'))}</description>"
         f"<enclosure url=\"{e(img)}\" type=\"image/jpeg\" length=\"0\"/>"
         f"</item>"
         for d, gid, t, link, img, cap in items[:30])
@@ -900,7 +925,7 @@ def make_series_feed(cfg, series, dogs, out, page_url, ua, credit, dog_of_the_da
                     continue
                 im.save(folder / name, quality=86, optimize=True, progressive=False)
                 image = f"{site}/social/{name}"
-                caption = f"{text}\n\n{TAGS} {tag}"
+                caption = with_signup(f"{text}\n\n{TAGS} {tag}", cfg, key)
                 items.append((at, f"""<item><title>{e(title)}</title><link>{e(image)}</link>
 <guid isPermaLink="false">sunny-series-{key}-{day:%Y-%m-%d}</guid><pubDate>{format_datetime(at)}</pubDate>
 <description>{e(caption)}</description><enclosure url="{e(image)}" type="image/jpeg" length="0"/></item>"""))
