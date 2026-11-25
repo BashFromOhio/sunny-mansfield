@@ -226,6 +226,36 @@ def fb_link(url, campaign):
 
 
 SIGNUP_TEXT = "\U0001F4EC Get the good news in your inbox every Thursday:"
+# One line per kind of post; the giveaway line replaces all of them while a giveaway is running.
+SIGNUP_LINES = {
+    "quote": "\u2600\ufe0f More good news like this, free every Thursday:",
+    "daily": "\U0001F4EC Get stories like this in your inbox every Thursday:",
+    "top": "\U0001F4EC Get stories like this in your inbox every Thursday:",
+    "link-post": "\U0001F4EC Get stories like this in your inbox every Thursday:",
+    "community": "\U0001F3E1 Get your neighbors' good news every Thursday, free:",
+    "pets": "\U0001F43E Get the week's good news, pets and all, every Thursday:",
+    "weekend": "\U0001F4C5 Plan your weekend: Mansfield's best events in your inbox every Thursday:",
+}
+
+
+def giveaway(cfg, now=None):
+    """The running giveaway from config (newsletter.giveaway: prize, ends YYYY-MM-DD, live true), or None."""
+    g = (cfg.get("newsletter") or {}).get("giveaway") or {}
+    if not (g.get("live") and g.get("prize") and g.get("ends")):
+        return None
+    today = (now or datetime.now()).date()
+    try:
+        ends = datetime.strptime(g["ends"], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    return g if today <= ends else None
+
+
+def signup_text(cfg, campaign="post"):
+    g = giveaway(cfg)
+    if g:
+        return f"\U0001F381 Sign up free to win {g['prize']}! Every new subscriber by {datetime.strptime(g['ends'], '%Y-%m-%d'):%b} {int(g['ends'][-2:])} is entered:"
+    return SIGNUP_LINES.get(campaign, SIGNUP_TEXT)
 
 
 def signup_url(cfg, campaign="post"):
@@ -239,7 +269,7 @@ def with_signup(caption, cfg, campaign="post"):
     url = signup_url(cfg, campaign)
     if not url:
         return caption
-    line = f"{SIGNUP_TEXT} {url}"
+    line = f"{signup_text(cfg, campaign)} {url}"
     head, sep, last = caption.rpartition("\n\n")
     if sep and last.lstrip().startswith("#"):
         return f"{head}\n\n{line}\n\n{last}"
@@ -761,7 +791,7 @@ def make_top_story_feed(cfg, stories, out, page_url, note=print):
         lead = "\U0001F525 Trending in Mansfield today: " if hot else "☀️ "
         signup = signup_url(cfg, "link-post")
         message = (f"{lead}{s['title']}" + (f"\n\n{summary}" if summary else "")
-                   + (f"\n\n{SIGNUP_TEXT} {signup}" if signup else "") + "\n\nTap below for the full story 👇")
+                   + (f"\n\n{signup_text(cfg, 'weekend' if evening.weekday() == 4 else 'link-post')} {signup}" if signup else "") + "\n\nTap below for the full story 👇")
         card = (f"<item><title>{e(s['title'])}</title><link>{e(fb_link(page_url(s), 'link-post'))}</link>"
                 f"<guid isPermaLink=\"false\">sunny-link-{evening:%Y-%m-%d}</guid><pubDate>{format_datetime(evening)}</pubDate>"
                 f"<description>{e(message)}</description></item>")
