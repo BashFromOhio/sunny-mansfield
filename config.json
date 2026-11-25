@@ -81,7 +81,14 @@
   "supabase_anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtpbm1yeG5ucWR6YWdwcG1ka2pyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1OTMyNjYsImV4cCI6MjEwODE2OTI2Nn0.UQ1kgnA6Ezgvw13-4PjFuT4P_VCX0PdzaglHgjO3oz4",
   "newsletter": {
     "beehiiv_form": "2a7e175b-acb9-410d-b238-957c579d0361",
-    "page": "https://sunnymansfield.beehiiv.com"
+    "page": "https://sunnymansfield.beehiiv.com",
+    "giveaway": {
+      "live": false,
+      "prize": "a $50 gift card to a Mansfield-area business",
+      "starts": "2026-11-26",
+      "ends": "2026-12-20",
+      "draw_by": "2026-12-22"
+    }
   },
   "mailing_address": [
     "Ofgeneration, LLC",

@@ -4426,6 +4426,41 @@ def render_legal(cfg, stories, kind):
     return shell(cfg, f"{title} · {cfg['site_name']}", desc, f"{site}/{kind}.html", inner, stories)
 
 
+def giveaway_cfg(cfg):
+    """The newsletter giveaway from config (newsletter.giveaway: prize, starts, ends, draw_by, live)."""
+    g = (cfg.get("newsletter") or {}).get("giveaway") or {}
+    return g if g.get("live") and g.get("prize") and g.get("ends") else None
+
+
+def render_giveaway(cfg, stories):
+    """Official rules for the newsletter giveaway. Entering = being subscribed to the free weekly email."""
+    g = giveaway_cfg(cfg)
+    site = cfg["site_url"].rstrip("/")
+    nl = ((cfg.get("newsletter") or {}).get("page") or "").rstrip("/")
+    join = f"{nl}/subscribe?utm_source=site&utm_medium=giveaway&utm_campaign=giveaway-rules"
+    day = lambda d: datetime.strptime(d, "%Y-%m-%d").strftime("%B %-d, %Y")
+    starts, ends = day(g.get("starts") or g["ends"]), day(g["ends"])
+    draw = day(g.get("draw_by") or g["ends"])
+    sponsor = mailing_address(cfg)
+    email = f'<a class="link" href="mailto:{e(cfg["submit_email"])}">{e(cfg["submit_email"])}</a>'
+    rules = [
+        ("No purchase necessary", "No purchase or payment of any kind is needed to enter or win. Buying anything does not improve your chances."),
+        ("Sponsor", f"The giveaway is run by Sunny Mansfield's publisher, {sponsor}. Facebook and Meta do not sponsor, endorse or run it."),
+        ("Who can enter", "Legal residents of Ohio who are 18 or older. Employees and owners of Ofgeneration, LLC and their households can't win. Void where prohibited."),
+        ("How to enter", f"Be subscribed to the free Sunny Mansfield Weekly email at 11:59 PM Eastern on {ends}. Sign up free at any time from {starts} to then; people who were already subscribed are entered too. One entry per person, whatever the number of email addresses."),
+        ("The prize", f"One winner gets {g['prize']} (approximate value $50). No cash substitute unless the prize can't be delivered as described. Taxes, if any, are the winner's."),
+        ("Picking the winner", f"One winner is picked at random from all eligible subscribers by {draw}. Odds depend on how many people enter."),
+        ("Telling the winner", "We email the winner at the address they subscribed with. If they don't reply within 7 days, or aren't eligible, we pick another winner at random. With the winner's OK we may share their first name and town."),
+        ("Your email", "We use your email to send the Weekly and to contact you if you win. You can unsubscribe at any time with one click; you stay entered only while you're subscribed. See our privacy policy."),
+        ("The fine print", "We may cancel or change the giveaway if something outside our control stops it from running fairly, and we'll say so on this page. Questions: email {email}."),
+    ]
+    body = "".join(f'<h2 class="hed">{e(h)}</h2><p>{e(t).replace("{email}", email)}</p>' for h, t in rules)
+    inner = f"""{page_title("Win a gift card", "Sunny Mansfield giveaway rules", f"Subscribe free to the Sunny Mansfield Weekly by {ends} for a chance to win {g['prize']}.")}
+<section class="wrap legaltext"><div class="share"><a class="btn solid" href="{e(join)}">Subscribe free to enter</a></div>{body}</section>"""
+    return shell(cfg, f"Giveaway rules · {cfg['site_name']}", f"Official rules for the Sunny Mansfield gift card giveaway, ending {ends}.",
+                 f"{site}/giveaway.html", inner, stories)
+
+
 def biz_card(cfg, b):
     img = (f'<img src="{e(b["image"])}" alt="" loading="lazy" referrerpolicy="no-referrer">' if b.get("image")
            else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["biz"]}</svg></span>')
@@ -6240,6 +6275,8 @@ def main():
     (out / "send-a-story.html").write_text(rebase(render_send_pictures(cfg, stories)))
     for kind in LEGAL:
         (out / f"{kind}.html").write_text(rebase(render_legal(cfg, stories, kind)))
+    if giveaway_cfg(cfg):
+        (out / "giveaway.html").write_text(rebase(render_giveaway(cfg, stories)))
     (out / "fundraisers.html").write_text(rebase(render_fundraisers(cfg, got["fundraisers"], stories)))
     (out / "give").mkdir(exist_ok=True)
     for f in got["fundraisers"]:

@@ -254,7 +254,8 @@ def giveaway(cfg, now=None):
 def signup_text(cfg, campaign="post"):
     g = giveaway(cfg)
     if g:
-        return f"\U0001F381 Sign up free to win {g['prize']}! Every new subscriber by {datetime.strptime(g['ends'], '%Y-%m-%d'):%b} {int(g['ends'][-2:])} is entered:"
+        end = datetime.strptime(g["ends"], "%Y-%m-%d")
+        return f"\U0001F381 Subscribe free by {end:%b} {end.day} for a chance to win {g['prize']}:"
     return SIGNUP_LINES.get(campaign, SIGNUP_TEXT)
 
 
@@ -270,6 +271,8 @@ def with_signup(caption, cfg, campaign="post"):
     if not url:
         return caption
     line = f"{signup_text(cfg, campaign)} {url}"
+    if giveaway(cfg):
+        line += f"\nRules: {cfg['site_url'].rstrip('/')}/giveaway.html"
     head, sep, last = caption.rpartition("\n\n")
     if sep and last.lstrip().startswith("#"):
         return f"{head}\n\n{line}\n\n{last}"
@@ -791,7 +794,8 @@ def make_top_story_feed(cfg, stories, out, page_url, note=print):
         lead = "\U0001F525 Trending in Mansfield today: " if hot else "☀️ "
         signup = signup_url(cfg, "link-post")
         message = (f"{lead}{s['title']}" + (f"\n\n{summary}" if summary else "")
-                   + (f"\n\n{signup_text(cfg, 'weekend' if evening.weekday() == 4 else 'link-post')} {signup}" if signup else "") + "\n\nTap below for the full story 👇")
+                   + (f"\n\n{signup_text(cfg, 'weekend' if evening.weekday() == 4 else 'link-post')} {signup}" if signup else "")
+                   + (f"\nRules: {cfg['site_url'].rstrip('/')}/giveaway.html" if signup and giveaway(cfg) else "") + "\n\nTap below for the full story 👇")
         card = (f"<item><title>{e(s['title'])}</title><link>{e(fb_link(page_url(s), 'link-post'))}</link>"
                 f"<guid isPermaLink=\"false\">sunny-link-{evening:%Y-%m-%d}</guid><pubDate>{format_datetime(evening)}</pubDate>"
                 f"<description>{e(message)}</description></item>")
