@@ -83,7 +83,7 @@
     "beehiiv_form": "2a7e175b-acb9-410d-b238-957c579d0361",
     "page": "https://sunnymansfield.beehiiv.com",
     "giveaway": {
-      "live": false,
+      "live": true,
       "prize": "a $50 gift card to a Mansfield-area business",
       "starts": "2026-11-26",
       "ends": "2026-12-20",
