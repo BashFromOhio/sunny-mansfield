@@ -1901,7 +1901,11 @@ def google_head(cfg):
         out += (f'\n<script async src="https://www.googletagmanager.com/gtag/js?id={e(ids[0])}"></script>'
                 f"<script>window.dataLayer=window.dataLayer||[];function gtag(){{dataLayer.push(arguments)}}"
                 f"var T={{}};try{{if(localStorage.getItem('sm-editor')==='1')T={{traffic_type:'internal'}}}}catch(x){{}}"
-                f"gtag('js',new Date());{configs}</script>")
+                f"gtag('js',new Date());{configs}"
+                # Google Ads "Newsletter signup" conversion, fired by the page script when beehiiv sends a new
+                # subscriber back with ?subscribed=1 (config.json "google_ads_signup", like "AW-123/AbC").
+                + (f"window.SM_SIGNUP={json.dumps(cfg['google_ads_signup'])};" if cfg.get("google_ads_signup") else "")
+                + "</script>")
     out += visit_counter(cfg)
     pub = adsense_pub(cfg)
     if pub:
@@ -2402,7 +2406,10 @@ if(nlpop&&nlpop.showModal){const box=nlpop.querySelector('.nl-form');const DAY=8
   sc.src='https://subscribe-forms.beehiiv.com/v3/loader.js';sc.dataset.beehiivForm=box.dataset.form;box.appendChild(sc)};
  const open=()=>{if(nlpop.open)return;load();nlpop.showModal();document.getElementById('nl-h').focus()};
  const snooze=days=>store('nlSnooze',String(Date.now()+days*DAY));
- if(/[?&]subscribed=1/.test(location.search)){snooze(3650);setTimeout(()=>say("You're subscribed! Watch your inbox for good news."),300)}
+ if(/[?&]subscribed=1/.test(location.search)){snooze(3650);setTimeout(()=>say("You're subscribed! Watch your inbox for good news."),300);
+  // Count the signup once per browser: Google Ads conversion plus an Analytics sign_up event.
+  if(window.gtag&&!store('nlCounted')){store('nlCounted','1');gtag('event','sign_up',{method:'newsletter'});
+   if(window.SM_SIGNUP)gtag('event','conversion',{send_to:window.SM_SIGNUP})}}
  document.addEventListener('click',ev=>{const t=ev.target.closest('[data-nl]');if(t){ev.preventDefault();open();return}
   if(ev.target.closest('[data-nl-close]')||ev.target===nlpop){nlpop.close();snooze(14)}});
  nlpop.addEventListener('cancel',()=>snooze(14));
