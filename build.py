@@ -1214,7 +1214,7 @@ footer .sponsors a{color:inherit}
 .play{position:absolute;left:50%;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;background:rgba(46,26,16,.78);border:3px solid var(--tertiary)}
 .play::after{content:"";position:absolute;left:24px;top:17px;border-style:solid;border-width:12px 0 12px 19px;border-color:transparent transparent transparent var(--tertiary)}
 .photo.video{aspect-ratio:16/9;background:#000}.photo.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-.photo.video.fb.tall{aspect-ratio:3/4;max-width:480px;margin-left:auto;margin-right:auto}
+.photo.video.fb.tall{aspect-ratio:3/4;width:100%;max-width:480px;margin-left:auto;margin-right:auto}
 .fund .tagline{font:700 10px/1 var(--caps);letter-spacing:.12em;text-transform:uppercase;color:var(--text-3)}
 .fund .report{font-size:12px;color:var(--text-3);text-decoration:underline;justify-self:start}
 .fund .report:hover{color:var(--secondary)}
