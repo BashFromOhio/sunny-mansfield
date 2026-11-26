@@ -25,6 +25,9 @@ jobs:
         env:
           SITE_URL: ${{ steps.pages.outputs.base_url }}
           BEEHIIV_API_KEY: ${{ secrets.BEEHIIV_API_KEY }}   # optional: live newsletter count on the admin Goals tab
+      # Smoke tests: if the new build is broken, stop here and keep the last good site live (GitHub emails you).
+      - run: pip install pytest && python3 -m pytest -q tests
+        env: { SITE_DIR: site }
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }
       # GitHub sometimes can't see a just-uploaded artifact yet ("Fetching artifact metadata failed"),
@@ -47,3 +50,8 @@ jobs:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
           FB_POSTING: ${{ vars.FB_POSTING }}
+      # Health alert: fails (and GitHub emails you) when news goes stale or feeds break. Checked once an hour.
+      - name: Site health
+        if: github.event_name == 'schedule' && (steps.deploy.outcome == 'success' || steps.deploy2.outcome == 'success')
+        run: |
+          if [ "$(date -u +%M)" -lt 15 ]; then python3 tools/health_check.py site; fi

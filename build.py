@@ -401,8 +401,12 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like
 STATS = {}
 
 
+NOTES = []  # every note() of this build, saved to health.json for monitoring
+
+
 def note(msg):
     """Log a line; on GitHub Actions it also shows as a notice on the run."""
+    NOTES.append(msg)
     print(("::notice::" if os.environ.get("GITHUB_ACTIONS") else "  ") + msg, file=sys.stderr)
 
 
@@ -5661,6 +5665,36 @@ $('gl-reasons').innerHTML=top.length?'<p class="caps kicker">Why posts were reje
 """
 
 
+def newsletter_panel(cfg, stories):
+    """Admin 'Newsletter' tab: a ready-to-paste weekly best-of for beehiiv, built from the last 7 days.
+    Originals come first because they bring readers back to sunnymansfield.com; then the best news with photos."""
+    now = datetime.now(timezone.utc)
+    week = [s for s in stories if s["date"] > now - timedelta(days=7) and s.get("section") != "life"]
+    originals = [s for s in week if s.get("community")][:4]
+    news = [s for s in week if not s.get("community") and s.get("image")][:6 - min(len(originals), 3)]
+    picks = originals + news
+    give = (cfg.get("newsletter") or {}).get("giveaway") or {}
+    subject = f"This week in Mansfield: {picks[0]['title']}" if picks else "This week in Mansfield"
+    items = "".join(
+        f'<h3><a href="{e(page_url(cfg, s))}">{e(s["title"])}</a></h3>'
+        + (f'<p><img src="{e(s["image"])}" alt="" width="560" style="max-width:100%"></p>' if s.get("image") else "")
+        + f'<p>{e((s.get("summary") or "")[:280])}{"…" if len(s.get("summary") or "") > 280 else ""}</p>'
+        + f'<p><a href="{e(page_url(cfg, s))}">Read it on Sunny Mansfield &rarr;</a></p>' for s in picks)
+    promo = (f'<h3>Win {e(give["prize"])}</h3><p>Every subscriber is entered. Forward this email to a friend so they can sign up too.</p>'
+             if give.get("live") else "")
+    body = (f'<p>Good morning, Mansfield! Here are the stories that made us smile this week.</p>{items}{promo}'
+            f'<p>Know someone doing great things? <a href="{e(cfg["site_url"].rstrip("/"))}/submit.html">Tell us about it</a>.</p>')
+    return f"""<div id="news-ed" hidden><div class="box"><span class="caps kicker">Weekly newsletter</span><h2 class="hed">This week's draft</h2>
+<p class="hint">Built from the last 7 days ({len(originals)} original{"" if len(originals) == 1 else "s"}, {len(news)} news). Copy it, paste into a new beehiiv post, and edit before sending.
+It refreshes every 15 minutes. Originals go first because they bring readers back to the site.</p>
+<p><b>Subject:</b> <span id="nl-subject">{e(subject)}</span></p>
+<div class="row"><button class="btn sm solid" type="button" id="nl-copy">Copy newsletter</button><button class="btn sm" type="button" id="nl-copy-subj">Copy subject</button></div>
+<div id="nl-body" class="nl-body" style="background:#fff;border:3px solid #2e1a10;padding:16px;margin-top:12px;max-width:640px">{body if picks else '<p class="hint">No stories in the last 7 days yet.</p>'}</div>
+<script>(()=>{{const cp=async(html,text,b)=>{{try{{await navigator.clipboard.write([new ClipboardItem({{'text/html':new Blob([html],{{type:'text/html'}}),'text/plain':new Blob([text],{{type:'text/plain'}})}})])}}catch(x){{await navigator.clipboard.writeText(text)}}b.textContent='Copied';setTimeout(()=>b.textContent=b.id==='nl-copy'?'Copy newsletter':'Copy subject',1500)}};
+document.getElementById('nl-copy').onclick=e=>{{const n=document.getElementById('nl-body');cp(n.innerHTML,n.innerText,e.target)}};
+document.getElementById('nl-copy-subj').onclick=e=>{{const t=document.getElementById('nl-subject').textContent;cp(t,t,e.target)}}}})()</script></div></div>"""
+
+
 def render_admin(cfg, stories, headline=None):
     site = cfg["site_url"].rstrip("/")
     if not backend_on(cfg):
@@ -5716,7 +5750,8 @@ The site also skips a news story by itself when it matches a story posted throug
 <button class="tab" type="button" data-q="brackets">Brackets</button>
 <button class="tab" type="button" data-q="rejected">Rejected</button>
 <button class="tab" type="button" data-q="verified">Verified people</button>
-<button class="tab" type="button" data-q="reach">Reach</button></div></nav>
+<button class="tab" type="button" data-q="reach">Reach</button>
+<button class="tab" type="button" data-q="newsletter">Newsletter</button></div></nav>
 <div class="row"><p class="hint">Signed in as <b id="me"></b>. <button class="textbtn" type="button" id="logout">Sign out</button></p>
 <input type="password" id="pw-new" placeholder="new password" aria-label="New password" autocomplete="new-password" style="flex:0 1 200px">
 <button class="btn sm" type="button" id="pw-btn">Set password</button></div></div>
@@ -5737,7 +5772,7 @@ The site also skips a news story by itself when it matches a story posted throug
 <label class="fld"><span class="caps">Headline</span><input id="l-title" maxlength="200" placeholder="Optional"></label>
 <label class="fld wide"><span class="caps">Summary</span><textarea id="l-sum" rows="3" maxlength="400" placeholder="Optional: leave blank to use the article's"></textarea></label>
 <div class="wide submitrow"><button class="btn solid" type="submit" id="l-btn">Post it</button><span class="formmsg" id="l-msg" role="status" aria-live="polite"></span></div></form></div>
-{picker}{goals_panel(cfg, stories)}<div id="reach-ed" hidden>{live_reach(cfg, stories, admin=True)}</div><div id="list" class="queue"></div></div>
+{picker}{goals_panel(cfg, stories)}{newsletter_panel(cfg, stories)}<div id="reach-ed" hidden>{live_reach(cfg, stories, admin=True)}</div><div id="list" class="queue"></div></div>
 <p class="formmsg" id="desk-msg"></p></section>"""
     script = f"""<script src="{SB_JS}"></script><script>
 (()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);const $=id=>document.getElementById(id);
@@ -5769,6 +5804,17 @@ async function counts(){{for(const [k,f] of [['pending',()=>ok(sb.from('submissi
  ['apps',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Join the team').eq('status','pending')],
  ['ads',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Advertise').eq('status','pending')]]){{
  const {{count}}=await f();document.querySelector(`[data-q="${{k}}"] .n`).textContent=count||''}}}}
+const NO5W=['Birthday','Join the team','Advertise','Bracket','Headline','Hide','Link'];
+// Basics check: a quick look for who, what, where, when and why in a post. A hint for the editor, not a verdict.
+function basics(r){{if(NO5W.includes(r.section))return null;const t=`${{r.title||''}} ${{r.summary||''}}`;
+ const nm=[r.name,r.business].filter(x=>x&&x.trim().length>2).map(x=>x.trim().toLowerCase());const who=nm.some(x=>t.toLowerCase().includes(x))||/\\b(led|hosted|organi[sz]ed|presented|sponsored|founded|coached|run|started) by [A-Z0-9]/.test(t)||/\\b(pastor|coach|principal|mayor|director|owner|founder|president|chef|teacher|officer|chief|dr\\.|rev\\.) [A-Z][a-z]+/i.test(t);
+ const what=(r.title||'').trim().length>=12&&(r.summary||'').trim().length>=100;
+ const where=!!r.town||/\\b(Mansfield|Ontario|Lexington|Shelby|Bellville|Lucas|Butler|Crestline|Galion|Ashland|Richland|Madison|Plymouth|Shiloh)\\b|\\b(street|st\\.|avenue|ave\\.?|road|rd\\.?|drive|park|church|school|center|centre|hall|library|field|gym|stadium|downtown)\\b/i.test(t);
+ const when=!!r.event_date||/\\b(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|june?|july?|aug(ust)?|sept?(ember)?|oct(ober)?|nov(ember)?|dec(ember)?|monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tonight|tomorrow|yesterday|this (week|weekend|month)|last (week|weekend))\\b|\\b\\d{{1,2}}\\/\\d{{1,2}}|\\b\\d{{1,2}}(:\\d{{2}})?\\s?(a\\.?m|p\\.?m)\\b|\\b20\\d\\d\\b/i.test(t);
+ const why=(r.summary||'').length>=220||/\\b(because|so that|to help|to raise|in order to|celebrat\\w*|honou?r\\w*|benefit\\w*|support\\w*|thanks to|award\\w*|won|first|record|milestone|mission|goal)\\b/i.test(t);
+ return {{who,what,where,when,why}}}}
+function basicsHtml(b){{if(!b)return '';const miss=Object.keys(b).filter(k=>!b[k]);
+ return `<p class="hint basics">${{miss.length?'<b>Basics check:</b> ':'<b>Basics check:</b> all there. '}}${{Object.entries(b).map(([k,v])=>`<span style="margin-right:8px;${{v?'':'color:#b3261e;font-weight:700'}}">${{v?'✓':'✗'}} ${{k[0].toUpperCase()+k.slice(1)}}</span>`).join('')}}${{miss.length?`<br>Looks like it's missing the ${{miss.join(', ')}}. Ask the sender or reject with a reason.`:''}}</p>`}}
 function item(r){{const when=new Date(r.created_at).toLocaleString();
  const facts=[['Section',r.section],['By',r.name],['Role',r.role],['Town',r.town],['Business',r.business],[r.section==='Birthday'?'Birthday':'Event date',r.section==='Birthday'&&r.event_date?new Date(r.event_date+'T12:00').toLocaleDateString('en-US',{{month:'long',day:'numeric'}}):r.event_date],['Price',r.price],['Contact',r.contact],['Email',r.email],['Email check',r.section==='Birthday'?(r.verified_at?'Confirmed with a code':'Not confirmed'):''],['Consent',r.consent&&r.consent.split('\\n').join(' · ')],['Sent',when],['Status',r.status+(r.reviewed_by?' by '+r.reviewed_by:'')],['Reason',r.review_note]].filter(x=>x[1]);
  const link=/^https?:\/\//i.test(r.link||'')?`<a class="link" href="${{esc(r.link)}}" target="_blank" rel="noopener">Open link</a>`:'';
@@ -5780,9 +5826,9 @@ function item(r){{const when=new Date(r.created_at).toLocaleString();
  return `<article class="qitem" data-row='${{esc(JSON.stringify({{email:r.email,name:r.name,role:r.role,title:r.title,summary:r.summary,link:r.link,photo:r.photo_url}}))}}'>
  ${{r.photo_url?`<span class="qphoto"><img src="${{esc(r.photo_url.split(/\\s+/)[0])}}" alt="">${{r.photo_url.trim().split(/\\s+/).length>1?`<span class="caps kicker">${{r.photo_url.trim().split(/\\s+/).length}} photos</span>`:''}}</span>`:''}}
  <div class="qbody"><span class="caps kicker">${{esc(r.section)}}</span><h3 class="hed">${{esc(r.title)}}</h3><p class="qtext">${{esc(r.summary||'')}}</p>
- <dl class="facts">${{facts.map(([k,v])=>`<dt>${{k}}</dt><dd>${{esc(v)}}</dd>`).join('')}}</dl>${{link}}<div class="share">${{acts}}</div></div></article>`}}
-async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';$('headline-ed').hidden=q!=='headline';$('reach-ed').hidden=q!=='reach';$('goals-ed').hidden=q!=='goals';$('link-ed').hidden=q==='reach'||q==='goals';counts();
- const list=$('list');list.innerHTML=q==='headline'?'':'<p class="hint">Loading…</p>';if(q==='headline'){{hiddenList();return}}if(q==='reach'){{list.innerHTML='';return}}if(q==='goals'){{list.innerHTML='';try{{window.SMgoals&&window.SMgoals(sb)}}catch(x){{say('Goals could not load: '+x.message)}}return}}
+ ${{r.status!=='approved'?basicsHtml(basics(r)):''}}<dl class="facts">${{facts.map(([k,v])=>`<dt>${{k}}</dt><dd>${{esc(v)}}</dd>`).join('')}}</dl>${{link}}<div class="share">${{acts}}</div></div></article>`}}
+async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';$('headline-ed').hidden=q!=='headline';$('reach-ed').hidden=q!=='reach';$('goals-ed').hidden=q!=='goals';$('news-ed').hidden=q!=='newsletter';$('link-ed').hidden=['reach','goals','newsletter'].includes(q);counts();
+ const list=$('list');list.innerHTML=q==='headline'?'':'<p class="hint">Loading…</p>';if(q==='headline'){{hiddenList();return}}if(q==='reach'){{list.innerHTML='';return}}if(q==='newsletter'){{list.innerHTML='';return}}if(q==='goals'){{list.innerHTML='';try{{window.SMgoals&&window.SMgoals(sb)}}catch(x){{say('Goals could not load: '+x.message)}}return}}
  if(q==='verified'){{const {{data,error}}=await sb.from('verified').select('*').order('added_at',{{ascending:false}});
   if(error){{list.innerHTML='';say(error.message);return}}
   list.innerHTML=data.length?data.map(v=>`<article class="qitem"><div class="qbody"><h3 class="hed">${{esc(v.name||v.email)}}</h3><p class="hint">${{esc(v.email)}} ${{v.role?'· '+esc(v.role):''}}</p>
@@ -5816,7 +5862,7 @@ document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q
  if(act==='reject'&&!b.dataset.sure){{b.dataset.sure=1;b.insertAdjacentHTML('beforebegin',`<span class="rsn-box" style="display:flex;flex-wrap:wrap;gap:6px;width:100%">
   <select class="rsn" aria-label="Reason"><option value="">Pick a reason…</option>${{REASONS.map(x=>`<option>${{esc(x)}}</option>`).join('')}}</select>
   <input class="rsn-note" maxlength="300" placeholder="Note (optional)" aria-label="Note" style="flex:1 1 160px"></span>`);
-  b.textContent='Confirm '+b.textContent.toLowerCase();b.closest('.share').querySelector('.rsn').focus();return}}
+  b.textContent='Confirm '+b.textContent.toLowerCase();const sel=b.closest('.share').querySelector('.rsn');if(b.closest('.qitem').querySelector('.basics b')&&/missing/.test(b.closest('.qitem').querySelector('.basics').textContent))sel.selectedIndex=1;sel.focus();return}}
  let note=null;if(act==='reject'){{const bx=b.closest('.share'),r1=bx.querySelector('.rsn').value,r2=bx.querySelector('.rsn-note').value.trim();
   if(!r1&&!r2){{say('Pick a reason or type a note first.');return}}note=[r1,r2].filter(Boolean).join(': ').slice(0,500)}}
  b.disabled=true;let error;
@@ -6502,9 +6548,23 @@ def main():
     write_search_files(cfg, stories, businesses, out, live_towns, flyers, got["jobs"], got["fundraisers"], got["homes"], videos)
     localize_photos(cfg, out)
     check_seo(out)
+    write_health(out, stories, args.sample)
     if not args.sample and os.environ.get("GITHUB_ACTIONS") and datetime.now(timezone.utc).minute < 15:
         ping_indexnow(cfg, stories, flyers)  # once an hour on the live site
     print(f"Built {len(stories)} stories -> {out}", file=sys.stderr)
+
+
+def write_health(out, stories, sample):
+    """health.json: a small report on this build that tools/health_check.py reads to raise alerts.
+    Not linked from the site; it holds no private data."""
+    now = datetime.now(timezone.utc)
+    newest = max((s["date"] for s in stories if not s.get("community")), default=None)
+    skipped = [n for n in NOTES if ": skipped (" in n]
+    (out / "health.json").write_text(json.dumps({
+        "built": now.isoformat(timespec="seconds"), "sample": bool(sample), "stories": len(stories),
+        "community_30d": sum(1 for s in stories if s.get("community") and s["date"] > now - timedelta(days=30)),
+        "newest_news_hours": round((now - newest).total_seconds() / 3600, 1) if newest else None,
+        "feeds_skipped": skipped, "notes": NOTES[-40:]}, indent=1))
 
 
 if __name__ == "__main__":
