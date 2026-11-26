@@ -333,7 +333,9 @@ def main():
     (site / "reel" / "caption.txt").write_text(caption(stories))
     (site / "reel" / "stories.json").write_text(json.dumps(stories, indent=1))
     secs = round(INTRO + OUTRO + STORY * len(stories) - FADE * (len(stories) + 1))
-    print(f"Reel: made a {secs}-second reel of {len(stories)} stories -> {site / 'reel' / 'this-week.mp4'}")
+    probe = subprocess.run([FFMPEG, "-hide_banner", "-i", str(site / "reel" / "this-week.mp4")], capture_output=True, text=True).stderr
+    sound = "with sound" if re.search(r"Stream #\S+: Audio", probe) else "NO SOUND"
+    print(f"Reel: made a {secs}-second reel ({sound}) of {len(stories)} stories -> {site / 'reel' / 'this-week.mp4'}")
 
 
 if __name__ == "__main__":
