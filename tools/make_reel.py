@@ -30,6 +30,7 @@ STORY_SECTIONS = {"Good News", "Sports", "Neighborhoods", "Local Business", "Stu
 SLIDES = 4                     # stories in the reel
 INTRO, OUTRO, FADE = 2.0, 2.2, 0.35
 STORY = (15 - INTRO - OUTRO + FADE * (SLIDES + 1)) / SLIDES   # so the whole reel lands on 15 seconds
+FFMPEG = "ffmpeg"
 UA = "Mozilla/5.0 (sunnymansfield.com reel maker)"
 
 
@@ -174,7 +175,7 @@ def render(stories, out):
         raw = Path(s["photo"]).read_bytes() if not s["photo"].startswith("http") else get(s["photo"])
         slides.append((story_slide(Image.open(io.BytesIO(raw)), headline(s["title"]), s["kicker"], i, len(stories)), STORY, True))
     slides.append((outro_slide(), OUTRO, False))
-    args, filters = ["ffmpeg", "-y", "-loglevel", "error"], []
+    args, filters = [FFMPEG, "-y", "-loglevel", "error"], []
     fps = 30
     for i, (img, dur, zoom) in enumerate(slides):
         p = tmp / f"{i}.png"
@@ -207,11 +208,24 @@ def caption(stories):
     return "\n".join(lines)
 
 
+def ffmpeg_path():
+    """System ffmpeg if there is one, else the static build that ships with the imageio-ffmpeg pip package."""
+    if shutil.which("ffmpeg"):
+        return shutil.which("ffmpeg")
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return None
+
+
 def main():
     site = Path(sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else "site")
     sample = "--sample" in sys.argv
-    if not shutil.which("ffmpeg"):
-        print("Reel: ffmpeg not installed, skipped")
+    global FFMPEG
+    FFMPEG = ffmpeg_path()
+    if not FFMPEG:
+        print("Reel: ffmpeg not installed (pip install imageio-ffmpeg), skipped")
         return
     try:
         stories = sample_stories() if sample else live_stories()
