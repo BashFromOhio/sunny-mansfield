@@ -773,7 +773,7 @@ def load_submissions(config, sample):
         elif fb_video:  # a Facebook reel or video plays right on the story page too
             link = ""
         got["stories"].append({"athlete": facts if section == "sports" and (facts or row["section"].lower() == "athlete spotlight") else None,
-                        "student": facts if section == "students" else None, "id": sid, "title": clean(row["title"], 200), "summary": clean(row["summary"], 400),
+                        "student": facts if section == "students" else None, "id": sid, "title": clean(fix_pasted_title(row["title"]), 200), "summary": clean(row["summary"], 400),
                         "body": paragraphs(row["summary"]), "link": link, "video": video, "fb_video": fb_video, "source": byline,
                         "role": row["role"], "image": image, "date": date, "section": section, "community": True,
                         "town": row["town"], "gallery": photos[:MAX_PHOTOS] if len(photos) > 1 else []})
@@ -790,7 +790,28 @@ def full_link(link):
     link = (link or "").strip()
     if link and not link.startswith("http") and re.match(r"^[\w-]+(\.[\w-]+)+(/|$)", link):
         link = "https://" + link
-    return link if re.match(r"(?i)^https?://", link) else ""
+    return untrack(link) if re.match(r"(?i)^https?://", link) else ""
+
+
+TRACKING = re.compile(r"^(fbclid|gclid|dclid|msclkid|mibextid|igshid|__cft__.*|__tn__|_hsenc|_hsmi|mc_eid)$", re.I)
+
+
+def untrack(link):
+    """Facebook and ad links carry long click-tracking codes (?fbclid=...). Drop them so links are clean and match."""
+    u = urllib.parse.urlsplit(link)
+    if not u.query:
+        return link
+    q = [(k, v) for k, v in urllib.parse.parse_qsl(u.query, keep_blank_values=True) if not TRACKING.match(k)]
+    return urllib.parse.urlunsplit(u._replace(query=urllib.parse.urlencode(q)))
+
+
+FB_LABEL = re.compile(r"\b(\w{1,2}) what[’']s this ([a-z])")
+
+
+def fix_pasted_title(title):
+    """A headline copied from a Facebook link preview can pick up its "what's this" label mid-word
+    ("Formed Leadership A what's this dvisory"); put the word back together."""
+    return FB_LABEL.sub(r"\1\2", title or "")
 
 
 def youtube_id(link):
@@ -2086,9 +2107,10 @@ def masthead(cfg, site, stories, quote=None, current=""):
     on = lambda key: ' class="on" aria-current="page"' if key == current else ""
     links = "".join(f'<a href="{e(site)}/{"" if key == "front" else key}"{on(key)}>{e(label)}</a>' for key, label in NAV)
     ad = banner(cfg, "A1").replace('class="wrap adrow"', 'class="adrow"', 1)
+    week = sum(1 for s in stories if s["date"] > now - timedelta(days=7))  # the paper keeps three weeks; say only this week's
     return f"""<header>
 <div class="topbar"><div class="wrap topbar-in"><span class="caps">{today}</span>
-<span class="caps topbar-mid">{len(stories)} good stories this week · Free · Updated all day</span>
+<span class="caps topbar-mid">{week} good {"story" if week == 1 else "stories"} this week · Free · Updated all day</span>
 <nav class="caps toplinks" aria-label="About the paper"><button class="navbtn" type="button" data-about>About</button>
 <a href="{e(site)}/start.html"{on("start.html")}>Start here</a><a href="{e(site)}/rules.html"{on("rules.html")}>Join the team</a>{f'<a href="{e(site)}/advertise.html"{on("advertise.html")}>Advertise</a>' if ads_open(cfg) else ""}
 <a class="topshare" href="{e(fb_share(site + '/'))}" target="_blank" rel="noopener" aria-label="Share the paper on Facebook">{FB_ICON}<span>Share the paper</span></a></nav></div></div>
@@ -6073,7 +6095,7 @@ def render_story_page(cfg, s, stories):
                  f'allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" allowfullscreen></iframe></div>')
     elif s.get("community") and "/s/" in s["link"] and s.get("image"):
         src = s["image"] if s["image"].startswith("https://") else "/" + s["image"]
-        media = (f'<span class="photo"><img src="{e(src)}" alt="" referrerpolicy="no-referrer"></span>')  # plain photo, no link to its Supabase storage address
+        media = (f'<span class="photo"><img src="{e(src)}" alt="{e(s["title"])}" referrerpolicy="no-referrer"></span>')  # plain photo, no link to its Supabase storage address
     elif s.get("image"):
         media = photo(s)
     section = SECTION_NAMES.get(s["section"], "Celebrations of Life" if life else "Good News")
@@ -6249,13 +6271,13 @@ def add_links(cfg, stories, links, sample=False):
     """Articles an editor pasted in the admin page. We read the headline, summary, photo and outlet from the
     article itself (its share tags), unless the editor typed their own. They show like any feed story."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=cfg.get("max_age_days", 21))
-    seen = {re.sub(r"\W+", "", s["title"].lower())[:60] for s in stories} | {s["link"] for s in stories}
+    seen = {re.sub(r"\W+", "", s["title"].lower())[:60] for s in stories} | {link_key(s["link"]) for s in stories}
     added = []
     for row in links:
         url = full_link(row["link"])
-        if not url or row["date"] < cutoff or url in seen:
+        if not url or row["date"] < cutoff or link_key(url) in seen:
             continue
-        title = "" if row["title"] == LINK_TITLE else row["title"]
+        title = "" if row["title"] == LINK_TITLE else fix_pasted_title(row["title"])
         summary, image = row["summary"], None
         source = urllib.parse.urlparse(url).netloc.removeprefix("www.")
         if not sample:
@@ -6282,7 +6304,7 @@ def add_links(cfg, stories, links, sample=False):
         key = re.sub(r"\W+", "", s["title"].lower())[:60]
         if key in seen:
             continue
-        seen |= {key, url}
+        seen |= {key, link_key(url)}
         s["section"] = SECTION_BY_LABEL.get((row["section"] or "").lower()) or classify(s) or "good"
         if s["section"] not in SECTION_NAMES:
             s["section"] = "good"
@@ -6341,6 +6363,16 @@ def drop_feed_duplicates(stories):
                 keep.append(s)
             continue
         keep.append(s)
+    # The same article can arrive twice (a feed and a pasted link, or two feeds with slightly different headlines).
+    links, once = set(), []
+    for s in keep:
+        k = link_key(s.get("link")) if s.get("link") and not s.get("community") else None
+        if k and k in links:
+            dropped.append(f'{s["title"]} (same link as an earlier story)')
+            continue
+        links.add(k)
+        once.append(s)
+    keep = once
     for d in dropped:
         note(f"Skipped duplicate: {d}")
     return keep
