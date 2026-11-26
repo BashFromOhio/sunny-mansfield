@@ -1,4 +1,4 @@
-"""This week's Facebook Reel: a 15-second vertical video (1080x1920) of the week's most-read neighbor stories, made from
+"""This week's Facebook Reel: a vertical video (1080x1920, about 20 seconds) of the week's 7 most-read neighbor stories, made from
 their real photos and headlines. No AI footage: every picture is the one the neighbor sent in.
 
   python3 tools/make_reel.py site            # live: stories from Supabase, ranked by page views this week
@@ -27,9 +27,9 @@ W, H = 1080, 1920
 CREAM, BROWN, ORANGE, GOLD, WHITE = (251, 246, 236), (46, 26, 16), (232, 115, 42), (246, 190, 60), (255, 255, 255)
 STORY_SECTIONS = {"Good News", "Sports", "Neighborhoods", "Local Business", "Student Voices", "Seniors",
                   "Athlete Spotlight", "Business Spotlight"}
-SLIDES = 4                     # stories in the reel
+SLIDES = 7                     # top stories in the reel (fewer if the week had fewer)
 INTRO, OUTRO, FADE = 2.0, 2.2, 0.35
-STORY = (15 - INTRO - OUTRO + FADE * (SLIDES + 1)) / SLIDES   # so the whole reel lands on 15 seconds
+STORY = 2.6                    # seconds per story: 7 stories make a reel of about 20 seconds
 FFMPEG = "ffmpeg"
 UA = "Mozilla/5.0 (sunnymansfield.com reel maker)"
 
@@ -41,6 +41,8 @@ def font(name, size):
 def headline(t):
     """Same headline style as the site (build.headline_style), so the Reel and the stories match."""
     try:
+        import warnings
+        warnings.simplefilter("ignore", SyntaxWarning)   # build.py's inline JavaScript trips harmless escape warnings
         sys.path.insert(0, str(HERE))
         from build import headline_style
         return headline_style(t)
@@ -92,7 +94,7 @@ def gradient(w, h, top, bottom):
 
 
 LOGO = HERE / "brand" / "post-logo.png"
-MUSIC = HERE / "brand" / "reel-music.m4a"   # optional soundtrack; delete the file for a silent Reel
+MUSIC = HERE / "brand" / "reel-music.m4a"   # optional soundtrack (30 s, faded in); delete the file for a silent Reel
 SAFE_TOP, SAFE_BOTTOM = 230, 1520   # Facebook covers the top bar and the bottom caption area of a Reel
 
 
@@ -203,9 +205,12 @@ def live_stories():
 
 def sample_stories():
     names = ["Ocie Hill kids paint a mural on the old corner store", "LADY TYGERS DOMINATE IN DOUBLE WIN!",
-             "Neighbors fill the food pantry shelves before Thanksgiving", "A new bakery opens on Main Street"]
+             "Neighbors fill the food pantry shelves before Thanksgiving", "A new bakery opens on Main Street",
+             "Madison band raises $3,000 for new uniforms", "Seniors teach a quilting class at the library",
+             "Volunteers plant 40 trees in North Lake Park"]
+    kinds = ["Neighborhoods", "Sports", "Good News", "Local Business", "Student Voices", "Seniors", "Good News"]
     return [{"title": t, "kicker": k, "photo": str(HERE / "assets" / "sample" / f"{i + 1}.jpg"), "views": 0, "url": ""}
-            for i, (t, k) in enumerate(zip(names, ["Neighborhoods", "Sports", "Good News", "Local Business"]))]
+            for i, (t, k) in enumerate(zip(names, kinds))]
 
 
 def render(stories, out):
@@ -273,7 +278,9 @@ def render(stories, out):
         args += ["-i", str(music)]
     args += ["-filter_complex", ";".join(flt), "-map", f"[{last}]"]
     if music:
-        args += ["-map", f"{n_in}:a", "-c:a", "aac", "-b:a", "160k", "-shortest"]
+        total = INTRO + OUTRO + STORY * len(stories) - FADE * (len(stories) + 1)
+        args += ["-map", f"{n_in}:a", "-af", f"atrim=0:{total:.2f},afade=out:st={total - 1.5:.2f}:d=1.5",
+                 "-c:a", "aac", "-b:a", "160k", "-shortest"]
     args += ["-r", str(fps), "-c:v", "libx264", "-preset", "veryfast",
              "-crf", "21", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out / "this-week.mp4")]
     subprocess.run(args, check=True)
@@ -325,7 +332,8 @@ def main():
         return
     (site / "reel" / "caption.txt").write_text(caption(stories))
     (site / "reel" / "stories.json").write_text(json.dumps(stories, indent=1))
-    print(f"Reel: made a {15}-second reel of {len(stories)} stories -> {site / 'reel' / 'this-week.mp4'}")
+    secs = round(INTRO + OUTRO + STORY * len(stories) - FADE * (len(stories) + 1))
+    print(f"Reel: made a {secs}-second reel of {len(stories)} stories -> {site / 'reel' / 'this-week.mp4'}")
 
 
 if __name__ == "__main__":
