@@ -140,9 +140,38 @@ def clean(text, limit=220):
 
 
 def paragraphs(text):
-    # The full submitted text for the story page, split on line breaks into paragraphs.
+    # The full submitted text for the story page, split on line breaks into paragraphs and tidied up.
     parts = [clean(p, 10**6) for p in re.split(r"\r?\n\s*\n|\r?\n", text or "")]
-    return [p for p in parts if p]
+    return [q for p in parts if p for q in tidy_paragraph(p)]
+
+
+CONTRACTIONS = {"Ive": "I've", "Im": "I'm", "dont": "don't", "cant": "can't", "wont": "won't", "didnt": "didn't",
+                "doesnt": "doesn't", "isnt": "isn't", "wasnt": "wasn't", "couldnt": "couldn't", "wouldnt": "wouldn't",
+                "shouldnt": "shouldn't", "thats": "that's", "theyre": "they're", "youre": "you're", "weve": "we've"}
+
+
+def tidy_paragraph(p, max_len=420):
+    """Neighbors type posts on phones. Fix the common slips (no space after a comma, a lone lowercase i, "Ive"),
+    drop lines that are only hashtags, and break a wall of text into short paragraphs of a few sentences."""
+    p = " ".join(p.split())
+    if re.fullmatch(r"(#\w+\s*)+", p):
+        return []
+    p = re.sub(r"\s+([,.;:!?])", r"\1", p)                                   # "books ." -> "books."
+    p = re.sub(r"(?<=[a-z\)])([,;!?])(?=[A-Za-z])", r"\1 ", p)                # "books,however" -> "books, however"
+    p = re.sub(r"(?<=[a-z]{2})\.(?=[A-Z][a-z])", ". ", p)                      # "books.Then" -> "books. Then" (not U.S. or .com)
+    p = re.sub(r"\bi\b(?=[\s',.!?])", "I", p)
+    p = re.sub(r"\b(" + "|".join(CONTRACTIONS) + r")\b", lambda m: CONTRACTIONS[m.group(1)], p)
+    p = re.sub(r"(^|(?<=[a-z]{2})[.!?]\s+)([a-z])", lambda m: m.group(1) + m.group(2).upper(), p)  # capital after a full stop (not "p.m.")
+    if len(p) <= max_len:
+        return [p]
+    out, cur = [], ""
+    for sent in re.split(r"(?<=[.!?])\s+(?=[A-Z\"“])", p):
+        if cur and len(cur) + len(sent) > max_len * 0.7:
+            out.append(cur)
+            cur = sent
+        else:
+            cur = f"{cur} {sent}".strip()
+    return out + ([cur] if cur else [])
 
 
 def parse_date(value):
@@ -2526,7 +2555,7 @@ def listing_card(x, cfg):
     grey = ' style="opacity:.55;filter:grayscale(1)"' if given else ""
     return (f'<article class="slide listing{" given" if given else ""}" id="l-{x["id"]}" data-cat="{cat}" data-q="{search}"{grey}><a class="photo" href="{e(url)}" tabindex="-1" aria-hidden="true">{img}{price}</a>'
             f'<span class="caps kicker">{e(MARKET_CAT_NAMES.get(cat, ""))} · {e(x.get("town") or "Richland County")} · {ago(x["date"])}</span>{photos}'
-            f'<h3 class="hed"><a href="{e(url)}">{e(x["title"])}</a></h3><p class="dek">{e(clip(x["summary"], 220))}</p>'
+            f'<h3 class="hed"><a href="{e(url)}">{e(x["title"])}</a></h3><p class="dek">{e(clip(" ".join(tidy_paragraph(x["summary"], 10**6)), 220))}</p>'
             f'<div class="share">{how}<a class="btn sm" href="{e(url)}">Details</a></div></article>')
 
 
@@ -2564,7 +2593,7 @@ def render_free_page(cfg, x, stories):
                     ("Where", x.get("town") or "Richland County"), ("Posted", x["date"].strftime("%B %-d, %Y"))) if v)
     photo_html = (f'<span class="photo"><img src="{e(img_src(x["image"]))}" alt="{e(x["title"])}" referrerpolicy="no-referrer"></span>'
                   if x.get("image") else "")
-    body = "".join(f"<p>{e(p)}</p>" for p in (x.get("body") or x["summary"]).split("\n") if p.strip())
+    body = "".join(f"<p>{e(p)}</p>" for p in paragraphs(x.get("body") or x["summary"]))
     gallery = ""
     if x.get("gallery"):
         pics = [p if p.startswith("https://") else "/" + p for p in x["gallery"]]
@@ -2580,7 +2609,9 @@ def render_free_page(cfg, x, stories):
             f' <span id="given-msg" role="status" aria-live="polite"></span></p>')
     inner = f"""{banner}<section class="wrap pagehead"><span class="script">{"Given away" if given else "Free to a good home"}</span><h1 class="retro sm">{e(x["title"])}</h1>
 <p class="intro">{e(cat)} · {e(x.get("town") or "Richland County")} · {ago(x["date"])}</p></section>
-<section class="wrap jobpage"><div class="legaltext">{photo_html}{body}</div>
+<style>.freebody{{max-width:680px}}.freebody p{{font-size:17px;line-height:1.7;margin:0 0 16px}}
+.freebody .photo{{display:block;margin:0 0 20px}}.freebody .photo img{{width:100%;max-height:460px;object-fit:cover;border:3px solid #2e1a10;display:block}}</style>
+<section class="wrap jobpage"><div class="freebody">{photo_html}{body}</div>
 <aside class="box"><dl class="facts">{facts}</dl><div class="share">{how}
 <a class="btn fb sm" href="{e(fb_share(url))}" target="_blank" rel="noopener">{FB_ICON}Share</a>
 <button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button></div>
