@@ -1,4 +1,4 @@
-"""This week's Facebook Reel: a vertical video (1080x1920, about 20 seconds) of the week's 7 most-read neighbor stories, made from
+"""This week's Facebook Reel: a vertical video (1080x1920, about 29 seconds) of the week's 7 most-read neighbor stories, made from
 their real photos and headlines. No AI footage: every picture is the one the neighbor sent in.
 
   python3 tools/make_reel.py site            # live: stories from Supabase, ranked by page views this week
@@ -28,8 +28,8 @@ CREAM, BROWN, ORANGE, GOLD, WHITE = (251, 246, 236), (46, 26, 16), (232, 115, 42
 STORY_SECTIONS = {"Good News", "Sports", "Neighborhoods", "Local Business", "Student Voices", "Seniors",
                   "Athlete Spotlight", "Business Spotlight"}
 SLIDES = 7                     # top stories in the reel (fewer if the week had fewer)
-INTRO, OUTRO, FADE = 2.0, 2.2, 0.35
-STORY = 2.6                    # seconds per story: 7 stories make a reel of about 20 seconds
+INTRO, OUTRO, FADE = 2.6, 3.0, 0.6
+STORY = 3.8                    # seconds per story: time to read each headline; 7 stories make a reel of about 29 seconds
 FFMPEG = "ffmpeg"
 UA = "Mozilla/5.0 (sunnymansfield.com reel maker)"
 
@@ -94,7 +94,7 @@ def gradient(w, h, top, bottom):
 
 
 LOGO = HERE / "brand" / "post-logo.png"
-MUSIC = HERE / "brand" / "reel-music.m4a"   # optional soundtrack (30 s, faded in); delete the file for a silent Reel
+MUSIC = HERE / "brand" / "reel-music.m4a"   # optional soundtrack ("Run Up" from 0:47, 40 s, faded in); delete the file for a silent Reel
 SAFE_TOP, SAFE_BOTTOM = 230, 1520   # Facebook covers the top bar and the bottom caption area of a Reel
 
 
@@ -231,8 +231,8 @@ def render(stories, out):
 
     def text_in(base, txt_idx, dur, k, delay=0.25):
         """Text fades in and rises 40px over half a second."""
-        flt.append(f"[{txt_idx}:v]format=rgba,fade=in:st={delay}:d=0.5:alpha=1[t{k}]")
-        flt.append(f"[{base}][t{k}]overlay=x=0:y='40*max(0,1-(t-{delay})/0.5)':shortest=1[s{k}]")
+        flt.append(f"[{txt_idx}:v]format=rgba,fade=in:st={delay}:d=0.8:alpha=1[t{k}]")
+        flt.append(f"[{base}][t{k}]overlay=x=0:y='40*max(0,1-(t-{delay})/0.8)':shortest=1[s{k}]")
         return f"s{k}"
 
     # intro: the sun rises behind the title
@@ -240,7 +240,7 @@ def render(stories, out):
     i_bg, i_sun, i_txt = add(bg, INTRO, "i_bg"), add(sun, INTRO, "i_sun"), add(txt, INTRO, "i_txt")
     flt.append(f"[{i_bg}:v]fps={fps},format=yuv420p[ib]")
     flt.append(f"[{i_sun}:v]format=rgba[isun]")
-    flt.append(f"[ib][isun]overlay=x=(W-w)/2:y='1500-530*min(1,t/1.3)':shortest=1[ibs]")
+    flt.append(f"[ib][isun]overlay=x=(W-w)/2:y='1500-530*min(1,t/1.8)':shortest=1[ibs]")
     slides.append((text_in("ibs", i_txt, INTRO, 0, 0.2), INTRO))
     # stories: soft blurred backdrop, framed photo with a slow push-in, headline sliding up
     for k, s in enumerate(stories, 1):
@@ -254,7 +254,7 @@ def render(stories, out):
             m = Image.new("L", (fw, fh), 0)
             ImageDraw.Draw(m).rounded_rectangle([0, 0, fw - 1, fh - 1], radius=22, fill=255)
             mask_idx = add(m, STORY, "mask")
-        flt.append(f"[{f}:v]scale={round(fw * 1.25)}:{round(fh * 1.25)},zoompan=z='1+0.08*on/{frames}':x='iw/2-(iw/zoom/2)'"
+        flt.append(f"[{f}:v]scale={round(fw * 1.25)}:{round(fh * 1.25)},zoompan=z='1+0.05*on/{frames}':x='iw/2-(iw/zoom/2)'"
                    f":y='ih/3-(ih/zoom/3)':d={frames}:s={fw}x{fh}:fps={fps}[z{k}]")
         flt.append(f"[{mask_idx}:v]fps={fps},format=gray,split[m{k}][mm{k}];[mm{k}]nullsink")
         flt.append(f"[z{k}][m{k}]alphamerge[f{k}]")
@@ -281,7 +281,7 @@ def render(stories, out):
         total = INTRO + OUTRO + STORY * len(stories) - FADE * (len(stories) + 1)
         args += ["-map", f"{n_in}:a", "-af", f"atrim=0:{total:.2f},afade=out:st={total - 1.5:.2f}:d=1.5",
                  "-c:a", "aac", "-b:a", "160k", "-shortest"]
-    args += ["-r", str(fps), "-c:v", "libx264", "-preset", "veryfast",
+    args += ["-map_chapters", "-1", "-map_metadata", "-1", "-r", str(fps), "-c:v", "libx264", "-preset", "veryfast",
              "-crf", "21", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out / "this-week.mp4")]
     subprocess.run(args, check=True)
     subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-ss", f"{INTRO + 0.8:.2f}", "-i", str(out / "this-week.mp4"),
