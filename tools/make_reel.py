@@ -92,6 +92,7 @@ def gradient(w, h, top, bottom):
 
 
 LOGO = HERE / "brand" / "post-logo.png"
+MUSIC = HERE / "brand" / "reel-music.m4a"   # optional soundtrack; delete the file for a silent Reel
 SAFE_TOP, SAFE_BOTTOM = 230, 1520   # Facebook covers the top bar and the bottom caption area of a Reel
 
 
@@ -267,7 +268,13 @@ def render(stories, out):
         flt.append(f"[{last}][{slides[k][0]}]xfade=transition={kind}:duration={FADE}:offset={t:.3f}[x{k}]")
         last, t = f"x{k}", t + slides[k][1]
     out.mkdir(parents=True, exist_ok=True)
-    args += ["-filter_complex", ";".join(flt), "-map", f"[{last}]", "-r", str(fps), "-c:v", "libx264", "-preset", "veryfast",
+    music = MUSIC if MUSIC.exists() else None
+    if music:   # the Reel's soundtrack: a 15-second excerpt, already faded and loudness-matched for social
+        args += ["-i", str(music)]
+    args += ["-filter_complex", ";".join(flt), "-map", f"[{last}]"]
+    if music:
+        args += ["-map", f"{n_in}:a", "-c:a", "aac", "-b:a", "160k", "-shortest"]
+    args += ["-r", str(fps), "-c:v", "libx264", "-preset", "veryfast",
              "-crf", "21", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out / "this-week.mp4")]
     subprocess.run(args, check=True)
     subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-ss", f"{INTRO + 0.8:.2f}", "-i", str(out / "this-week.mp4"),
