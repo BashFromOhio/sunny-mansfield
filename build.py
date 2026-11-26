@@ -5842,7 +5842,18 @@ def newsletter_panel(cfg, stories):
              if give.get("live") else "")
     body = (f'<p>Good morning, Mansfield! Here are the stories that made us smile this week.</p>{items}{promo}'
             f'<p>Know someone doing great things? <a href="{e(cfg["site_url"].rstrip("/"))}/submit.html">Tell us about it</a>.</p>')
-    return f"""<div id="news-ed" hidden><div class="box"><span class="caps kicker">Weekly newsletter</span><h2 class="hed">This week's draft</h2>
+    reel = f"""<div class="box" style="margin-bottom:16px"><span class="caps kicker">Facebook Reel</span><h2 class="hed">This week's Reel</h2>
+<p class="hint">15 seconds, made automatically from the week's most-read neighbor stories and their real photos. It refreshes with the site.
+Download it, post it as a Reel on the Sunny Mansfield Page, paste the caption, and put the site link in the first comment.</p>
+<video id="reel-v" src="{e(cfg["site_url"].rstrip("/"))}/reel/this-week.mp4" controls playsinline preload="metadata" style="width:100%;max-width:300px;border:3px solid #2e1a10;display:block;margin:10px 0"></video>
+<div class="row"><a class="btn sm solid" href="{e(cfg["site_url"].rstrip("/"))}/reel/this-week.mp4" download="sunny-mansfield-this-week.mp4">Download the Reel</a>
+<button class="btn sm" type="button" id="reel-cap">Copy caption</button></div>
+<p class="hint" id="reel-msg"></p>
+<script>(()=>{{const v=document.getElementById('reel-v'),m=document.getElementById('reel-msg'),b=document.getElementById('reel-cap');let cap='';
+v.onerror=()=>{{m.textContent='No Reel this week yet: it needs at least 2 neighbor stories with photos from the last 7 days.'}};
+fetch('{e(cfg["site_url"].rstrip("/"))}/reel/caption.txt',{{cache:'no-store'}}).then(r=>r.ok?r.text():'').then(t=>{{cap=t}});
+b.onclick=async()=>{{if(!cap)return;await navigator.clipboard.writeText(cap);b.textContent='Copied';setTimeout(()=>b.textContent='Copy caption',1500)}}}})()</script></div>"""
+    return f"""<div id="news-ed" hidden>{reel}<div class="box"><span class="caps kicker">Weekly newsletter</span><h2 class="hed">This week's draft</h2>
 <p class="hint">Built from the last 7 days ({len(originals)} original{"" if len(originals) == 1 else "s"}, {len(news)} news). Copy it, paste into a new beehiiv post, and edit before sending.
 It refreshes every 15 minutes. Originals go first because they bring readers back to the site.</p>
 <p><b>Subject:</b> <span id="nl-subject">{e(subject)}</span></p>

@@ -25,6 +25,8 @@ jobs:
         env:
           SITE_URL: ${{ steps.pages.outputs.base_url }}
           BEEHIIV_API_KEY: ${{ secrets.BEEHIIV_API_KEY }}   # optional: live newsletter count on the admin Goals tab
+      # This week's 15-second Facebook Reel from the most-read neighbor stories (never fails the build).
+      - run: python3 tools/make_reel.py site
       # Smoke tests: if the new build is broken, stop here and keep the last good site live (GitHub emails you).
       - run: pip install pytest && python3 -m pytest -q tests
         env: { SITE_DIR: site }
