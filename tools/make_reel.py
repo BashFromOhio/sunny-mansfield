@@ -93,7 +93,8 @@ def gradient(w, h, top, bottom):
     return g
 
 
-LOGO = HERE / "brand" / "post-logo.png"
+LOGO = HERE / "brand" / "reel-logo.png"              # the retro Sunny Mansfield logo, for light backgrounds
+LOGO_REV = HERE / "brand" / "reel-logo-reverse.png"  # cream version, for orange and photo backgrounds
 MUSIC = HERE / "brand" / "reel-music.m4a"   # optional soundtrack ("Run Up" from 0:47, 40 s, faded in); delete the file for a silent Reel
 SAFE_TOP, SAFE_BOTTOM = 230, 1520   # Facebook covers the top bar and the bottom caption area of a Reel
 
@@ -112,10 +113,15 @@ def progress(d, n, total):
         d.rounded_rectangle([a, y, a + seg, y + 8], radius=4, fill=CREAM if k < n else (255, 255, 255, 90))
 
 
+def logo(path, width):
+    im = Image.open(path).convert("RGBA")
+    return im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
+
+
 def brand_tag(img):
-    d = ImageDraw.Draw(img)
-    d.text((60, 205), "SUNNY MANSFIELD", font=font("Josefin-700", 30), fill=CREAM, anchor="lm")
-    d.text((W - 60, 205), "GOOD NEWS", font=font("Josefin-700", 30), fill=GOLD, anchor="rm")
+    lg = logo(LOGO_REV, 310)
+    img.paste(lg, (56, 214 - lg.height // 2), lg)
+    ImageDraw.Draw(img).text((W - 60, 214), "GOOD NEWS", font=font("Josefin-700", 30), fill=GOLD, anchor="rm")
 
 
 def story_layers(photo, title, kicker, n, total):
@@ -152,10 +158,10 @@ def intro_layers(span):
     ImageDraw.Draw(sun).ellipse([0, 0, 419, 419], fill=GOLD + (255,))
     text = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     t = ImageDraw.Draw(text)
-    t.text((W / 2, 470), "This week in", font=font("Yellowtail", 120), fill=CREAM, anchor="mm")
-    t.text((W / 2, 630), "MANSFIELD", font=font("Caslon-700", 150), fill=WHITE, anchor="mm", stroke_width=6, stroke_fill=BROWN)
-    t.text((W / 2, 770), span.upper(), font=font("Josefin-700", 40), fill=CREAM, anchor="mm")
-    t.text((W / 2, 840), "TOP GOOD-NEWS STORIES", font=font("Josefin-700", 40), fill=CREAM, anchor="mm")
+    lg = logo(LOGO_REV, 900)
+    text.paste(lg, ((W - lg.width) // 2, 300), lg)
+    t.text((W / 2, 300 + lg.height + 90), "This week's top stories", font=font("Yellowtail", 92), fill=CREAM, anchor="mm")
+    t.text((W / 2, 300 + lg.height + 190), span.upper(), font=font("Josefin-700", 42), fill=CREAM, anchor="mm")
     return bg, sun, text
 
 
@@ -166,6 +172,8 @@ def outro_layers():
     d.rectangle([0, H - 36, W, H], fill=ORANGE)
     text = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     t = ImageDraw.Draw(text)
+    lg = logo(LOGO, 820)
+    text.paste(lg, ((W - lg.width) // 2, 330), lg)
     t.text((W / 2, 640), "Read every story", font=font("Yellowtail", 120), fill=ORANGE + (255,), anchor="mm")
     t.text((W / 2, 790), "SUNNYMANSFIELD.COM", font=font("Caslon-700", 68), fill=BROWN + (255,), anchor="mm")
     t.rounded_rectangle([W / 2 - 330, 900, W / 2 + 330, 1000], radius=50, fill=ORANGE + (255,))
@@ -213,6 +221,28 @@ def sample_stories():
             for i, (t, k) in enumerate(zip(names, kinds))]
 
 
+def push_in_clip(fg, seconds, fps, path, zoom=0.05):
+    """A smooth slow zoom: every frame is resampled from a sharper source at sub-pixel positions, so there's no
+    stair-step jitter (ffmpeg's zoompan moves in whole pixels, which looks shaky on photos)."""
+    fw, fh = fg.size
+    src = fg.resize((round(fw * 1.6), round(fh * 1.6)), Image.LANCZOS)
+    sw, sh = src.size
+    frames = round(seconds * fps)
+    enc = subprocess.Popen([FFMPEG, "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{fw}x{fh}",
+                            "-r", str(fps), "-i", "-", "-c:v", "libx264", "-preset", "veryfast", "-crf", "16",
+                            "-pix_fmt", "yuv420p", str(path)], stdin=subprocess.PIPE)
+    for k in range(frames):
+        p = k / max(1, frames - 1)
+        p = p * p * (3 - 2 * p)                     # ease in and out
+        z = 1 + zoom * p
+        cw, ch = sw / z, sh / z
+        x0, y0 = (sw - cw) / 2, (sh - ch) / 3        # zoom toward the upper third, where faces usually are
+        frame = src.transform((fw, fh), Image.EXTENT, (x0, y0, x0 + cw, y0 + ch), Image.BICUBIC)
+        enc.stdin.write(frame.tobytes())
+    enc.stdin.close()
+    enc.wait()
+
+
 def render(stories, out):
     """Layers per slide (background, moving photo or sun, text that fades and slides in), joined with smooth transitions."""
     tmp = Path(tempfile.mkdtemp())
@@ -247,15 +277,20 @@ def render(stories, out):
         raw = Path(s["photo"]).read_bytes() if not s["photo"].startswith("http") else get(s["photo"])
         photo = Image.open(io.BytesIO(raw))
         bg, fg, (fx, fy, fw, fh), txt = story_layers(photo, headline(s["title"]), s["kicker"], k, len(stories))
-        b, f, t = add(bg, STORY, f"b{k}"), add(fg, STORY, f"f{k}"), add(txt, STORY, f"t{k}")
+        clip = tmp / f"clip{k}.mp4"
+        push_in_clip(fg, STORY, fps, clip)
+        b = add(bg, STORY, f"b{k}")
+        args.extend(["-i", str(clip)])
+        n_in += 1
+        f = n_in - 1
+        t = add(txt, STORY, f"t{k}")
         frames = round(STORY * fps)
         flt.append(f"[{b}:v]fps={fps},format=yuv420p[b{k}]")
         if k == 1:   # one rounded-corner mask, shared by every photo
             m = Image.new("L", (fw, fh), 0)
             ImageDraw.Draw(m).rounded_rectangle([0, 0, fw - 1, fh - 1], radius=22, fill=255)
             mask_idx = add(m, STORY, "mask")
-        flt.append(f"[{f}:v]scale={round(fw * 1.25)}:{round(fh * 1.25)},zoompan=z='1+0.05*on/{frames}':x='iw/2-(iw/zoom/2)'"
-                   f":y='ih/3-(ih/zoom/3)':d={frames}:s={fw}x{fh}:fps={fps}[z{k}]")
+        flt.append(f"[{f}:v]fps={fps},format=yuv420p[z{k}]")
         flt.append(f"[{mask_idx}:v]fps={fps},format=gray,split[m{k}][mm{k}];[mm{k}]nullsink")
         flt.append(f"[z{k}][m{k}]alphamerge[f{k}]")
         flt.append(f"[b{k}][f{k}]overlay=x={fx}:y={fy}:shortest=1[bf{k}]")
