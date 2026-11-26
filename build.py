@@ -5535,6 +5535,7 @@ def newsletter_count():
             req = urllib.request.Request(f"https://api.beehiiv.com/v2/publications/{pub}?expand[]=stats",
                                          headers={"Authorization": f"Bearer {key}", "User-Agent": "sunny-mansfield"})
             st = json.loads(urllib.request.urlopen(req, timeout=20).read())["data"]["stats"]
+            print(f"  Newsletter: {st.get('active_subscriptions')} subscribers (live from beehiiv)", file=sys.stderr)
             return {"subscribers": int(st.get("active_subscriptions") or 0), "open_rate": st.get("average_open_rate"),
                     "click_rate": st.get("average_click_rate"), "updated": eastern().strftime("%Y-%m-%d"), "live": True}
         except Exception as ex:
