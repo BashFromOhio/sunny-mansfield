@@ -5805,6 +5805,7 @@ async function counts(){{for(const [k,f] of [['pending',()=>ok(sb.from('submissi
  ['apps',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Join the team').eq('status','pending')],
  ['ads',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Advertise').eq('status','pending')]]){{
  const {{count}}=await f();document.querySelector(`[data-q="${{k}}"] .n`).textContent=count||''}}}}
+const MOVABLE={json.dumps([n for _, n in SECTIONS])};
 const NO5W=['Birthday','Join the team','Advertise','Bracket','Headline','Hide','Link'];
 // Basics check: a quick look for who, what, where, when and why in a post. A hint for the editor, not a verdict.
 function basics(r){{if(NO5W.includes(r.section))return null;const t=`${{r.title||''}} ${{r.summary||''}}`;
@@ -5824,6 +5825,7 @@ function item(r){{const when=new Date(r.created_at).toLocaleString();
  else if(r.section==='Bracket')acts=btn('edit-bracket','Edit','solid');
  else if(r.status!=='approved')acts=btn('approve','Approve','solid')+btn('reject','Reject')+(r.email?btn('verify-approve','Approve and verify sender'):'');
  else acts=btn('reject','Take down');acts+=btn('delete','Delete','ghost');
+ if(MOVABLE.includes(r.section))acts+=`<label class="hint" style="display:inline-flex;gap:6px;align-items:center">Move to <select class="mv" data-id="${{r.id}}" aria-label="Move to section">${{MOVABLE.map(x=>`<option${{x===r.section?' selected':''}}>${{esc(x)}}</option>`).join('')}}</select></label>`;
  return `<article class="qitem" data-row='${{esc(JSON.stringify({{email:r.email,name:r.name,role:r.role,title:r.title,summary:r.summary,link:r.link,photo:r.photo_url}}))}}'>
  ${{r.photo_url?`<span class="qphoto"><img src="${{esc(r.photo_url.split(/\\s+/)[0])}}" alt="">${{r.photo_url.trim().split(/\\s+/).length>1?`<span class="caps kicker">${{r.photo_url.trim().split(/\\s+/).length}} photos</span>`:''}}</span>`:''}}
  <div class="qbody"><span class="caps kicker">${{esc(r.section)}}</span><h3 class="hed">${{esc(r.title)}}</h3><p class="qtext">${{esc(r.summary||'')}}</p>
@@ -5840,6 +5842,10 @@ async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAtt
 async function hiddenList(){{const {{data,error}}=await base().eq('section','Hide');const box=$('hidden-list');if(error){{box.innerHTML='';return}}
  box.innerHTML=data.length?'<p class="caps kicker" style="margin-top:12px">Removed stories</p>'+data.map(r=>`<p class="hint">${{esc(r.title)}}
  <button class="textbtn" type="button" data-unhide="${{r.id}}">Put back</button></p>`).join(''):''}}
+document.addEventListener('change',async ev=>{{const m=ev.target.closest('select.mv');if(!m)return;m.disabled=true;
+ const {{error}}=await sb.from('submissions').update({{section:m.value}}).eq('id',m.dataset.id);m.disabled=false;
+ if(error){{say('Could not move it: '+error.message);return}}const k=m.closest('.qitem').querySelector('.kicker');if(k)k.textContent=m.value;
+ say('Moved to '+m.value+'. The site updates in a few minutes; the story keeps the same link.');rebuild()}});
 document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q]');if(t){{q=t.dataset.q;load();return}}
  const hd=ev.target.closest('[data-hide]');if(hd){{if(!hd.dataset.sure){{hd.dataset.sure=1;hd.textContent='Tap again to remove';return}}
   hd.disabled=true;const p=JSON.parse(hd.dataset.hide);let {{data,error}}=await sb.from('submissions').insert({{section:'Hide',title:p.title.slice(0,200),link:p.link,name:'Sunny Mansfield'}}).select('id');
