@@ -1,4 +1,4 @@
-"""This week's Facebook Reel: a 15-second vertical video (720x1280) of the week's most-read neighbor stories, made from
+"""This week's Facebook Reel: a 15-second vertical video (1080x1920) of the week's most-read neighbor stories, made from
 their real photos and headlines. No AI footage: every picture is the one the neighbor sent in.
 
   python3 tools/make_reel.py site            # live: stories from Supabase, ranked by page views this week
@@ -23,7 +23,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 HERE = Path(__file__).resolve().parent.parent
 FONTS = HERE / "brand" / "fonts"
-W, H = 720, 1280
+W, H = 1080, 1920
 CREAM, BROWN, ORANGE, GOLD, WHITE = (251, 246, 236), (46, 26, 16), (232, 115, 42), (246, 190, 60), (255, 255, 255)
 STORY_SECTIONS = {"Good News", "Sports", "Neighborhoods", "Local Business", "Student Voices", "Seniors",
                   "Athlete Spotlight", "Business Spotlight"}
@@ -39,7 +39,13 @@ def font(name, size):
 
 
 def headline(t):
-    """Neighbors often type headlines in ALL CAPS or with emoji. Make them read well on a phone."""
+    """Same headline style as the site (build.headline_style), so the Reel and the stories match."""
+    try:
+        sys.path.insert(0, str(HERE))
+        from build import headline_style
+        return headline_style(t)
+    except Exception:
+        pass
     t = re.sub(r"[^\w\s.,:;!?'’\"“”&$%#()\-–—/]", "", t or "").strip()
     t = re.sub(r"\s+", " ", t)
     letters = [c for c in t if c.isalpha()]
@@ -85,52 +91,85 @@ def gradient(w, h, top, bottom):
     return g
 
 
-def intro_slide():
-    img = gradient(W, H, (240, 132, 52), (196, 72, 22))
+LOGO = HERE / "brand" / "post-logo.png"
+SAFE_TOP, SAFE_BOTTOM = 230, 1520   # Facebook covers the top bar and the bottom caption area of a Reel
+
+
+def blurred_bg(photo):
+    bg = cover(photo, W // 4, H // 4).filter(ImageFilter.GaussianBlur(10)).resize((W, H), Image.LANCZOS)
+    return Image.blend(bg, Image.new("RGB", (W, H), (20, 12, 6)), 0.55)
+
+
+def progress(d, n, total):
+    """Story-style progress segments across the top, like Instagram and Facebook stories."""
+    gap, x0, x1, y = 10, 60, W - 60, 150
+    seg = (x1 - x0 - gap * (total - 1)) / total
+    for k in range(total):
+        a = x0 + k * (seg + gap)
+        d.rounded_rectangle([a, y, a + seg, y + 8], radius=4, fill=CREAM if k < n else (255, 255, 255, 90))
+
+
+def brand_tag(img):
     d = ImageDraw.Draw(img)
-    for i in range(14):   # sunburst rays
-        import math
-        a = math.pi * (i / 13)
-        d.line([(W / 2, H * 0.62), (W / 2 - math.cos(a) * W, H * 0.62 - math.sin(a) * W)], fill=(250, 160, 70), width=18)
-    d.ellipse([W / 2 - 150, H * 0.62 - 150, W / 2 + 150, H * 0.62 + 150], fill=GOLD)
-    d.text((W / 2, 300), "This week in", font=font("Yellowtail", 86), fill=CREAM, anchor="mm")
-    d.text((W / 2, 410), "MANSFIELD", font=font("Caslon-700", 96), fill=WHITE, anchor="mm", stroke_width=4, stroke_fill=BROWN)
-    d.text((W / 2, 520), "GOOD NEWS · TOP STORIES", font=font("Josefin-700", 30), fill=CREAM, anchor="mm")
-    d.text((W / 2, H - 120), "SUNNYMANSFIELD.COM", font=font("Josefin-700", 32), fill=CREAM, anchor="mm")
-    return img
+    d.text((60, 205), "SUNNY MANSFIELD", font=font("Josefin-700", 30), fill=CREAM, anchor="lm")
+    d.text((W - 60, 205), "GOOD NEWS", font=font("Josefin-700", 30), fill=GOLD, anchor="rm")
 
 
-def story_slide(photo, title, kicker, n, total):
-    img = cover(photo, W, H)
-    shade = gradient(W, H // 2, (0, 0, 0), (0, 0, 0)).convert("L")
-    mask = Image.linear_gradient("L").resize((W, H // 2))
-    dark = Image.new("RGB", (W, H // 2), (24, 14, 8))
-    img.paste(dark, (0, H - H // 2), Image.eval(mask, lambda v: int(v * 0.92)))
-    d = ImageDraw.Draw(img)
-    f = font("Caslon-700", 58)
-    lines = wrap(d, title, f, W - 96, 4)
-    y = H - 140 - len(lines) * 68
-    d.rounded_rectangle([48, y - 74, 48 + d.textlength(kicker.upper(), font=font("Josefin-700", 26)) + 36, y - 30],
-                        radius=8, fill=ORANGE)
-    d.text((66, y - 52), kicker.upper(), font=font("Josefin-700", 26), fill=WHITE, anchor="lm")
-    for i, line in enumerate(lines):
-        d.text((48, y + i * 68), line, font=f, fill=WHITE, stroke_width=2, stroke_fill=(20, 10, 4))
-    d.text((48, H - 70), "SUNNYMANSFIELD.COM", font=font("Josefin-700", 26), fill=GOLD, anchor="lm")
-    d.text((W - 48, H - 70), f"{n}/{total}", font=font("Josefin-700", 26), fill=CREAM, anchor="rm")
-    return img
+def story_layers(photo, title, kicker, n, total):
+    """(background with frame, the photo for the push-in, text layer with alpha) for one story."""
+    bg = blurred_bg(photo)
+    d = ImageDraw.Draw(bg, "RGBA")
+    progress(d, n, total)
+    brand_tag(bg)
+    fx, fy, fw, fh = 60, 270, W - 120, 1000
+    d.rounded_rectangle([fx - 8, fy - 8, fx + fw + 8, fy + fh + 8], radius=26, fill=CREAM)
+    fg = cover(photo, fw, fh)
+    text = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    t = ImageDraw.Draw(text)
+    kf, hf = font("Josefin-700", 32), font("Caslon-700", 74)
+    lines = wrap(t, title, hf, W - 140, 3)
+    y = fy + fh + 70
+    kw = t.textlength(kicker.upper(), font=kf)
+    t.rounded_rectangle([70, y, 70 + kw + 44, y + 58], radius=10, fill=ORANGE + (255,))
+    t.text((92, y + 30), kicker.upper(), font=kf, fill=WHITE, anchor="lm")
+    for k, line in enumerate(lines):
+        t.text((70, y + 90 + k * 86), line, font=hf, fill=WHITE)
+    return bg, fg, (fx, fy, fw, fh), text
 
 
-def outro_slide():
-    img = Image.new("RGB", (W, H), CREAM)
-    d = ImageDraw.Draw(img)
-    d.rectangle([0, 0, W, 24], fill=ORANGE)
-    d.rectangle([0, H - 24, W, H], fill=ORANGE)
-    d.text((W / 2, 430), "Read every story", font=font("Yellowtail", 80), fill=ORANGE, anchor="mm")
-    d.text((W / 2, 540), "SUNNYMANSFIELD.COM", font=font("Caslon-700", 46), fill=BROWN, anchor="mm")
-    d.text((W / 2, 700), "Know a neighbor doing", font=font("Josefin-700", 34), fill=BROWN, anchor="mm")
-    d.text((W / 2, 748), "great things? Tell us!", font=font("Josefin-700", 34), fill=BROWN, anchor="mm")
-    d.text((W / 2, 900), "Link in the comments", font=font("Josefin-700", 28), fill=(138, 111, 92), anchor="mm")
-    return img
+def intro_layers(span):
+    bg = gradient(W, H, (244, 140, 56), (190, 66, 20))
+    d = ImageDraw.Draw(bg)
+    import math
+    cx, cy = W / 2, 1180
+    for k in range(18):
+        a = math.pi * (k / 17)
+        d.line([(cx, cy), (cx - math.cos(a) * 1400, cy - math.sin(a) * 1400)], fill=(248, 158, 70), width=26)
+    sun = Image.new("RGBA", (420, 420), (0, 0, 0, 0))
+    ImageDraw.Draw(sun).ellipse([0, 0, 419, 419], fill=GOLD + (255,))
+    text = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    t = ImageDraw.Draw(text)
+    t.text((W / 2, 470), "This week in", font=font("Yellowtail", 120), fill=CREAM, anchor="mm")
+    t.text((W / 2, 630), "MANSFIELD", font=font("Caslon-700", 150), fill=WHITE, anchor="mm", stroke_width=6, stroke_fill=BROWN)
+    t.text((W / 2, 770), span.upper(), font=font("Josefin-700", 40), fill=CREAM, anchor="mm")
+    t.text((W / 2, 840), "TOP GOOD-NEWS STORIES", font=font("Josefin-700", 40), fill=CREAM, anchor="mm")
+    return bg, sun, text
+
+
+def outro_layers():
+    bg = Image.new("RGB", (W, H), CREAM)
+    d = ImageDraw.Draw(bg)
+    d.rectangle([0, 0, W, 36], fill=ORANGE)
+    d.rectangle([0, H - 36, W, H], fill=ORANGE)
+    text = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    t = ImageDraw.Draw(text)
+    t.text((W / 2, 640), "Read every story", font=font("Yellowtail", 120), fill=ORANGE + (255,), anchor="mm")
+    t.text((W / 2, 790), "SUNNYMANSFIELD.COM", font=font("Caslon-700", 68), fill=BROWN + (255,), anchor="mm")
+    t.rounded_rectangle([W / 2 - 330, 900, W / 2 + 330, 1000], radius=50, fill=ORANGE + (255,))
+    t.text((W / 2, 950), "LINK IN THE COMMENTS", font=font("Josefin-700", 38), fill=WHITE + (255,), anchor="mm")
+    t.text((W / 2, 1120), "Know a neighbor doing great things?", font=font("Josefin-700", 40), fill=BROWN + (255,), anchor="mm")
+    t.text((W / 2, 1180), "Tell us and we'll share it.", font=font("Josefin-700", 40), fill=BROWN + (255,), anchor="mm")
+    return bg, text
 
 
 def get(url, headers=None, limit=12_000_000):
@@ -169,34 +208,70 @@ def sample_stories():
 
 
 def render(stories, out):
+    """Layers per slide (background, moving photo or sun, text that fades and slides in), joined with smooth transitions."""
     tmp = Path(tempfile.mkdtemp())
-    slides = [(intro_slide(), INTRO, False)]
-    for i, s in enumerate(stories, 1):
-        raw = Path(s["photo"]).read_bytes() if not s["photo"].startswith("http") else get(s["photo"])
-        slides.append((story_slide(Image.open(io.BytesIO(raw)), headline(s["title"]), s["kicker"], i, len(stories)), STORY, True))
-    slides.append((outro_slide(), OUTRO, False))
-    args, filters = [FFMPEG, "-y", "-loglevel", "error"], []
-    fps = 30
-    for i, (img, dur, zoom) in enumerate(slides):
-        p = tmp / f"{i}.png"
+    fps, args, flt, slides = 30, [FFMPEG, "-y", "-loglevel", "error"], [], []
+    now = datetime.now(timezone.utc)
+    span = f"{(now - timedelta(days=6)):%b %-d} – {now:%b %-d}"
+    n_in = 0
+
+    def add(img, dur, name):
+        nonlocal n_in
+        p = tmp / f"{name}.png"
         img.save(p)
-        args += ["-loop", "1", "-t", f"{dur:.3f}", "-i", str(p)]
-        frames = round(dur * fps)
-        if zoom:   # slow push-in so photos feel alive
-            filters.append(f"[{i}:v]scale={W * 2}:{H * 2},zoompan=z='1+0.07*on/{frames}':x='iw/2-(iw/zoom/2)':y='ih/3-(ih/zoom/3)'"
-                           f":d={frames}:s={W}x{H}:fps={fps},setsar=1,format=yuv420p[v{i}]")
-        else:
-            filters.append(f"[{i}:v]fps={fps},scale={W}:{H},setsar=1,format=yuv420p[v{i}]")
-    last, t = "v0", slides[0][1]
-    for i in range(1, len(slides)):
+        args.extend(["-loop", "1", "-t", f"{dur:.3f}", "-i", str(p)])
+        n_in += 1
+        return n_in - 1
+
+    def text_in(base, txt_idx, dur, k, delay=0.25):
+        """Text fades in and rises 40px over half a second."""
+        flt.append(f"[{txt_idx}:v]format=rgba,fade=in:st={delay}:d=0.5:alpha=1[t{k}]")
+        flt.append(f"[{base}][t{k}]overlay=x=0:y='40*max(0,1-(t-{delay})/0.5)':shortest=1[s{k}]")
+        return f"s{k}"
+
+    # intro: the sun rises behind the title
+    bg, sun, txt = intro_layers(span)
+    i_bg, i_sun, i_txt = add(bg, INTRO, "i_bg"), add(sun, INTRO, "i_sun"), add(txt, INTRO, "i_txt")
+    flt.append(f"[{i_bg}:v]fps={fps},format=yuv420p[ib]")
+    flt.append(f"[{i_sun}:v]format=rgba[isun]")
+    flt.append(f"[ib][isun]overlay=x=(W-w)/2:y='1500-530*min(1,t/1.3)':shortest=1[ibs]")
+    slides.append((text_in("ibs", i_txt, INTRO, 0, 0.2), INTRO))
+    # stories: soft blurred backdrop, framed photo with a slow push-in, headline sliding up
+    for k, s in enumerate(stories, 1):
+        raw = Path(s["photo"]).read_bytes() if not s["photo"].startswith("http") else get(s["photo"])
+        photo = Image.open(io.BytesIO(raw))
+        bg, fg, (fx, fy, fw, fh), txt = story_layers(photo, headline(s["title"]), s["kicker"], k, len(stories))
+        b, f, t = add(bg, STORY, f"b{k}"), add(fg, STORY, f"f{k}"), add(txt, STORY, f"t{k}")
+        frames = round(STORY * fps)
+        flt.append(f"[{b}:v]fps={fps},format=yuv420p[b{k}]")
+        if k == 1:   # one rounded-corner mask, shared by every photo
+            m = Image.new("L", (fw, fh), 0)
+            ImageDraw.Draw(m).rounded_rectangle([0, 0, fw - 1, fh - 1], radius=22, fill=255)
+            mask_idx = add(m, STORY, "mask")
+        flt.append(f"[{f}:v]scale={round(fw * 1.25)}:{round(fh * 1.25)},zoompan=z='1+0.08*on/{frames}':x='iw/2-(iw/zoom/2)'"
+                   f":y='ih/3-(ih/zoom/3)':d={frames}:s={fw}x{fh}:fps={fps}[z{k}]")
+        flt.append(f"[{mask_idx}:v]fps={fps},format=gray,split[m{k}][mm{k}];[mm{k}]nullsink")
+        flt.append(f"[z{k}][m{k}]alphamerge[f{k}]")
+        flt.append(f"[b{k}][f{k}]overlay=x={fx}:y={fy}:shortest=1[bf{k}]")
+        slides.append((text_in(f"bf{k}", t, STORY, k), STORY))
+    # outro
+    bg, txt = outro_layers()
+    o_bg, o_txt = add(bg, OUTRO, "o_bg"), add(txt, OUTRO, "o_txt")
+    flt.append(f"[{o_bg}:v]fps={fps},format=yuv420p[ob]")
+    slides.append((text_in("ob", o_txt, OUTRO, 99, 0.15), OUTRO))
+    # join: fade into the first story, slide between stories, fade to the outro
+    last, t = slides[0][0], slides[0][1]
+    for k in range(1, len(slides)):
         t -= FADE
-        filters.append(f"[{last}][v{i}]xfade=transition=fade:duration={FADE}:offset={t:.3f}[x{i}]")
-        last, t = f"x{i}", t + slides[i][1]
+        kind = "slideleft" if 1 < k < len(slides) - 1 else "fade"
+        flt.append(f"[{last}][{slides[k][0]}]xfade=transition={kind}:duration={FADE}:offset={t:.3f}[x{k}]")
+        last, t = f"x{k}", t + slides[k][1]
     out.mkdir(parents=True, exist_ok=True)
-    args += ["-filter_complex", ";".join(filters), "-map", f"[{last}]", "-r", str(fps), "-c:v", "libx264",
-             "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out / "this-week.mp4")]
+    args += ["-filter_complex", ";".join(flt), "-map", f"[{last}]", "-r", str(fps), "-c:v", "libx264", "-preset", "veryfast",
+             "-crf", "21", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out / "this-week.mp4")]
     subprocess.run(args, check=True)
-    slides[1][0].save(out / "this-week.jpg", quality=88)
+    subprocess.run([FFMPEG, "-y", "-loglevel", "error", "-ss", f"{INTRO + 0.8:.2f}", "-i", str(out / "this-week.mp4"),
+                    "-frames:v", "1", "-q:v", "3", str(out / "this-week.jpg")], check=True)
     shutil.rmtree(tmp, ignore_errors=True)
 
 

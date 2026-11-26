@@ -145,6 +145,45 @@ def paragraphs(text):
     return [q for p in parts if p for q in tidy_paragraph(p)]
 
 
+# Headline style for every title on the site (feeds and neighbor posts, old and new): AP-style title case.
+SMALL_WORDS = {"a", "an", "and", "as", "at", "but", "by", "for", "if", "in", "nor", "of", "off", "on", "or", "per", "so",
+               "the", "to", "up", "via", "vs", "vs.", "yet", "with"}
+ACRONYMS = {"ai", "aka", "bgsu", "ceo", "cfo", "cpr", "diy", "dj", "ems", "fbi", "fema", "gop", "hs", "id", "ii", "iii", "iv",
+            "llc", "mlk", "mshs", "naacp", "nba", "ncaa", "necic", "nfl", "nhl", "ohsaa", "osu", "pta", "pto", "rv", "stem",
+            "tv", "u.s.", "usa", "us", "vfw", "voa", "wnba", "ymca", "ywca", "5k", "10k", "4-h"}
+SHOUTY_TAIL = re.compile(r"([!?])[!?]+")
+
+
+def headline_style(title):
+    """Consistent, readable headlines: ALL-CAPS posts become title case, small words stay lowercase (AP style), names and
+    acronyms written in mixed case keep their capitals, emoji and doubled punctuation go, stray spaces are fixed."""
+    t = re.sub(r"[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F\u200d]", "", title or "")
+    t = re.sub(r"\s+([,.;:!?])", r"\1", " ".join(t.split()))
+    t = SHOUTY_TAIL.sub(r"\1", t).strip(" -–—")
+    letters = [c for c in t if c.isalpha()]
+    shouty = bool(letters) and sum(c.isupper() for c in letters) / len(letters) > 0.6
+    words, out = t.split(" "), []
+    for i, w in enumerate(words):
+        core = w.strip("\"“”‘’'()[],.:;!?")
+        low = core.lower()
+        first = i == 0 or re.search(r"[:—–]$|^[-–—]$", words[i - 1] or "") is not None
+        last = i == len(words) - 1
+        if not core:
+            out.append(w)
+            continue
+        if low in ACRONYMS and (shouty or core.isupper()):
+            new = core.upper()
+        elif not shouty and (any(c.isupper() for c in core[1:]) or core.isupper() and len(core) <= 5):
+            new = core  # McDonald's, iPhone, GROW, NECIC: written that way on purpose
+        elif low in SMALL_WORDS and not first and not last:
+            new = low
+        else:
+            new = "-".join(p[:1].upper() + p[1:].lower() if shouty or p.islower() else p for p in core.split("-"))
+            new = re.sub(r"(?<=[’'])S\b", "s", new)
+        out.append(w.replace(core, new, 1))
+    return " ".join(out)
+
+
 CONTRACTIONS = {"Ive": "I've", "Im": "I'm", "dont": "don't", "cant": "can't", "wont": "won't", "didnt": "didn't",
                 "doesnt": "doesn't", "isnt": "isn't", "wasnt": "wasn't", "couldnt": "couldn't", "wouldnt": "wouldn't",
                 "shouldnt": "shouldn't", "thats": "that's", "theyre": "they're", "youre": "you're", "weve": "we've"}
@@ -6613,6 +6652,8 @@ def main():
     stories = add_links(cfg, stories, got["links"], args.sample)
     stories = merge_community(cfg, stories, got["stories"])
     stories = drop_feed_duplicates(drop_hidden(stories, got["hidden"]))
+    for x in stories + got["listings"] + got["flyers"]:
+        x["title"] = headline_style(x["title"])
     series, series_extra = collect_series(cfg, stories, args.sample)
     dogs = fetch_shelter_dogs(cfg, args.sample)
     flyers, listings = got["flyers"], got["listings"]
