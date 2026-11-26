@@ -28,6 +28,10 @@ alter table public.submissions add column if not exists consent text check (char
 alter table public.submissions add column if not exists verified_at timestamptz;
 -- Why an editor rejected or took down a post (picked from a list on the admin page). Editors only, never published.
 alter table public.submissions add column if not exists review_note text check (char_length(review_note) <= 500);
+-- Free Stuff: when the post was marked given away (greyed out for a few days, then down), and when the poster was last
+-- emailed the "mark it given away" link (the "given" function sends at most one every 30 minutes).
+alter table public.submissions add column if not exists given_at timestamptz;
+alter table public.submissions add column if not exists given_link_at timestamptz;
 create index if not exists submissions_status_idx on public.submissions (status, created_at desc);
 
 -- People who can use the admin page, and people whose posts skip the review queue.
@@ -107,7 +111,7 @@ create policy "admins manage verified" on public.verified for all to authenticat
 -- event_date holds the birthday with the year 2000 (the form never asks for the year); Feb 29 is also listed on Feb 28 and Mar 1.
 drop view if exists public.published;
 create view public.published as
-  select id, created_at, section, title, summary, photo_url, link, name, role, business, town, event_date, price
+  select id, created_at, section, title, summary, photo_url, link, name, role, business, town, event_date, price, given_at
   from public.submissions
   where status = 'approved' and section not in ('Join the team', 'Advertise')
     and (section <> 'Birthday' or (

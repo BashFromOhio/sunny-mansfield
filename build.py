@@ -498,6 +498,7 @@ def market_category(title, summary, given=""):
     return "other"
 
 
+GIVEN_DAYS = 3  # a Free Stuff post marked given away stays up, greyed out, this long
 LISTING_DAYS = 30  # flyers without a date and Free Stuff listings come down after this
 JOB_DAYS = 30
 JOB_TYPES = ["Full-time", "Part-time", "Seasonal", "Temporary", "Internship"]
@@ -630,8 +631,12 @@ def load_submissions(config, sample):
             text = " ".join(keep).strip()
             if PAID.search(f'{row["title"]} {text}') or row["price"].strip().lower() not in ("", "free", "$0"):
                 continue  # not free, so not for this page
+            given = parse_date(row["given_at"]) if row.get("given_at") else None
+            if given and given + timedelta(days=GIVEN_DAYS) < now:
+                continue  # given away a while ago: take it down
             got["listings"].append({"id": sid, "pid": row.get("id") or (sid if sample else ""), "title": scrub(row["title"]), "summary": scrub(text),
-                                    "image": image, "town": row["town"], "date": date,
+                                    "body": scrub("\n".join(keep).strip()), "gallery": photos[:MAX_PHOTOS] if len(photos) > 1 else [],
+                                    "image": image, "town": row["town"], "date": date, "given": given,
                                     "cat": market_category(row["title"], text, given)})
             continue
         if section == "job":
@@ -745,6 +750,7 @@ def load_submissions(config, sample):
                         "town": row["town"], "gallery": photos[:MAX_PHOTOS] if len(photos) > 1 else []})
     got["flyers"].sort(key=lambda f: f["day"] or f["date"] + timedelta(days=LISTING_DAYS))
     got["listings"].sort(key=lambda x: x["date"], reverse=True)
+    got["listings"].sort(key=lambda x: bool(x.get("given")))  # given-away posts sink to the bottom, greyed out
     got["birthdays"].sort(key=lambda b: (not b["today"], b["date"]))  # today's first, then yesterday's
     note("Community: " + ", ".join(f"{len(v)} {k}" for k, v in got.items()))
     return got
@@ -2204,7 +2210,7 @@ def make_newsletter_issue(cfg, out, stories, flyers=(), funds=(), listings=(), j
     fresh = [x for x in listings if x["date"] >= week][:4]
     if fresh:
         sections.append(("Free stuff", [
-            {"title": x["title"], "url": utm(canon + f"/free.html#l-{x['id']}"), "kicker": x.get("town") or "Richland County",
+            {"title": x["title"], "url": utm(canon + f"/free/{x['id']}.html"), "kicker": x.get("town") or "Richland County",
              "text": short(x["summary"], 120)} for x in fresh]))
     hiring = [j for j in jobs if j["date"] >= week][:4]
     if hiring:
@@ -2510,13 +2516,91 @@ def flyer_card(f):
 def listing_card(x, cfg):
     img = (f'<img src="{e(img_src(x["image"]))}" alt="" loading="lazy" referrerpolicy="no-referrer">' if x.get("image")
            else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["sales"]}</svg></span>')
-    price = '<span class="price">Free</span>'
-    how = reply_button(cfg, x, "Message the giver")
+    given = bool(x.get("given"))
+    price = '<span class="price">Given away</span>' if given else '<span class="price">Free</span>'
+    how = '<span class="muted">Found a new home</span>' if given else reply_button(cfg, x, "Message the giver")
     cat = x.get("cat") or "other"
     search = e(f'{x["title"]} {x["summary"]} {x.get("town") or ""}'.lower())
-    return (f'<article class="slide listing" id="l-{x["id"]}" data-cat="{cat}" data-q="{search}"><span class="photo">{img}{price}</span>'
-            f'<span class="caps kicker">{e(MARKET_CAT_NAMES.get(cat, ""))} · {e(x.get("town") or "Richland County")} · {ago(x["date"])}</span>'
-            f'<h3 class="hed">{e(x["title"])}</h3><p class="dek">{e(x["summary"])}</p><div class="share">{how}</div></article>')
+    url = free_url(cfg, x)
+    photos = f' <span class="caps kicker">{len(x["gallery"])} photos</span>' if x.get("gallery") else ""
+    grey = ' style="opacity:.55;filter:grayscale(1)"' if given else ""
+    return (f'<article class="slide listing{" given" if given else ""}" id="l-{x["id"]}" data-cat="{cat}" data-q="{search}"{grey}><a class="photo" href="{e(url)}" tabindex="-1" aria-hidden="true">{img}{price}</a>'
+            f'<span class="caps kicker">{e(MARKET_CAT_NAMES.get(cat, ""))} · {e(x.get("town") or "Richland County")} · {ago(x["date"])}</span>{photos}'
+            f'<h3 class="hed"><a href="{e(url)}">{e(x["title"])}</a></h3><p class="dek">{e(clip(x["summary"], 220))}</p>'
+            f'<div class="share">{how}<a class="btn sm" href="{e(url)}">Details</a></div></article>')
+
+
+def clip(t, n):
+    t = " ".join((t or "").split())
+    return t if len(t) <= n else t[:n - 10].rsplit(" ", 1)[0] + "…"
+
+
+def render_given(cfg, stories):
+    """given.html: where the poster's "mark it given away" email link lands. It checks the link and greys the post out."""
+    site = cfg["site_url"].rstrip("/")
+    conf = json.dumps({"url": cfg["supabase_url"], "key": cfg["supabase_anon_key"]})
+    inner = f"""<section class="wrap pagehead"><span class="script">Free Stuff</span><h1 class="retro sm">Given away</h1>
+<p class="intro" id="g-msg">Checking your link…</p><p><a class="btn" href="{e(site)}/free.html">See all free stuff</a></p></section>"""
+    script = f"""<script src="{SB_JS}"></script><script>(async()=>{{const C={conf};const m=document.getElementById('g-msg');
+const q=new URLSearchParams(location.search),id=q.get('id'),t=q.get('t');if(!id||!t){{m.textContent='This link is missing something. Open it straight from the email.';return}}
+try{{const sb=supabase.createClient(C.url,C.key);const {{data,error}}=await sb.functions.invoke('given',{{body:{{action:'mark',id,t}}}});
+ if(error){{let x='';try{{x=(await error.context.json()).error}}catch(_){{}}throw new Error(x||error.message)}}
+ m.textContent='Done! Your post now shows as given away. It comes off the site in a few days. Thanks for passing it on.'}}
+catch(err){{m.textContent='We could not mark it: '+(err.message||err)}}}})()</script>"""
+    return shell(cfg, f"Given away · {cfg['site_name']}", "Mark a Free Stuff post as given away.", f"{site}/given.html",
+                 inner, stories, extra=script, index=False)
+
+
+def free_url(cfg, x):
+    return f'{cfg["site_url"].rstrip("/")}/free/{x["id"]}.html'
+
+
+def render_free_page(cfg, x, stories):
+    """Its own page for a Free Stuff post: every photo, the whole note, a private reply button and share links."""
+    site = cfg["site_url"].rstrip("/")
+    url = free_url(cfg, x)
+    cat = MARKET_CAT_NAMES.get(x.get("cat") or "other", "")
+    facts = "".join(f"<dt>{k}</dt><dd>{e(v)}</dd>" for k, v in (("Price", "Free"), ("Category", cat),
+                    ("Where", x.get("town") or "Richland County"), ("Posted", x["date"].strftime("%B %-d, %Y"))) if v)
+    photo_html = (f'<span class="photo"><img src="{e(img_src(x["image"]))}" alt="{e(x["title"])}" referrerpolicy="no-referrer"></span>'
+                  if x.get("image") else "")
+    body = "".join(f"<p>{e(p)}</p>" for p in (x.get("body") or x["summary"]).split("\n") if p.strip())
+    gallery = ""
+    if x.get("gallery"):
+        pics = [p if p.startswith("https://") else "/" + p for p in x["gallery"]]
+        tiles = "".join(f'<a class="gal-tile" href="{e(p)}" data-gal="{i}" aria-label="Photo {i + 1} of {len(pics)}">'
+                        f'<img src="{e(p)}" alt="" loading="lazy" referrerpolicy="no-referrer"></a>' for i, p in enumerate(pics))
+        gallery = (f'<section class="wrap gallery" aria-labelledby="gal-h"><h2 class="label" id="gal-h">Photos ({len(pics)})</h2>'
+                   f'<div class="gal-grid">{tiles}</div></section>{GALLERY_VIEWER}')
+    given = bool(x.get("given"))
+    banner = ('<section class="wrap"><p class="note"><b>Given away.</b> This found a new home. Thanks for passing it on!</p></section>' if given else "")
+    how = '<span class="muted">Found a new home</span>' if given else reply_button(cfg, x, "Message the giver")
+    mine = ("" if given or not x.get("pid") or not backend_on(cfg) else
+            f'<p class="hint">Is this yours and it\'s gone? <button class="textbtn" type="button" id="given-btn" data-id="{e(x["pid"])}">Mark as given away</button>'
+            f' <span id="given-msg" role="status" aria-live="polite"></span></p>')
+    inner = f"""{banner}<section class="wrap pagehead"><span class="script">{"Given away" if given else "Free to a good home"}</span><h1 class="retro sm">{e(x["title"])}</h1>
+<p class="intro">{e(cat)} · {e(x.get("town") or "Richland County")} · {ago(x["date"])}</p></section>
+<section class="wrap jobpage"><div class="legaltext">{photo_html}{body}</div>
+<aside class="box"><dl class="facts">{facts}</dl><div class="share">{how}
+<a class="btn fb sm" href="{e(fb_share(url))}" target="_blank" rel="noopener">{FB_ICON}Share</a>
+<button class="textbtn" type="button" data-copy="{e(url)}">Copy link</button></div>
+<p class="hint">{e(REPLY_NOTE)}</p>{mine}</aside></section>{gallery}
+<section class="wrap latest"><p class="note"><a class="link" href="{e(site)}/free.html">All free stuff</a> · <a class="link" href="{e(site)}/submit.html#free">Give something away</a> ·
+<a class="link" href="{e(report_link(cfg, {"title": x["title"], "link": url}))}">Report this post</a></p></section>"""
+    data = [breadcrumbs([("Sunny Mansfield", f"{site}/"), ("Free Stuff", f"{site}/free.html"), (x["title"], url)])]
+    return shell(cfg, f"Free: {x['title']}, {x.get('town') or 'Richland County'} OH · {cfg['site_name']}",
+                 f"Free in {x.get('town') or 'Richland County'}, Ohio: {clip(x['summary'], 140)}", url, inner, stories,
+                 image=img_src(x["image"]) if (x.get("image") or "").startswith("https://") else None, data=data, extra=reply_box(cfg) + (GIVEN_JS if mine else ""))
+
+
+# "Mark as given away" on a Free Stuff page: emails the poster a one-tap link (the "given" Supabase function).
+# reply_box has already loaded supabase-js and the site's public key.
+GIVEN_JS = """<script>(()=>{const b=document.getElementById('given-btn');if(!b||!window.supabase)return;const m=document.getElementById('given-msg');
+b.onclick=async()=>{b.disabled=true;m.textContent='Sending…';
+ try{const sb=supabase.createClient(SBCONF.url,SBCONF.key);const {error}=await sb.functions.invoke('given',{body:{action:'send',id:b.dataset.id}});
+  if(error){let t='';try{t=(await error.context.json()).error}catch(_){}throw new Error(t||error.message)}
+  m.textContent='We emailed the poster a link. Once they tap it, this post shows as given away.'}
+ catch(e){m.textContent='Could not send: '+(e.message||e);b.disabled=false}}})()</script>"""
 
 
 def reply_button(cfg, x, label):
@@ -2562,7 +2646,7 @@ def reply_box(cfg):
 <p class="hint wide">{e(REPLY_NOTE)} Never send money, gift cards, your Social Security number or bank details to someone you haven't met. <a class="link" href="{e(site)}/privacy.html" target="_blank">Privacy</a></p>
 <div class="wide submitrow"><button class="btn solid" type="submit">Send</button><span class="formmsg" role="status" aria-live="polite"></span></div>
 </form></dialog>
-<script src="{SB_JS}"></script><script>
+<script src="{SB_JS}"></script><script>window.SBCONF={conf};
 (()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);const d=document.getElementById('reply');const f=document.getElementById('reply-form');
 const msg=f.querySelector('.formmsg');let post=null;
 document.addEventListener('click',ev=>{{const b=ev.target.closest('[data-reply]');if(b){{post=b.dataset.reply;
@@ -5819,13 +5903,13 @@ function basics(r){{if(NO5W.includes(r.section))return null;const t=`${{r.title|
 function basicsHtml(b){{if(!b)return '';const miss=Object.keys(b).filter(k=>!b[k]);
  return `<p class="hint basics">${{miss.length?'<b>Basics check:</b> ':'<b>Basics check:</b> all there. '}}${{Object.entries(b).map(([k,v])=>`<span style="margin-right:8px;${{v?'':'color:#b3261e;font-weight:700'}}">${{v?'✓':'✗'}} ${{k[0].toUpperCase()+k.slice(1)}}</span>`).join('')}}${{miss.length?`<br>Looks like it's missing the ${{miss.join(', ')}}. Ask the sender or reject with a reason.`:''}}</p>`}}
 function item(r){{const when=new Date(r.created_at).toLocaleString();
- const facts=[['Section',r.section],['By',r.name],['Role',r.role],['Town',r.town],['Business',r.business],[r.section==='Birthday'?'Birthday':'Event date',r.section==='Birthday'&&r.event_date?new Date(r.event_date+'T12:00').toLocaleDateString('en-US',{{month:'long',day:'numeric'}}):r.event_date],['Price',r.price],['Contact',r.contact],['Email',r.email],['Email check',r.section==='Birthday'?(r.verified_at?'Confirmed with a code':'Not confirmed'):''],['Consent',r.consent&&r.consent.split('\\n').join(' · ')],['Sent',when],['Status',r.status+(r.reviewed_by?' by '+r.reviewed_by:'')],['Reason',r.review_note]].filter(x=>x[1]);
+ const facts=[['Section',r.section],['By',r.name],['Role',r.role],['Town',r.town],['Business',r.business],[r.section==='Birthday'?'Birthday':'Event date',r.section==='Birthday'&&r.event_date?new Date(r.event_date+'T12:00').toLocaleDateString('en-US',{{month:'long',day:'numeric'}}):r.event_date],['Price',r.price],['Contact',r.contact],['Email',r.email],['Email check',r.section==='Birthday'?(r.verified_at?'Confirmed with a code':'Not confirmed'):''],['Consent',r.consent&&r.consent.split('\\n').join(' · ')],['Sent',when],['Status',r.status+(r.reviewed_by?' by '+r.reviewed_by:'')+(r.given_at?' · given away':'')],['Reason',r.review_note]].filter(x=>x[1]);
  const link=/^https?:\/\//i.test(r.link||'')?`<a class="link" href="${{esc(r.link)}}" target="_blank" rel="noopener">Open link</a>`:'';
  const btn=(a,t,c='')=>`<button class="btn sm ${{c}}" type="button" data-act="${{a}}" data-id="${{r.id}}">${{t}}</button>`;
  let acts='';if(r.section==='Join the team')acts=btn('verify-approve','Approve and verify','solid')+btn('reject','Decline');
  else if(r.section==='Bracket')acts=btn('edit-bracket','Edit','solid');
  else if(r.status!=='approved')acts=btn('approve','Approve','solid')+btn('reject','Reject')+(r.email?btn('verify-approve','Approve and verify sender'):'');
- else acts=btn('reject','Take down');acts+=btn('delete','Delete','ghost');
+ else acts=btn('reject','Take down')+(r.section==='Free Stuff'&&!r.given_at?btn('given','Mark given away'):'');acts+=btn('delete','Delete','ghost');
  if(MOVABLE.includes(r.section))acts+=`<label class="hint" style="display:inline-flex;gap:6px;align-items:center">Move to <select class="mv" data-id="${{r.id}}" aria-label="Move to section">${{MOVABLE.map(x=>`<option${{x===r.section?' selected':''}}>${{esc(x)}}</option>`).join('')}}</select></label>`;
  return `<article class="qitem" data-row='${{esc(JSON.stringify({{email:r.email,name:r.name,role:r.role,title:r.title,summary:r.summary,link:r.link,photo:r.photo_url}}))}}'>
  ${{r.photo_url?`<span class="qphoto"><img src="${{esc(r.photo_url.split(/\\s+/)[0])}}" alt="">${{r.photo_url.trim().split(/\\s+/).length>1?`<span class="caps kicker">${{r.photo_url.trim().split(/\\s+/).length}} photos</span>`:''}}</span>`:''}}
@@ -5874,7 +5958,8 @@ document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q
  let note=null;if(act==='reject'){{const bx=b.closest('.share'),r1=bx.querySelector('.rsn').value,r2=bx.querySelector('.rsn-note').value.trim();
   if(!r1&&!r2){{say('Pick a reason or type a note first.');return}}note=[r1,r2].filter(Boolean).join(': ').slice(0,500)}}
  b.disabled=true;let error;
- if(act==='delete'){{(({{error}}=await sb.from('submissions').delete().eq('id',id)));
+ if(act==='given'){{(({{error}}=await sb.from('submissions').update({{given_at:new Date().toISOString()}}).eq('id',id)));if(!error){{say('Marked given away. It shows greyed out for 3 days, then comes down.');rebuild();load();return}}}}
+ else if(act==='delete'){{(({{error}}=await sb.from('submissions').delete().eq('id',id)));
   const paths=(row.photo||'').split(/\\s+/).map(u=>(u.match(/\/object\/public\/photos\/(.+)$/)||[])[1]).filter(Boolean).map(decodeURIComponent);
   if(!error&&paths.length)await sb.storage.from('photos').remove(paths)}}
  else{{if(act==='verify-approve'&&row.email){{({{error}}=await sb.from('verified').upsert({{email:row.email.toLowerCase(),name:row.name,role:row.role}}));}}
@@ -6535,6 +6620,10 @@ def main():
     (out / "sports.html").write_text(rebase(render_sports(cfg, stories, got["brackets"])))
     (out / "free.html").write_text(rebase(render_market(cfg, listings, stories)))
     (out / "market.html").write_text(rebase(render_moved(cfg, stories, "free.html", "Free Stuff")))
+    (out / "given.html").write_text(rebase(render_given(cfg, stories)))
+    (out / "free").mkdir(exist_ok=True)
+    for x in listings:
+        (out / "free" / f"{x['id']}.html").write_text(rebase(render_free_page(cfg, x, stories)))
     (out / "jobs.html").write_text(rebase(render_jobs(cfg, got["jobs"], stories)))
     (out / "jobs").mkdir(exist_ok=True)
     for j in got["jobs"]:
