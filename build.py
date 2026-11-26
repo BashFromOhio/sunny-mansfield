@@ -631,12 +631,12 @@ def load_submissions(config, sample):
             text = " ".join(keep).strip()
             if PAID.search(f'{row["title"]} {text}') or row["price"].strip().lower() not in ("", "free", "$0"):
                 continue  # not free, so not for this page
-            given = parse_date(row["given_at"]) if row.get("given_at") else None
-            if given and given + timedelta(days=GIVEN_DAYS) < now:
+            gone = parse_date(row["given_at"]) if row.get("given_at") else None
+            if gone and gone + timedelta(days=GIVEN_DAYS) < now:
                 continue  # given away a while ago: take it down
             got["listings"].append({"id": sid, "pid": row.get("id") or (sid if sample else ""), "title": scrub(row["title"]), "summary": scrub(text),
                                     "body": scrub("\n".join(keep).strip()), "gallery": photos[:MAX_PHOTOS] if len(photos) > 1 else [],
-                                    "image": image, "town": row["town"], "date": date, "given": given,
+                                    "image": image, "town": row["town"], "date": date, "given": gone,
                                     "cat": market_category(row["title"], text, given)})
             continue
         if section == "job":

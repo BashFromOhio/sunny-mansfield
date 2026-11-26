@@ -50,3 +50,21 @@ def test_inline_scripts_parse(page, tmp_path):
         f.write_text(js)
         r = subprocess.run(["node", "--check", str(f)], capture_output=True, text=True)
         assert r.returncode == 0, f"{page} script {i}: {r.stderr[:300]}"
+
+
+def test_live_style_rows_build(monkeypatch):
+    """The sample build skips old listings, so feed load_submissions a fresh live-style row of each common kind."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    import build as b
+    now = __import__("datetime").datetime.now(__import__("datetime").timezone.utc).isoformat()
+    base = {"id": "00000000-0000-0000-0000-000000000001", "when": now, "title": "Test post", "summary": "Line one.\nLine two.",
+            "photo": "https://example.com/a.jpg https://example.com/b.jpg", "link": "", "name": "Tester", "role": "",
+            "business": "", "town": "Mansfield", "event_date": "", "price": "", "given_at": ""}
+    rows = [dict(base, section=s) for s in ("Good News", "Free Stuff", "Event Flyer", "Business Spotlight")]
+    rows.append(dict(base, section="Free Stuff", id="00000000-0000-0000-0000-000000000002", given_at=now))
+    monkeypatch.setattr(b, "fetch_published", lambda cfg: rows)
+    cfg = json.loads((Path(b.HERE) / "config.json").read_text())
+    got = b.load_submissions(cfg, False)
+    assert len(got["listings"]) == 2 and got["listings"][-1]["given"]
+    assert got["stories"]
