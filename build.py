@@ -5805,7 +5805,7 @@ async function counts(){{for(const [k,f] of [['pending',()=>ok(sb.from('submissi
  ['apps',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Join the team').eq('status','pending')],
  ['ads',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Advertise').eq('status','pending')]]){{
  const {{count}}=await f();document.querySelector(`[data-q="${{k}}"] .n`).textContent=count||''}}}}
-const MOVABLE={json.dumps([n for _, n in SECTIONS])};
+const MOVABLE={json.dumps([n for _, n in SECTIONS] + ['Free Stuff'])};  // Free Stuff: things given away, not write-ups
 const NO5W=['Birthday','Join the team','Advertise','Bracket','Headline','Hide','Link'];
 // Basics check: a quick look for who, what, where, when and why in a post. A hint for the editor, not a verdict.
 function basics(r){{if(NO5W.includes(r.section))return null;const t=`${{r.title||''}} ${{r.summary||''}}`;
