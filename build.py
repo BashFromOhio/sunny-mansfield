@@ -5883,7 +5883,7 @@ def newsletter_panel(cfg, stories):
             f'<p>Know someone doing great things? <a href="{e(cfg["site_url"].rstrip("/"))}/submit.html">Tell us about it</a>.</p>')
     reel = f"""<div class="box" style="margin-bottom:16px"><span class="caps kicker">Facebook Reel</span><h2 class="hed">This week's Reel</h2>
 <p class="hint">About 30 seconds, made automatically from the week's 7 most-read neighbor stories and their real photos. It refreshes with the site.
-Download it, post it as a Reel on the Sunny Mansfield Page, paste the caption, and put the site link in the first comment.</p>
+It posts to the Sunny Mansfield Facebook Page every Friday evening on its own. To post it yourself, download it and paste the caption.</p>
 <video id="reel-v" src="{e(cfg["site_url"].rstrip("/"))}/reel/this-week.mp4" controls playsinline preload="metadata" style="width:100%;max-width:300px;border:3px solid #2e1a10;display:block;margin:10px 0"></video>
 <div class="row"><a class="btn sm solid" href="{e(cfg["site_url"].rstrip("/"))}/reel/this-week.mp4" download="sunny-mansfield-this-week.mp4">Download the Reel</a>
 <button class="btn sm" type="button" id="reel-cap">Copy caption</button></div>

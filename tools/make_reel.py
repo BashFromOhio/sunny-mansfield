@@ -169,7 +169,7 @@ def outro_layers():
     t.text((W / 2, 640), "Read every story", font=font("Yellowtail", 120), fill=ORANGE + (255,), anchor="mm")
     t.text((W / 2, 790), "SUNNYMANSFIELD.COM", font=font("Caslon-700", 68), fill=BROWN + (255,), anchor="mm")
     t.rounded_rectangle([W / 2 - 330, 900, W / 2 + 330, 1000], radius=50, fill=ORANGE + (255,))
-    t.text((W / 2, 950), "LINK IN THE COMMENTS", font=font("Josefin-700", 38), fill=WHITE + (255,), anchor="mm")
+    t.text((W / 2, 950), "LINK IN THE POST", font=font("Josefin-700", 38), fill=WHITE + (255,), anchor="mm")
     t.text((W / 2, 1120), "Know a neighbor doing great things?", font=font("Josefin-700", 40), fill=BROWN + (255,), anchor="mm")
     t.text((W / 2, 1180), "Tell us and we'll share it.", font=font("Josefin-700", 40), fill=BROWN + (255,), anchor="mm")
     return bg, text
@@ -292,8 +292,8 @@ def render(stories, out):
 def caption(stories):
     lines = ["This week's good news from Mansfield ☀️", ""]
     lines += [f"{i}. {headline(s['title'])}" for i, s in enumerate(stories, 1)]
-    lines += ["", "Read every story at sunnymansfield.com (link in the comments). Know a neighbor doing great things? Tell us!",
-              "", "#Mansfield #MansfieldOhio #RichlandCounty #GoodNews"]
+    lines += ["", "Read every story 👉 https://sunnymansfield.com/?utm_source=facebook&utm_medium=social&utm_campaign=weekly_reel",
+              "", "Know a neighbor doing great things? Tell us!", "", "#Mansfield #MansfieldOhio #RichlandCounty #GoodNews"]
     return "\n".join(lines)
 
 
