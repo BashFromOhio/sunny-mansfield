@@ -502,7 +502,8 @@ LISTING_DAYS = 30  # flyers without a date and Free Stuff listings come down aft
 JOB_DAYS = 30
 JOB_TYPES = ["Full-time", "Part-time", "Seasonal", "Temporary", "Internship"]
 # Free Stuff is free only: a price, a trade or a payment app means it isn't (old Buy & Sell posts included).
-PAID = re.compile(r"\$\s?\d|\b(obo|or best offer|for sale|asking|venmo|cash ?app|zelle|paypal|wanted|wtb|iso)\b", re.I)
+PAID = re.compile(r"\$\s?\d|\b(obo|or best offer|for sale|asking|venmo|cash ?app|zelle|paypal)\b"
+                  r"|^\s*(wanted|wtb|iso)\b|\b(wanted|wtb|iso)\s*:", re.I | re.M)  # "WANTED: ..." posts, not "I wanted to give"
 PHONE = re.compile(r"(?<!\d)(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)")
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 
