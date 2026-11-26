@@ -26,6 +26,8 @@ create table if not exists public.submissions (
 alter table public.submissions add column if not exists consent text check (char_length(consent) <= 1000);
 -- When the sender confirmed their email with a code (birthday shout-outs). Only the "verify" function sets it.
 alter table public.submissions add column if not exists verified_at timestamptz;
+-- Why an editor rejected or took down a post (picked from a list on the admin page). Editors only, never published.
+alter table public.submissions add column if not exists review_note text check (char_length(review_note) <= 500);
 create index if not exists submissions_status_idx on public.submissions (status, created_at desc);
 
 -- People who can use the admin page, and people whose posts skip the review queue.

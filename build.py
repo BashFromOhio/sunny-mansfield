@@ -5443,7 +5443,9 @@ function trend(){{const d=days.slice(0,-1).slice(-30);if(d.length<14)return null
 function worth(S){{const all=S.all||0,m=C.m,box=$('reach-worth');if(!all){{box.innerHTML='<p class="hint">Fills in once the first views are counted.</p>';return}}
  const tile=(v,l,sm)=>`<div class="reach-tile"><b>${{v}}</b><span>${{l}}</span>${{sm?`<small>${{sm}}</small>`:''}}</div>`;
  const fb=S.facebook||0,next=trend();
- box.innerHTML=tile($$(all*m.cpm/1000),'Market value, last 30 days',`What ${{n(all)}} views would cost as Facebook ads at $${{m.cpm}} per 1,000 (range ${{$$(all*m.cpm_low/1000)}} to ${{$$(all*m.cpm_high/1000)}})`)+
+ const visits=Object.keys(SRC).reduce((t,k)=>t+(S[k]||0),0);
+ box.innerHTML=(visits?tile($$(visits*m.cpc),'Market value, last 30 days',`What ${{n(visits)}} visits would cost to buy as Facebook ad clicks at $${{m.cpc.toFixed(2)}} each. Every visit is someone who chose to open the site, so it's priced like a click, not a scrolled-past ad view.`)
+  :tile($$(all*m.cpm/1000),'Market value, last 30 days',`What ${{n(all)}} page views would cost as Facebook ad views at $${{m.cpm_low}} to $${{m.cpm_high}} per 1,000 (about $${{m.cpm}} on average)`))+
   tile(next===null?'Soon':n(next),'Projected views, next 30 days',next===null?'Needs two full weeks of counting first.':`If the trend of the last ${{Math.min(30,days.length-1)}} days holds`)+
   (fb?tile($$(fb*m.cpc),'Facebook visits, as ad clicks',`${{n(fb)}} visits from Facebook at $${{m.cpc.toFixed(2)}} per click`):'');
  if(days.length<15){{$('reach-spots').innerHTML='<p class="hint">What each ad spot costs per 1,000 views shows after two full weeks of counting. Before that, a monthly price divided by a few days of views gives silly numbers.</p>';return}}
@@ -5585,6 +5587,7 @@ The site also skips a news story by itself when it matches a story posted throug
     script = f"""<script src="{SB_JS}"></script><script>
 (()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));
+const REASONS=['Missing the basics: who, what, where, when or why','Not clear who is behind it or how to reach them','Reads like an ad or promotion','Not about the Mansfield area','Already covered or a duplicate','Photo or wording not fit to publish','Could not be checked'];
 const SPECIAL=['Join the team','Advertise'];const NOTQ='("Join the team","Advertise","Bracket","Headline","Hide")';let me=null,q='pending';
 const say=t=>{{$('desk-msg').textContent=t}};
 $('login-form').onsubmit=async ev=>{{ev.preventDefault();const em=$('login-email').value.trim(),pw=$('login-pass').value;
@@ -5612,7 +5615,7 @@ async function counts(){{for(const [k,f] of [['pending',()=>ok(sb.from('submissi
  ['ads',()=>sb.from('submissions').select('id',{{count:'exact',head:true}}).eq('section','Advertise').eq('status','pending')]]){{
  const {{count}}=await f();document.querySelector(`[data-q="${{k}}"] .n`).textContent=count||''}}}}
 function item(r){{const when=new Date(r.created_at).toLocaleString();
- const facts=[['Section',r.section],['By',r.name],['Role',r.role],['Town',r.town],['Business',r.business],[r.section==='Birthday'?'Birthday':'Event date',r.section==='Birthday'&&r.event_date?new Date(r.event_date+'T12:00').toLocaleDateString('en-US',{{month:'long',day:'numeric'}}):r.event_date],['Price',r.price],['Contact',r.contact],['Email',r.email],['Email check',r.section==='Birthday'?(r.verified_at?'Confirmed with a code':'Not confirmed'):''],['Consent',r.consent&&r.consent.split('\\n').join(' · ')],['Sent',when],['Status',r.status+(r.reviewed_by?' by '+r.reviewed_by:'')]].filter(x=>x[1]);
+ const facts=[['Section',r.section],['By',r.name],['Role',r.role],['Town',r.town],['Business',r.business],[r.section==='Birthday'?'Birthday':'Event date',r.section==='Birthday'&&r.event_date?new Date(r.event_date+'T12:00').toLocaleDateString('en-US',{{month:'long',day:'numeric'}}):r.event_date],['Price',r.price],['Contact',r.contact],['Email',r.email],['Email check',r.section==='Birthday'?(r.verified_at?'Confirmed with a code':'Not confirmed'):''],['Consent',r.consent&&r.consent.split('\\n').join(' · ')],['Sent',when],['Status',r.status+(r.reviewed_by?' by '+r.reviewed_by:'')],['Reason',r.review_note]].filter(x=>x[1]);
  const link=/^https?:\/\//i.test(r.link||'')?`<a class="link" href="${{esc(r.link)}}" target="_blank" rel="noopener">Open link</a>`:'';
  const btn=(a,t,c='')=>`<button class="btn sm ${{c}}" type="button" data-act="${{a}}" data-id="${{r.id}}">${{t}}</button>`;
  let acts='';if(r.section==='Join the team')acts=btn('verify-approve','Approve and verify','solid')+btn('reject','Decline');
@@ -5655,13 +5658,21 @@ document.addEventListener('click',async ev=>{{const t=ev.target.closest('[data-q
  if(act==='edit-bracket'){{$('b-id').value=id;$('b-title').value=row.title||'';$('b-text').value=row.summary||'';$('b-link').value=row.link||'';
   $('b-head').textContent='Edit bracket';$('bracket-ed').scrollIntoView({{behavior:'smooth'}});return}}
  if(act==='delete'&&!b.dataset.sure){{b.dataset.sure=1;b.textContent='Tap again to delete';return}}
+ if(act==='reject'&&!b.dataset.sure){{b.dataset.sure=1;b.insertAdjacentHTML('beforebegin',`<span class="rsn-box" style="display:flex;flex-wrap:wrap;gap:6px;width:100%">
+  <select class="rsn" aria-label="Reason"><option value="">Pick a reason…</option>${{REASONS.map(x=>`<option>${{esc(x)}}</option>`).join('')}}</select>
+  <input class="rsn-note" maxlength="300" placeholder="Note (optional)" aria-label="Note" style="flex:1 1 160px"></span>`);
+  b.textContent='Confirm '+b.textContent.toLowerCase();b.closest('.share').querySelector('.rsn').focus();return}}
+ let note=null;if(act==='reject'){{const bx=b.closest('.share'),r1=bx.querySelector('.rsn').value,r2=bx.querySelector('.rsn-note').value.trim();
+  if(!r1&&!r2){{say('Pick a reason or type a note first.');return}}note=[r1,r2].filter(Boolean).join(': ').slice(0,500)}}
  b.disabled=true;let error;
  if(act==='delete'){{(({{error}}=await sb.from('submissions').delete().eq('id',id)));
   const paths=(row.photo||'').split(/\\s+/).map(u=>(u.match(/\/object\/public\/photos\/(.+)$/)||[])[1]).filter(Boolean).map(decodeURIComponent);
   if(!error&&paths.length)await sb.storage.from('photos').remove(paths)}}
  else{{if(act==='verify-approve'&&row.email){{({{error}}=await sb.from('verified').upsert({{email:row.email.toLowerCase(),name:row.name,role:row.role}}));}}
-  if(!error)(({{error}}=await sb.from('submissions').update({{status:act==='reject'?'rejected':'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}}).eq('id',id)));}}
- if(error){{say(error.message);b.disabled=false;return}}say(act==='reject'?'Done. It will not appear on the site.':act==='delete'?'Deleted.':b.closest('.qitem').querySelector('.kicker').textContent==='Birthday'?'Approved. It will show on their birthday (and on Facebook that morning).':'Approved. It will be on the site within 20 minutes.');rebuild();load()}});
+  if(!error){{const upd={{status:act==='reject'?'rejected':'approved',reviewed_at:new Date().toISOString(),reviewed_by:me}};if(act==='reject')upd.review_note=note;
+   (({{error}}=await sb.from('submissions').update(upd).eq('id',id)));
+   if(error&&/review_note/.test(error.message||'')){{delete upd.review_note;(({{error}}=await sb.from('submissions').update(upd).eq('id',id)));if(!error)say('Rejected, but the reason was not saved: run the updated schema.sql in Supabase.')}}}}}}
+ if(error){{say(error.message);b.disabled=false;return}}if(!/not saved/.test($('desk-msg').textContent)||act!=='reject')say(act==='reject'?'Done. It will not appear on the site. Reason saved.':act==='delete'?'Deleted.':b.closest('.qitem').querySelector('.kicker').textContent==='Birthday'?'Approved. It will show on their birthday (and on Facebook that morning).':'Approved. It will be on the site within 20 minutes.');rebuild();load()}});
 // Ask the site to rebuild now (the "rebuild" function), a few seconds after the last change, so approvals,
 // take-downs and deletes show in about 2 minutes. Without the function the regular 15-minute refresh still runs.
 let rbT;function rebuild(){{clearTimeout(rbT);rbT=setTimeout(async()=>{{const {{error}}=await sb.functions.invoke('rebuild');
