@@ -665,7 +665,7 @@ def load_submissions(config, sample):
                 continue  # given away a while ago: take it down
             got["listings"].append({"id": sid, "pid": row.get("id") or (sid if sample else ""), "title": scrub(row["title"]), "summary": scrub(text),
                                     "body": scrub("\n".join(keep).strip()), "gallery": photos[:MAX_PHOTOS] if len(photos) > 1 else [],
-                                    "image": image, "town": row["town"], "date": date, "given": gone,
+                                    "image": image, "town": row["town"], "date": date, "given": gone, "by": clean(row.get("name") or "", 80),
                                     "cat": market_category(row["title"], text, given)})
             continue
         if section == "job":
@@ -2555,7 +2555,7 @@ def listing_card(x, cfg):
     grey = ' style="opacity:.55;filter:grayscale(1)"' if given else ""
     return (f'<article class="slide listing{" given" if given else ""}" id="l-{x["id"]}" data-cat="{cat}" data-q="{search}"{grey}><a class="photo" href="{e(url)}" tabindex="-1" aria-hidden="true">{img}{price}</a>'
             f'<span class="caps kicker">{e(MARKET_CAT_NAMES.get(cat, ""))} · {e(x.get("town") or "Richland County")} · {ago(x["date"])}</span>{photos}'
-            f'<h3 class="hed"><a href="{e(url)}">{e(x["title"])}</a></h3><p class="dek">{e(clip(" ".join(tidy_paragraph(x["summary"], 10**6)), 220))}</p>'
+            f'<h3 class="hed"><a href="{e(url)}">{e(x["title"])}</a></h3>' + (f'<p class="hint">Posted by {e(x["by"])}</p>' if x.get("by") else "") + f'<p class="dek">{e(clip(" ".join(tidy_paragraph(x["summary"], 10**6)), 220))}</p>'
             f'<div class="share">{how}<a class="btn sm" href="{e(url)}">Details</a></div></article>')
 
 
@@ -2589,7 +2589,7 @@ def render_free_page(cfg, x, stories):
     site = cfg["site_url"].rstrip("/")
     url = free_url(cfg, x)
     cat = MARKET_CAT_NAMES.get(x.get("cat") or "other", "")
-    facts = "".join(f"<dt>{k}</dt><dd>{e(v)}</dd>" for k, v in (("Price", "Free"), ("Category", cat),
+    facts = "".join(f"<dt>{k}</dt><dd>{e(v)}</dd>" for k, v in (("Price", "Free"), ("Posted by", x.get("by")), ("Category", cat),
                     ("Where", x.get("town") or "Richland County"), ("Posted", x["date"].strftime("%B %-d, %Y"))) if v)
     photo_html = (f'<span class="photo"><img src="{e(img_src(x["image"]))}" alt="{e(x["title"])}" referrerpolicy="no-referrer"></span>'
                   if x.get("image") else "")
@@ -2608,7 +2608,7 @@ def render_free_page(cfg, x, stories):
             f'<p class="hint">Is this yours and it\'s gone? <button class="textbtn" type="button" id="given-btn" data-id="{e(x["pid"])}">Mark as given away</button>'
             f' <span id="given-msg" role="status" aria-live="polite"></span></p>')
     inner = f"""{banner}<section class="wrap pagehead"><span class="script">{"Given away" if given else "Free to a good home"}</span><h1 class="retro sm">{e(x["title"])}</h1>
-<p class="intro">{e(cat)} · {e(x.get("town") or "Richland County")} · {ago(x["date"])}</p></section>
+<p class="intro">{"Posted by " + e(x["by"]) + " · " if x.get("by") else ""}{e(cat)} · {e(x.get("town") or "Richland County")} · {ago(x["date"])}</p></section>
 <style>.freebody{{max-width:680px}}.freebody p{{font-size:17px;line-height:1.7;margin:0 0 16px}}
 .freebody .photo{{display:block;margin:0 0 20px}}.freebody .photo img{{width:100%;max-height:460px;object-fit:cover;border:3px solid #2e1a10;display:block}}</style>
 <section class="wrap jobpage"><div class="freebody">{photo_html}{body}</div>
@@ -3687,7 +3687,7 @@ document.querySelectorAll('form.sunny').forEach(f=>{{showFor(f);f.addEventListen
   if(pii&&PRIVATE.includes(sec)){{msg.textContent='Please take your phone number or email out of the post. People reply through the site, so you stay private.';return}}
   if(pii&&!f.dataset.piiOk){{f.dataset.piiOk=1;msg.textContent='Heads up: there is a phone number or email in your post, and it will be public. Take it out, or press Send again to keep it.';return}}
   if(sec==='Home for Rent or Sale'&&/\\b(no (kids|children|families)|adults only|singles only|couples only|perfect for (a )?(single|couple)|(christians?|whites?|americans?) only|no (wheelchairs?|disabled)|english speakers? only)\\b/i.test(pub)){{msg.textContent='Fair housing laws don\u2019t allow preferences about who can live there (like no kids or adults only). Please describe the home instead.';return}}
-  if(sec==='Free Stuff'&&/\$\s?\d|\\b(obo|or best offer|for sale|asking|venmo|cash ?app|zelle|paypal|wanted|wtb|iso)\\b/i.test(pub)){{msg.textContent='Free Stuff is free only. Please take out any price, trade or payment app.';return}}
+  if(sec==='Free Stuff'&&/\$\s?\d|\\b(obo|or best offer|for sale|asking|venmo|cash ?app|zelle|paypal)\\b|^\\s*(wanted|wtb|iso)\\b|\\b(wanted|wtb|iso)\\s*:/im.test(pub)){{msg.textContent='Free Stuff is free only. Please take out any price, trade or payment app.';return}}
   if(val('minor')===''){{msg.textContent='Please tell us if the athlete is under 18.';f.minor.focus();return}}
   if(val('minor')==='Yes'&&(!val('guardian')||!val('guardian_ok'))){{msg.textContent='For an athlete under 18, add the parent or guardian name and check that they said OK.';f.guardian.focus();return}}
   if(val('s_minor')==='Yes'&&!val('s_guardian')){{msg.textContent='If you are under 18, add your parent or guardian\u2019s name. Only editors see it.';f.s_guardian.focus();return}}
