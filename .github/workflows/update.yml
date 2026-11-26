@@ -24,6 +24,7 @@ jobs:
       - run: python3 build.py --out site
         env:
           SITE_URL: ${{ steps.pages.outputs.base_url }}
+          BEEHIIV_API_KEY: ${{ secrets.BEEHIIV_API_KEY }}   # optional: live newsletter count on the admin Goals tab
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }
       # GitHub sometimes can't see a just-uploaded artifact yet ("Fetching artifact metadata failed"),

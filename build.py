@@ -5507,6 +5507,160 @@ def render_advertise(cfg, stories):
                  f"{site}/advertise.html", inner, stories, extra=form_script(cfg))
 
 
+# ---------- Admin "Goals" tab: where the site stands against the $75K-a-month goal ----------
+# Rough planning numbers, not measurements. Replace them with real ones as they come in
+# (AdSense shows your real RPM once it's approved). Everything live on the tab comes from the database.
+GOALS = {
+    "monthly_goal": 75000,
+    "adsense_rpm": (2, 10),          # rough display-ad earnings per 1,000 page views for a US local site
+    "sponsor_per_sub": (10, 20),     # rough yearly newsletter sponsor income per subscriber, once sponsors are selling
+    "views_ladder": [1000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000],
+    "news_ladder": [100, 1000, 5000, 10000, 25000, 50000],
+    "originals_ladder": [10, 30, 60, 100, 200],
+    "news_steps": {100: "proof people outside your circle want it", 1000: "enough to pitch a first newsletter sponsor",
+                   5000: "steady sponsor income is realistic"},
+}
+
+
+def newsletter_count():
+    """Newsletter subscribers: live from beehiiv when BEEHIIV_API_KEY is set (a GitHub secret), else social.json."""
+    key = os.environ.get("BEEHIIV_API_KEY", "").strip()
+    pub = os.environ.get("BEEHIIV_PUBLICATION_ID", "pub_5144e321-f3e4-4ec9-9169-ecf21300b73a").strip()
+    if key:
+        try:
+            req = urllib.request.Request(f"https://api.beehiiv.com/v2/publications/{pub}?expand[]=stats",
+                                         headers={"Authorization": f"Bearer {key}", "User-Agent": "sunny-mansfield"})
+            st = json.loads(urllib.request.urlopen(req, timeout=20).read())["data"]["stats"]
+            return {"subscribers": int(st.get("active_subscriptions") or 0), "open_rate": st.get("average_open_rate"),
+                    "click_rate": st.get("average_click_rate"), "updated": eastern().strftime("%Y-%m-%d"), "live": True}
+        except Exception as ex:
+            print(f"  Newsletter: beehiiv lookup failed ({ex}); using social.json")
+    try:
+        n = json.loads((HERE / "social.json").read_text())["newsletter"]
+        return {**n, "live": False}
+    except Exception:
+        return None
+
+
+def goals_panel(cfg, stories):
+    """The admin Goals tab. Build-time facts (stories, Facebook, newsletter, ad spots) go in as JSON;
+    page views and the review queue are read live in the editor's browser."""
+    now = datetime.now(timezone.utc)
+    month = [s for s in stories if s["date"] > now - timedelta(days=30)]
+    originals = sum(1 for s in month if s.get("community"))
+    fb = facebook_posts()
+    spots = [(s["spot"], s["name"], spot_price(s["spot"])) for s in AD_SPOTS if s["spot"] != "S1" and spot_price(s["spot"])]
+    give = (cfg.get("newsletter") or {}).get("giveaway") or {}
+    data = {"goal": GOALS["monthly_goal"], "rpm": GOALS["adsense_rpm"], "sps": GOALS["sponsor_per_sub"],
+            "vl": GOALS["views_ladder"], "nl": GOALS["news_ladder"], "ol": GOALS["originals_ladder"],
+            "nsteps": GOALS["news_steps"], "originals": originals, "feed": len(month) - originals,
+            "fb": fb, "news": newsletter_count(), "spots": [{"code": c, "name": n, "price": p} for c, n, p in spots],
+            "sold": len(cfg.get("ads") or []), "ads_open": bool(cfg.get("ads_open")),
+            "adsense": bool(cfg.get("adsense_client")), "giveaway": give if give.get("live") else None,
+            "today": eastern().strftime("%Y-%m-%d"),
+            "url": cfg["supabase_url"].rstrip("/") + "/rest/v1/", "key": cfg["supabase_anon_key"]}
+    js = GOALS_JS.replace("__DATA__", json.dumps(data))
+    return f"""<div id="goals-ed" hidden><style>{GOALS_CSS}</style>
+<div class="box gl-hero"><span class="caps kicker">The big goal</span><h2 class="hed">$75,000 a month from sunnymansfield.com</h2>
+<div id="gl-hero"><p class="hint">Loading…</p></div></div>
+<h3 class="hed gl-h">Where the money will come from</h3>
+<p class="hint">Each way the site can earn, what it brings in today, and what it would take to get there. Estimates are labeled; live numbers update every time you open this tab.</p>
+<div id="gl-engines" class="gl-grid"></div>
+<h3 class="hed gl-h">Next milestones</h3><div id="gl-miles"></div>
+<h3 class="hed gl-h">This week's focus</h3><ol id="gl-focus" class="gl-focus"></ol>
+<h3 class="hed gl-h">Content and review, last 30 days</h3><div id="gl-queue" class="reach-tiles"></div><div id="gl-reasons"></div>
+<p class="hint gl-note">How these numbers work: page views and visits come from the site's own counter. Newsletter subscribers come from beehiiv
+(<span id="gl-newsrc"></span>). Ad prices come from the Advertise page. The AdSense earnings rate (${GOALS["adsense_rpm"][0]} to ${GOALS["adsense_rpm"][1]} per 1,000 views)
+and newsletter sponsor value (${GOALS["sponsor_per_sub"][0]} to ${GOALS["sponsor_per_sub"][1]} per subscriber a year) are rough planning guesses. Swap them for real numbers in <code>GOALS</code> in build.py once AdSense and sponsors are live.</p>
+<script>{js}</script></div>"""
+
+
+GOALS_CSS = """
+.gl-h{margin:28px 0 6px}.gl-hero .big{font-size:40px;font-weight:700;color:#2e1a10;font-variant-numeric:tabular-nums}
+.gl-bar{height:14px;border:3px solid #2e1a10;background:#fff;margin:8px 0;position:relative}.gl-bar i{display:block;height:100%;background:#e8732a;min-width:2px}
+.gl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:14px 0}
+.gl-card{background:#fff;border:3px solid #2e1a10;padding:14px 16px}.gl-card h4{margin:0 0 4px;font-size:18px}
+.gl-card .now{font-size:26px;font-weight:700;color:#2e1a10;font-variant-numeric:tabular-nums}.gl-card p{margin:6px 0;font-size:15px;color:#5c4636}
+.gl-tag{display:inline-block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border:2px solid #2e1a10;margin-left:6px;vertical-align:middle}
+.gl-mile{margin:12px 0}.gl-mile .row1{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.gl-mile small{color:#5c4636}
+.gl-focus li{margin:8px 0;max-width:70ch}.gl-note{margin-top:26px}.gl-reasons li{margin:4px 0}
+"""
+
+GOALS_JS = r"""
+window.SMgoals=async function(sb){const D=__DATA__,$=id=>document.getElementById(id);
+const n=x=>Math.round(x).toLocaleString('en-US'),$$=x=>'$'+(x>=1000?n(x):x>=100?Math.round(x):x.toFixed(2));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const bar=p=>`<div class="gl-bar" role="img" aria-label="${Math.round(p)} percent"><i style="width:${Math.min(100,Math.max(0,p))}%"></i></div>`;
+const next=(v,l)=>l.find(x=>x>v)||l[l.length-1],prev=(v,l)=>[0,...l].filter(x=>x<=v).pop();
+const H={apikey:D.key,Authorization:'Bearer '+D.key};
+let views=0,visits=0,daily=[];
+try{const sm=await fetch(D.url+'reach_summary?select=k,views',{headers:H}).then(r=>r.ok?r.json():[]);
+ const S=Object.fromEntries(sm.map(r=>[r.k,r.views]));views=S.all||0;
+ visits=['facebook','instagram','threads','bluesky','x','google','other-search','newsletter','other-sites','direct'].reduce((t,k)=>t+(S[k]||0),0);
+ daily=await fetch(D.url+'reach_daily?select=day,views&order=day.asc',{headers:H}).then(r=>r.ok?r.json():[])}catch(x){}
+const days=daily.filter(r=>r.views>0),span=days.length?Math.max(1,Math.round((Date.parse(D.today)-Date.parse(days[0].day))/864e5)+1):0;
+const last7=daily.slice(-8,-1).reduce((t,r)=>t+r.views,0),prev7=daily.slice(-15,-8).reduce((t,r)=>t+r.views,0);
+const pace=span&&span<30?views/span*30:views;  // what a full month looks like at today's pace
+const subs=D.news?D.news.subscribers:0;
+// Income today: only what is actually coming in. Nothing is sold yet, so this stays honest at $0 until it changes.
+const income=0;
+$('gl-hero').innerHTML=`<p><span class="big">${$$(income)}</span> <span class="hint">of ${$$(D.goal)} a month</span></p>${bar(income/D.goal*100)}
+<p class="hint">No income yet: AdSense is ${D.adsense?'set up and waiting for approval':'not set up'}, ${D.sold?D.sold+' ad spot(s) sold':'no ad spots sold'}, and the newsletter and store aren't selling yet.
+That's expected for a site this new. The useful number right now is the audience, because every income source below grows from it.</p>`;
+// Engines
+const [r1,r2]=D.rpm,needLo=D.goal/r2*1000,needHi=D.goal/r1*1000;
+const spotLo=D.spots.reduce((t,s)=>t+s.price[0],0),spotHi=D.spots.reduce((t,s)=>t+s.price[1],0);
+const [s1,s2]=D.sps,newsLo=subs*s1/12,newsHi=subs*s2/12;
+const card=(t,tag,now,lines)=>`<div class="gl-card"><h4>${t}<span class="gl-tag">${tag}</span></h4><div class="now">${now}</div>${lines.map(l=>`<p>${l}</p>`).join('')}</div>`;
+$('gl-engines').innerHTML=
+ card('Display ads (AdSense)',D.adsense?'Waiting for approval':'Not set up',`${$$(views*r1/1000)} to ${$$(views*r2/1000)}`,
+  [`What last 30 days' ${n(views)} page views <i>would</i> earn at an estimated $${r1} to $${r2} per 1,000 views.`,
+   `<b>To reach $75K from ads alone:</b> about ${n(needLo/1e6*10)/10}M to ${n(needHi/1e6*10)/10}M page views a month, roughly ${n(needLo/Math.max(views,1))}× today. Ads alone won't get there, but they grow with every visitor.`])+
+ card('Local ad spots',D.ads_open?'Open':'Paused',`${$$(spotLo)} to ${$$(spotHi)}`,
+  [`A month's income if each of the ${D.spots.length} spots on the Advertise page sells once, at today's founding prices. ${D.sold?D.sold+' sold so far.':'None sold yet.'}`,
+   `Prices can rise as views grow. At 25,000 views a month the top banner's $300 is about $12 per 1,000 views, in line with Facebook.`])+
+ card('Newsletter sponsors','Building the list',`${n(subs)} subscribers`,
+  [subs?`Worth roughly ${$$(newsLo)} to ${$$(newsHi)} a month once sponsors are selling (est. $${s1} to $${s2} per subscriber a year).`:'Waiting for the first subscriber count.',
+   `<b>To reach $75K from the newsletter alone:</b> about ${n(D.goal*12/s2)} to ${n(D.goal*12/s1)} subscribers, more than a third of Richland County. Sponsors usually start paying around 1,000 to 5,000.`])+
+ card('Online store','Planned','Not open',['Print-on-demand merch and local makers\' goods on a separate Shopify store.','Store income depends on traffic too: more readers, more shoppers.']);
+// Milestones
+const mile=(label,v,ladder,unit,note)=>{const a=prev(v,ladder),b=next(v,ladder),p=b>a?(v-a)/(b-a)*100:100;
+ return `<div class="gl-mile"><div class="row1"><b>${label}</b><span>${n(v)} ${unit} → next goal <b>${n(b)}</b></span></div>${bar(v/b*100)}<small>${note(b,v)}</small></div>`};
+const growth=prev7?Math.round((last7-prev7)/prev7*100):null;
+$('gl-miles').innerHTML=
+ mile('Page views, last 30 days',views,D.vl,'views',(b,v)=>`${span&&span<30?`Counting for ${span} days so far; a full month at this pace is about ${n(pace)}. `:''}${growth!==null?`Last 7 days: ${n(last7)} views, ${growth>=0?'up':'down'} ${Math.abs(growth)}% from the week before.`:'Week-over-week change shows after two weeks of counting.'}`)+
+ mile('Visits, last 30 days',visits,D.vl.map(x=>Math.round(x/2)),'visits',()=>`People who opened the site (one person reading three stories is one visit and three views).`)+
+ mile('Newsletter subscribers',subs,D.nl,'',(b)=>`${D.nsteps[b]?n(b)+' is '+D.nsteps[b]+'. ':''}${D.news&&D.news.open_rate?`Open rate ${Math.round(D.news.open_rate)}%, well above the usual 40 to 50%.`:''}`)+
+ mile('Original stories, last 30 days',D.originals,D.ol,'stories',()=>`Stories sent in through the site, next to ${n(D.feed)} news stories from other outlets. Originals are what bring people back to sunnymansfield.com instead of the source.`)+
+ (D.fb?mile('Facebook posts, last 30 days',D.fb.posts,[100,300,600,900],'posts',()=>`About ${D.fb.per_day} a day. Facebook is the biggest source of visits right now.`):'');
+// Focus: plain rules on the numbers, most urgent first
+const f=[];
+if(subs<100)f.push(`<b>Grow the newsletter to 100.</b> ${D.giveaway?`The giveaway (${esc(D.giveaway.prize)}) runs through ${new Date(D.giveaway.ends+'T12:00').toLocaleDateString('en-US',{month:'long',day:'numeric'})}. Pin it on Facebook and mention it in every post this week.`:'Give people a reason to sign up, like a giveaway or a weekly best-of.'}`);
+if(D.originals<30)f.push(`<b>Publish more originals.</b> ${D.originals} this month; aim for one a day. Ask schools, churches, teams and businesses to send stories, and reject posts that miss the who, what, where, when or why so the bar stays high.`);
+if(views<5000)f.push(`<b>Get to 5,000 page views a month.</b> Every Facebook post should link back to a story on the site, not to the original outlet.`);
+if(!D.sold&&views>=10000)f.push(`<b>Open the ad spots.</b> You have enough reach to pitch founding sponsors.`);
+if(!D.sold&&views<10000)f.push(`<b>Line up founding sponsors for later.</b> Keep a list of 10 local businesses to pitch once views pass 10,000 a month.`);
+$('gl-focus').innerHTML=f.map(x=>`<li>${x}</li>`).join('');
+$('gl-newsrc').textContent=D.news?(D.news.live?'live, checked '+D.news.updated:'last checked '+(D.news.updated||'by hand')):'not counted yet';
+// Queue health (editors only, needs the signed-in session)
+const since=new Date(Date.now()-30*864e5).toISOString(),SK='("Headline","Hide","Bracket","Link","Join the team","Advertise")';
+const cnt=async q=>{const {count}=await q;return count||0};
+const base=()=>sb.from('submissions').select('id',{count:'exact',head:true}).not('section','in',SK);
+const [waiting,approved,rejected,verified]=await Promise.all([cnt(base().eq('status','pending')),
+ cnt(base().eq('status','approved').gte('created_at',since)),cnt(base().eq('status','rejected').gte('created_at',since)),
+ cnt(sb.from('verified').select('email',{count:'exact',head:true}))]);
+const tile=(v,l,s)=>`<div class="reach-tile"><b>${v}</b><span>${l}</span>${s?`<small>${s}</small>`:''}</div>`;
+const tot=approved+rejected;
+$('gl-queue').innerHTML=tile(n(waiting),'Waiting for review',waiting?'Clear these first: the Waiting tab.':'All caught up.')+
+ tile(n(approved),'Approved')+tile(n(rejected),'Rejected',tot?Math.round(rejected/tot*100)+'% of reviewed posts':'')+
+ tile(n(verified),'Verified contributors','Their posts skip review.');
+const {data:rs}=await sb.from('submissions').select('review_note').eq('status','rejected').gte('created_at',since).not('review_note','is',null);
+const by={};(rs||[]).forEach(r=>{const k=(r.review_note||'').split(': ')[0];by[k]=(by[k]||0)+1});
+const top=Object.entries(by).sort((a,b)=>b[1]-a[1]);
+$('gl-reasons').innerHTML=top.length?'<p class="caps kicker">Why posts were rejected</p><ul class="gl-reasons">'+top.map(([k,v])=>`<li>${esc(k)}: <b>${v}</b></li>`).join('')+'</ul>':'<p class="hint">Rejection reasons will add up here as editors pick them.</p>'};
+"""
+
+
 def render_admin(cfg, stories, headline=None):
     site = cfg["site_url"].rstrip("/")
     if not backend_on(cfg):
@@ -5553,6 +5707,7 @@ The site also skips a news story by itself when it matches a story posted throug
 <p class="formmsg" id="login-msg"></p></div>
 <div id="desk" hidden>
 <div class="deskbar"><nav class="sections" aria-label="Queue"><div class="qtabs">
+<button class="tab" type="button" data-q="goals">Goals</button>
 <button class="tab" type="button" data-q="pending">Waiting <span class="n"></span></button>
 <button class="tab" type="button" data-q="apps">Team applications <span class="n"></span></button>
 <button class="tab" type="button" data-q="ads">Ad inquiries <span class="n"></span></button>
@@ -5582,13 +5737,13 @@ The site also skips a news story by itself when it matches a story posted throug
 <label class="fld"><span class="caps">Headline</span><input id="l-title" maxlength="200" placeholder="Optional"></label>
 <label class="fld wide"><span class="caps">Summary</span><textarea id="l-sum" rows="3" maxlength="400" placeholder="Optional: leave blank to use the article's"></textarea></label>
 <div class="wide submitrow"><button class="btn solid" type="submit" id="l-btn">Post it</button><span class="formmsg" id="l-msg" role="status" aria-live="polite"></span></div></form></div>
-{picker}<div id="reach-ed" hidden>{live_reach(cfg, stories, admin=True)}</div><div id="list" class="queue"></div></div>
+{picker}{goals_panel(cfg, stories)}<div id="reach-ed" hidden>{live_reach(cfg, stories, admin=True)}</div><div id="list" class="queue"></div></div>
 <p class="formmsg" id="desk-msg"></p></section>"""
     script = f"""<script src="{SB_JS}"></script><script>
 (()=>{{const C={conf};const sb=supabase.createClient(C.url,C.key);const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));
 const REASONS=['Missing the basics: who, what, where, when or why','Not clear who is behind it or how to reach them','Reads like an ad or promotion','Not about the Mansfield area','Already covered or a duplicate','Photo or wording not fit to publish','Could not be checked'];
-const SPECIAL=['Join the team','Advertise'];const NOTQ='("Join the team","Advertise","Bracket","Headline","Hide")';let me=null,q='pending';
+const SPECIAL=['Join the team','Advertise'];const NOTQ='("Join the team","Advertise","Bracket","Headline","Hide")';let me=null,q='goals';
 const say=t=>{{$('desk-msg').textContent=t}};
 $('login-form').onsubmit=async ev=>{{ev.preventDefault();const em=$('login-email').value.trim(),pw=$('login-pass').value;
  if(!em||!pw){{$('login-msg').textContent='Type your email and password.';return}}$('login-btn').disabled=true;
@@ -5626,8 +5781,8 @@ function item(r){{const when=new Date(r.created_at).toLocaleString();
  ${{r.photo_url?`<span class="qphoto"><img src="${{esc(r.photo_url.split(/\\s+/)[0])}}" alt="">${{r.photo_url.trim().split(/\\s+/).length>1?`<span class="caps kicker">${{r.photo_url.trim().split(/\\s+/).length}} photos</span>`:''}}</span>`:''}}
  <div class="qbody"><span class="caps kicker">${{esc(r.section)}}</span><h3 class="hed">${{esc(r.title)}}</h3><p class="qtext">${{esc(r.summary||'')}}</p>
  <dl class="facts">${{facts.map(([k,v])=>`<dt>${{k}}</dt><dd>${{esc(v)}}</dd>`).join('')}}</dl>${{link}}<div class="share">${{acts}}</div></div></article>`}}
-async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';$('headline-ed').hidden=q!=='headline';$('reach-ed').hidden=q!=='reach';$('link-ed').hidden=q==='reach';counts();
- const list=$('list');list.innerHTML=q==='headline'?'':'<p class="hint">Loading…</p>';if(q==='headline'){{hiddenList();return}}if(q==='reach'){{list.innerHTML='';return}}
+async function load(){{document.querySelectorAll('[data-q]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.q===q));$('addv').hidden=q!=='verified';$('bracket-ed').hidden=q!=='brackets';$('headline-ed').hidden=q!=='headline';$('reach-ed').hidden=q!=='reach';$('goals-ed').hidden=q!=='goals';$('link-ed').hidden=q==='reach'||q==='goals';counts();
+ const list=$('list');list.innerHTML=q==='headline'?'':'<p class="hint">Loading…</p>';if(q==='headline'){{hiddenList();return}}if(q==='reach'){{list.innerHTML='';return}}if(q==='goals'){{list.innerHTML='';try{{window.SMgoals&&window.SMgoals(sb)}}catch(x){{say('Goals could not load: '+x.message)}}return}}
  if(q==='verified'){{const {{data,error}}=await sb.from('verified').select('*').order('added_at',{{ascending:false}});
   if(error){{list.innerHTML='';say(error.message);return}}
   list.innerHTML=data.length?data.map(v=>`<article class="qitem"><div class="qbody"><h3 class="hed">${{esc(v.name||v.email)}}</h3><p class="hint">${{esc(v.email)}} ${{v.role?'· '+esc(v.role):''}}</p>
