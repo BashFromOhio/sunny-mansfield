@@ -3659,7 +3659,7 @@ def sunny_form(cfg, fid, section, fields, button, title_tpl="", signin=False, ve
     return f"""<form class="sunny" id="{fid}" data-section="{e(section)}" data-title="{e(title_tpl)}"{" data-verify=\"1\"" if verify else ""} novalidate>
 {sign}{"".join(fields)}
 <label class="hp" aria-hidden="true">Leave this empty<input name="hp" tabindex="-1" autocomplete="off"></label>
-<label class="check wide"><input type="checkbox" required name="agree" value="Yes" data-consent="Agreed to rules, terms, photo permission and OK from people named"> <span>I agree to the <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/rules.html#rules" target="_blank">Sunny rules</a> and <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/terms.html" target="_blank">terms</a>, have permission to share any photo I add, and everyone named or pictured said it's OK (a parent or guardian for anyone under 18). <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/privacy.html" target="_blank">Privacy</a></span></label>
+<label class="check wide"><input type="checkbox" required name="agree" value="Yes" data-consent="Agreed to rules, terms (version 2026-11-26), photo permission and OK from people named"> <span>I'm responsible for what I post, and I agree to the <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/rules.html#rules" target="_blank">Sunny rules</a> and <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/terms.html" target="_blank">terms</a>, have permission to share any photo I add, and everyone named or pictured said it's OK (a parent or guardian for anyone under 18). <a class="link" href="{e(cfg['site_url'].rstrip('/'))}/privacy.html" target="_blank">Privacy</a></span></label>
 <div class="wide submitrow"><button class="btn solid" type="submit"{"" if on else " disabled"}>{button}</button><span class="formmsg" role="status" aria-live="polite"></span></div>
 {closed}</form>
 <div class="thanks" hidden><span class="script">Thank you!</span><h2 class="hed">Got it.</h2><p data-thanks></p>
@@ -4080,9 +4080,10 @@ LEGAL = {
     "terms": ("Terms of use", "The ground rules for reading and posting on Sunny Mansfield.", [
         ("Using the site", "Sunny Mansfield is free to read. By sending a post you agree to these terms and to the Sunny rules. "
          "You must be 13 or older to send a post, and 18 or older to post Free Stuff or a job."),
-        ("What you send", "You keep ownership of what you write and the photos you take. You give Ofgeneration LLC permission "
-         "to publish, edit for length and clarity, and share your post on this site, in our feeds and on our social media pages. "
-         "You can ask us to take it down at any time."),
+        ("What you send", "You keep ownership of what you write and the photos you take. You give Ofgeneration LLC a free, "
+         "non-exclusive, worldwide permission to publish, edit for length, clarity and spelling, and share your post on this site, "
+         "in our newsletter and feeds, on our social media pages and in promotions for Sunny Mansfield. You can ask us to take it "
+         "down at any time. We'll remove it from the site, but copies already shared, sent or saved by others may remain."),
         ("Your promises", "You promise that what you send is true as far as you know, is yours to share, and that you have the "
          "OK of anyone named or pictured, including a parent or guardian's OK for anyone under 18. Don't send anything "
          "hurtful, private, illegal, political campaigning, or copied from someone else."),
@@ -4109,14 +4110,32 @@ LEGAL = {
          "anyone who misuses it, and we can't promise every message is delivered."),
         ("Stories from other outlets", "Headlines, short summaries and photos from other news outlets belong to their publishers "
          "and always link back to the original. Publishers who'd like their stories left out can email {email}."),
-        ("No guarantees", "We work hard to get things right, but the site is provided as is. Ofgeneration LLC isn't responsible "
-         "for posts written by neighbors or employers, for anything given away or any job, or for other websites we link to."),
-        ("Your responsibility", "If something you post breaks these terms or the law and someone makes a claim against "
-         "Ofgeneration LLC because of it, you agree to cover the costs that claim causes us."),
+        ("Neighbor posts are the neighbor's words", "Posts, photos, listings and replies sent in by neighbors, businesses and "
+         "employers are their own words. We may review or tidy them, but that doesn't make them ours, and we don't promise they're "
+         "accurate or complete."),
+        ("Meeting up and picking up", "If you meet someone, pick something up, hand something over or go to an event you found "
+         "here, you do it at your own risk. Meet in a public place, bring a friend, and check items yourself. We aren't part of any "
+         "exchange and can't settle disputes between users."),
+        ("No guarantees", "We work hard to get things right, but the site is provided \u201cas is\u201d and \u201cas available\u201d, "
+         "without warranties of any kind. Ofgeneration LLC isn't responsible for posts written by neighbors, businesses or "
+         "employers, for anything given away, any event, fundraiser or job, or for other websites we link to."),
+        ("Limit on our liability", "To the fullest extent the law allows, Ofgeneration LLC and its owners, editors and volunteers "
+         "won't be liable for indirect, incidental or consequential damages, or for any loss arising from posts, listings, replies, "
+         "meet-ups or exchanges between users. If we are ever found liable to you, the most we'll owe is $100."),
+        ("Your responsibility", "You're responsible for what you post. If something you post breaks these terms or the law and "
+         "someone makes a claim against Ofgeneration LLC because of it, you agree to defend us and cover the costs that claim "
+         "causes us, including reasonable lawyer's fees."),
+        ("Removing posts and accounts", "We may remove any post, end any verified contributor's access, or block anyone from "
+         "posting or replying, at any time and for any reason, including posts that break these terms or the Sunny rules."),
         ("Copyright", "If you think something here uses your work without permission, email {email} with a link to it and "
          "what you own. We'll take it down while we look into it."),
         ("Problems and takedowns", "If something here is wrong, hurtful or yours and posted without permission, email {email} "
          "or use the \u201cReport or remove a post\u201d link and we'll look at it right away."),
+        ("Ohio law", "These terms are governed by the laws of Ohio. Any dispute about the site will be handled in the state or "
+         "federal courts that serve Richland County, Ohio."),
+        ("Changes and the fine print", "We may update these terms; the date below shows the latest version, and posting after "
+         "a change means you accept it. If any part of these terms can't be enforced, the rest still applies. These terms and "
+         "the Sunny rules are the whole agreement between you and us about the site. Last updated November 26, 2026."),
     ]),
 }
 
