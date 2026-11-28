@@ -1,0 +1,373 @@
+{
+ "_how": "Shop Local page (shop.html). Each shop with a 'shopify' domain refreshes its products from that store on every build; the 'products' list here is the fallback snapshot. Buy links: put a Shopify Collabs or affiliate link in 'collab_url' (the Visit the shop button) and per product in 'collab_links' {handle: link}; 'link_params' (like 'ref=sunnymansfield') is added to every other product link. Empty means the normal store link.",
+ "shops": [
+  {
+   "name": "Thesoyala",
+   "slug": "thesoyala",
+   "featured": true,
+   "shopify": "thesoyala.com",
+   "store_url": "https://thesoyala.com",
+   "collab_url": "",
+   "collab_links": {},
+   "link_params": "",
+   "town": "Dayton, Ohio",
+   "category": "Candles & home",
+   "tagline": "Scent, unrushed.",
+   "about": "Soy candles hand-poured in small batches in Ohio, with wooden wicks that crackle softly as they burn. Pair them with wax melts for gentle, flameless fragrance, or join a candle-making class and pour your own.",
+   "image": "/assets/shops/thesoyala.jpg",
+   "events": [
+    {
+     "title": "Holiday Candle & Wax Melt Pouring Experience",
+     "date": "2026-12-17",
+     "where": "Vandalia Recreation Center, Vandalia, Ohio",
+     "about": "Pour your own candle and wax melts, decorate them and take them home. Materials included.",
+     "handle": "holiday-candle-wax-melt-pouring-experience"
+    }
+   ],
+   "products": [
+    {
+     "title": "Piña Colada Wax Melt",
+     "handle": "pina-colada-wax-melt",
+     "kind": "melt",
+     "size": "",
+     "price": "10.00",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0047-7336886294499983503.jpg?v=1794955225"
+    },
+    {
+     "title": "Clean Cotton Wax Melt",
+     "handle": "clean-cotton-wax-melt",
+     "kind": "melt",
+     "size": "",
+     "price": "10.00",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0046-7336886294499983503.jpg?v=1794955225"
+    },
+    {
+     "title": "Blackberry Wax Melt",
+     "handle": "blackberry-wax-melt",
+     "kind": "melt",
+     "size": "",
+     "price": "10.00",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0045-7336886294499983503.jpg?v=1794955225"
+    },
+    {
+     "title": "Lemon Poundcake Wax Melt",
+     "handle": "lemon-poundcake-wax-melt",
+     "kind": "melt",
+     "size": "",
+     "price": "10.00",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0044-7336886294499983503.jpg?v=1794955225"
+    },
+    {
+     "title": "Mahogany Teakwood Wax Melt",
+     "handle": "mahogany-teakwood-wax-melt",
+     "kind": "melt",
+     "size": "",
+     "price": "10.00",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0043-7336886294499983503.jpg?v=1794955225"
+    },
+    {
+     "title": "Baccarat Wax Melt",
+     "handle": "baccarat-wax-melt",
+     "kind": "melt",
+     "size": "",
+     "price": "10.00",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0042-7336886294499983503.jpg?v=1794955224"
+    },
+    {
+     "title": "Banana Bread Wax Melt",
+     "handle": "banana-bread-wax-melt",
+     "kind": "melt",
+     "size": "",
+     "price": "10.00",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0041-7336886294499983503.jpg?v=1794955224"
+    },
+    {
+     "title": "Orange Wax Melt",
+     "handle": "orange-wax-melt",
+     "kind": "melt",
+     "size": "",
+     "price": "10.00",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0040-7336886294499983503.jpg?v=1794955224"
+    },
+    {
+     "title": "White Sage Lavender Wax Melt",
+     "handle": "white-sage-lavender-wax-melt",
+     "kind": "melt",
+     "size": "",
+     "price": "10.00",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0039-7336886294499983503.jpg?v=1794955224"
+    },
+    {
+     "title": "Pink Sugar Wax Melt",
+     "handle": "pink-sugar-wax-melt",
+     "kind": "melt",
+     "size": "",
+     "price": "10.00",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0038-7336886294499983503.jpg?v=1794955224"
+    },
+    {
+     "title": "Honey Bourbon Wax Melt",
+     "handle": "honey-bourbon-wax-melt",
+     "kind": "melt",
+     "size": "",
+     "price": "10.00",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0037-7336886294499983503.jpg?v=1794955224"
+    },
+    {
+     "title": "Brandied Pear Wax Melt",
+     "handle": "brandied-pear-wax-melt",
+     "kind": "melt",
+     "size": "",
+     "price": "10.00",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0036-7336886294499983503.jpg?v=1794955224"
+    },
+    {
+     "title": "Patchouli",
+     "handle": "patchouli",
+     "kind": "candle",
+     "size": "6 oz",
+     "price": "24.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/att.FzdrBJ7Emvgb-AaLKv7WUEN5folNvlY04boErXW1SAw.jpg?v=1794441577"
+    },
+    {
+     "title": "Lavender",
+     "handle": "lavender",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0035-895612711193035311.jpg?v=1794775997"
+    },
+    {
+     "title": "Fresh Out The Dryer",
+     "handle": "fresh-out-the-dryer",
+     "kind": "candle",
+     "size": "6 oz",
+     "price": "24.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0034-895612711193035311.jpg?v=1794775998"
+    },
+    {
+     "title": "Patchouli",
+     "handle": "patchouli-1",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0033-895612711193035311.jpg?v=1794775997"
+    },
+    {
+     "title": "Toasted Pumpkin Spice",
+     "handle": "toasted-pumpkin-spice-6ounce",
+     "kind": "candle",
+     "size": "6 oz",
+     "price": "24.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0032-895612711193035311.jpg?v=1794775997"
+    },
+    {
+     "title": "Black Raspberry Vanilla",
+     "handle": "black-raspberry-vanilla-1",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0031-895612711193035311.jpg?v=1794775997"
+    },
+    {
+     "title": "Caramel Apple",
+     "handle": "caramel-apple-11ounce",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0030-895612711193035311.jpg?v=1794775997"
+    },
+    {
+     "title": "Woodland Berries & Sage",
+     "handle": "woodland-berries-sage",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0029-895612711193035311.jpg?v=1794775997"
+    },
+    {
+     "title": "Butterscotch Bourbon",
+     "handle": "butterscotch-bourbon",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0028-895612711193035311.jpg?v=1794775997"
+    },
+    {
+     "title": "Toasted Pumpkin Spice",
+     "handle": "toasted-pumpkin-spice",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0027-895612711193035311.jpg?v=1794775997"
+    },
+    {
+     "title": "Clean Cotton",
+     "handle": "clean-cotton",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0026-895612711193035311.jpg?v=1794775997"
+    },
+    {
+     "title": "Banana Bread",
+     "handle": "banana-bread",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0025-895612711193035311.jpg?v=1794775998"
+    },
+    {
+     "title": "Cranberry",
+     "handle": "cranberry",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0024-895612711193035311.jpg?v=1794775996"
+    },
+    {
+     "title": "Lemon Pound Cake",
+     "handle": "lemon-pound-cake",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0017-895612711193035311.jpg?v=1794775935"
+    },
+    {
+     "title": "Honey Bourbon",
+     "handle": "honey-bourbon-11",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0018-895612711193035311.jpg?v=1794775935"
+    },
+    {
+     "title": "Pink Sugar Crystals",
+     "handle": "pink-sugar",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0019-895612711193035311.jpg?v=1794775996"
+    },
+    {
+     "title": "White Sage Lavender",
+     "handle": "white-sage-lavender",
+     "kind": "candle",
+     "size": "11 oz",
+     "price": "34.98",
+     "available": false,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0021-895612711193035311.jpg?v=1794775998"
+    },
+    {
+     "title": "Black Raspberry Vanilla",
+     "handle": "black-raspberry-vanilla",
+     "kind": "candle",
+     "size": "6 oz",
+     "price": "24.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0015-895612711193035311.jpg?v=1794775935"
+    },
+    {
+     "title": "Caramel Apple",
+     "handle": "caramel-apple",
+     "kind": "candle",
+     "size": "6 oz",
+     "price": "24.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0003-895612711193035311.jpg?v=1794775937"
+    },
+    {
+     "title": "Sweet Potato",
+     "handle": "sweet-potato-1",
+     "kind": "candle",
+     "size": "6 oz",
+     "price": "24.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0005-895612711193035311.jpg?v=1794775934"
+    },
+    {
+     "title": "Cranberry Prosecco",
+     "handle": "cranberry-prosecco",
+     "kind": "candle",
+     "size": "6 oz",
+     "price": "24.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0014-895612711193035311.jpg?v=1794775937"
+    },
+    {
+     "title": "Bergamot",
+     "handle": "bergamot",
+     "kind": "candle",
+     "size": "6 oz",
+     "price": "24.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0013-895612711193035311.jpg?v=1794775934"
+    },
+    {
+     "title": "Beach Linen",
+     "handle": "beach-linen",
+     "kind": "candle",
+     "size": "6 oz",
+     "price": "24.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0009-895612711193035311.jpg?v=1794775934"
+    },
+    {
+     "title": "Dark Orchard",
+     "handle": "dark-orchard",
+     "kind": "candle",
+     "size": "6 oz",
+     "price": "24.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0010-895612711193035311.jpg?v=1794775934"
+    },
+    {
+     "title": "Saffron Cedarwood",
+     "handle": "saffron-cedarwood",
+     "kind": "candle",
+     "size": "6 oz",
+     "price": "24.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0011-895612711193035311.jpg?v=1794775934"
+    },
+    {
+     "title": "Ocean Breeze",
+     "handle": "ocean-breeze",
+     "kind": "candle",
+     "size": "6 oz",
+     "price": "24.98",
+     "available": true,
+     "image": "https://cdn.shopify.com/s/files/1/0507/7054/2741/files/0012-895612711193035311.jpg?v=1794775934"
+    }
+   ]
+  }
+ ]
+}
