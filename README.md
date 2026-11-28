@@ -6,6 +6,7 @@ on Facebook. It republishes only a headline, a short summary, and a link back to
 
 ## Files
 - `config.json`: site name, tagline, web address, Facebook page, and the news feeds to read.
+- `shops.json`: shops on the Shop Local page (see Shop Local below).
 - `businesses.json`: local business spotlights (edit by hand; the current entries are examples).
 - `build.py`: fetches feeds, filters, and writes the site to `site/` (index, one share page per story, `feed.xml`).
 - `sample_stories.json`: example stories for previews (`python3 build.py --sample`).
@@ -85,6 +86,18 @@ invite to send a shout-out every other day at noon. To sponsor the birthday box,
 `quotes.csv` feeds the Facebook quote of the day only (it is not shown on the site): the `quote.jpg` image and `quotes.xml`, which posts a framed quote image to Facebook twice a day. Columns are `quote`,
 `author`, an optional `date` and optional `Suggested Hashtags`. The quote changes at 8 a.m. and 8 p.m. Eastern,
 walking down the list in date order (file order if there are no dates), and starts over at the end.
+
+## Shop Local (shop.html)
+The Shop Local tab shows products from local Shopify stores, listed in `shops.json`. A shop with a `shopify` domain
+refreshes its products from that store's public catalog on every build, so new items, prices and sold-out tags update by
+themselves. The `products` list in `shops.json` is a saved copy the page falls back to if the store can't be reached.
+- Every Buy button goes to the shop's own store, so checkout and money stay with them.
+- **Shopify Collabs or affiliate links:** once a shop sets up a collab, paste its link into `collab_url` (the Visit the shop
+  button) and, per product, into `collab_links` as `{"product-handle": "link"}`. `link_params` (for example `ref=sunnymansfield`)
+  is added to every other product link. Leave them empty to use the normal store links. When any of these are set, the
+  page adds an affiliate note and marks those links `rel="sponsored"`.
+- `events` lists a shop's classes or pop-ups (`date` as YYYY-MM-DD); each one hides the day after it happens.
+- To add a shop, copy the Thesoyala entry, change the name, `slug`, `shopify` domain and `store_url`, and set `featured`.
 
 ## Watch Mansfield (local videos)
 The top-right spot of the front page hero is "Watch Mansfield": local videos that rotate every 10 seconds (an orange

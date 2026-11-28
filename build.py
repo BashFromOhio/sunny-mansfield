@@ -1787,6 +1787,63 @@ body{margin:0}
 
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,440px);
   background:var(--primary);color:var(--tertiary);padding:8px 16px;border-radius:0;font:600 14px/1.5 var(--sans);text-align:center}
+
+/* ===== Shop Local (shop.html) ===== */
+.sl-shopblock{padding-bottom:8px}
+.sl-feat{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);border:2px solid var(--border-strong);background:var(--tertiary)}
+.sl-hero{min-height:420px;background:var(--surface) center/cover no-repeat;position:relative}
+.sl-badge{position:absolute;left:16px;top:16px;background:var(--secondary);color:#fff;font-size:11px;letter-spacing:.12em;padding:7px 11px}
+.sl-body{padding:36px 40px;display:grid;align-content:center;gap:10px}
+.sl-body .kicker{color:var(--secondary);font-size:12px;letter-spacing:.12em}
+.sl-body .hed{font-size:clamp(36px,4vw,48px);line-height:1.05;letter-spacing:-.02em}
+.sl-tagline{margin:0;font:italic 400 20px/1.4 var(--serif);color:var(--text-2)}
+.sl-body .dek{font-size:16px;line-height:1.65}
+.sl-sync{display:flex;gap:8px;align-items:center;margin:6px 0;padding:10px 12px;background:var(--surface);border-left:4px solid #5e8e3e;font-size:13px;color:var(--text-2)}
+.sl-sync svg{width:16px;height:18px;flex:none}
+.sl-body .share{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+.sl-event{display:flex;align-items:center;gap:20px;margin-top:20px;border:2px solid var(--border-subtle);background:#fbf6ec;padding:18px 22px}
+.sl-date{border:2px solid var(--border-strong);background:#fff;text-align:center;width:64px;flex:none;display:grid}
+.sl-date span{background:var(--secondary);color:#fff;font-size:11px;letter-spacing:.12em;padding:3px 0}
+.sl-date b{font:700 28px/1.3 var(--serif)}
+.sl-event .hed{font-size:20px;line-height:1.25}
+.sl-event p{margin:2px 0 0;font-size:14px;line-height:1.5;color:var(--text-2)}
+.sl-event .btn{margin-left:auto;white-space:nowrap}
+.sl-label{margin-top:48px}
+.sl-chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px}
+.sl-chips button{font:inherit;font-size:12px;letter-spacing:.12em;text-transform:uppercase;background:#fff;color:var(--text);border:2px solid var(--border-strong);padding:8px 14px;cursor:pointer;min-height:40px}
+.sl-chips button.on,.sl-chips button:hover{background:var(--primary);color:#fff}
+.sl-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+.sl-card{border:2px solid var(--border-subtle);background:#fff;display:flex;flex-direction:column;min-width:0}
+.sl-card:hover{border-color:var(--border-strong)}
+.sl-card[hidden]{display:none}
+.navbar .navgroup a{letter-spacing:.1em}
+@media (min-width:1241px) and (max-width:1399px){.navbar .navgroup a,.navbar .navbtn{padding-inline:5px}}
+@media (min-width:1400px){.navbar .navgroup a{padding-inline:10px}}
+.sl-ph{display:block;aspect-ratio:1/1;background:var(--surface);position:relative;overflow:hidden}
+.sl-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.sl-card.out .sl-ph img{opacity:.55}
+.sl-tag{position:absolute;right:0;top:0;background:var(--primary);color:#fff;font-size:10.5px;letter-spacing:.12em;padding:6px 9px}
+.sl-in{padding:14px 16px 16px;display:flex;flex-direction:column;flex:1;gap:2px}
+.sl-shop{font-size:10.5px;letter-spacing:.12em;color:var(--text-3)}
+.sl-card .hed{font-size:19px;line-height:1.2;margin:2px 0}
+.sl-meta{font-size:13px;color:var(--text-2)}
+.sl-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:12px}
+.sl-price{font:700 19px/1 var(--serif)}
+.sl-join{margin-top:56px}
+.sl-join-in{padding:40px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:40px;align-items:center}
+.sl-join-in p{color:var(--text-2);margin:8px 0 20px}
+.sl-steps{margin:0;padding:0;list-style:none;counter-reset:s;display:grid;gap:14px}
+.sl-steps li{counter-increment:s;display:grid;grid-template-columns:38px 1fr;gap:4px 16px;padding-bottom:14px;border-bottom:1px solid var(--border-subtle);color:var(--text-2);font-size:14.5px;line-height:1.5}
+.sl-steps li:last-child{border-bottom:0}
+.sl-steps li::before{content:counter(s);grid-row:1/span 2;width:38px;height:38px;border:2px solid var(--secondary);color:var(--secondary);display:grid;place-items:center;font:700 18px/1 var(--caps)}
+.sl-steps b{color:var(--text);display:block}
+@media (max-width:1000px){.sl-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){.sl-feat{grid-template-columns:minmax(0,1fr)}.sl-hero{min-height:240px}.sl-body{padding:24px 20px}
+  .sl-event{flex-wrap:wrap;gap:14px;padding:16px}.sl-event>div:nth-child(2){flex:1;min-width:0}.sl-event .btn{margin-left:0;width:100%;justify-content:center}
+  .sl-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.sl-in{padding:12px}.sl-card .hed{font-size:16.5px}
+  .sl-row{flex-direction:column;align-items:stretch}.sl-row .btn{justify-content:center;text-align:center}
+  .sl-chips{flex-wrap:nowrap;overflow-x:auto;margin-right:-16px;padding-right:16px}.sl-chips button{white-space:nowrap}
+  .sl-join-in{grid-template-columns:minmax(0,1fr);padding:24px 20px;gap:22px}.sl-body .share .btn{flex:1;justify-content:center;white-space:nowrap;padding-inline:12px}}
 """
 
 SEPIA = {"sky": "#ead6ae", "light": "#d8b98a", "mid": "#a97b4f", "dark": "#5b3a22", "paper": "#f6ead2"}
@@ -2135,7 +2192,7 @@ def card(cfg, s, front=False):
 # sit in the top bar, where readers expect "about the paper" links; Submit news is the button.
 NAV = [("front", "Front page"), ("events.html", "Events"), ("sports.html", "Sports"), ("students.html", "Student Voices"),
        ("watch.html", "Watch Mansfield"), ("pets.html", "Adopt-a-Paw"), ("businesses.html", "Businesses"),
-       ("jobs.html", "Jobs"), ("homes.html", "Homes"), ("free.html", "Free Stuff"), ("fundraisers.html", "Donate")]
+       ("shop.html", "Shop Local"), ("jobs.html", "Jobs"), ("homes.html", "Homes"), ("free.html", "Free Stuff"), ("fundraisers.html", "Donate")]
 NAV_ALIAS = {"index.html": "front", "write.html": "students.html", "send-a-story.html": "students.html"}
 
 
@@ -4741,6 +4798,168 @@ def render_business(cfg, b, businesses, stories):
                  data=[place, crumbs], index=not b.get("sample"))
 
 
+SHOP_FIRST = 12  # products shown before the See all button
+SHOP_KINDS = [("candle", "Candles"), ("melt", "Wax melts"), ("class", "Classes"), ("other", "More")]
+
+
+def shop_kind(title, product_type):
+    t = f"{title} {product_type}".lower()
+    if re.search(r"\b(class|workshop|experience|pour(ing)? party)\b", t):
+        return "class"
+    if "melt" in t:
+        return "melt"
+    if "candle" in t:
+        return "candle"
+    return "other"
+
+
+def shopify_products(domain):
+    """A Shopify store's public catalog (/products.json), newest first. Raises if the store can't be read."""
+    _, text = fetch(f"https://{domain}/products.json?limit=250", limit=5_000_000)
+    items = []
+    for p in json.loads(text).get("products", []):
+        variants = p.get("variants") or [{}]
+        prices = sorted(float(v.get("price") or 0) for v in variants)
+        body = re.sub(r"<[^>]+>", " ", p.get("body_html") or "")
+        size = re.search(r"(\d{1,2}(?:\.\d)?)\s*(?:-\s*)?(?:oz|ounce)", f'{p.get("handle", "")} {p.get("title", "")} {body}', re.I)
+        imgs = p.get("images") or []
+        items.append({"title": p.get("title", "").strip(), "handle": p.get("handle", ""),
+                      "kind": shop_kind(p.get("title", ""), p.get("product_type", "")),
+                      "size": f"{size.group(1)} oz" if size else "", "price": f"{prices[0]:.2f}",
+                      "price_max": f"{prices[-1]:.2f}" if prices[-1] != prices[0] else "",
+                      "available": any(v.get("available", True) for v in variants),
+                      "image": imgs[0]["src"] if imgs else ""})
+    return [x for x in items if x["title"] and x["handle"]]
+
+
+def load_shops(sample):
+    """Shops from shops.json. Shopify stores refresh their products on every build; the saved list is the fallback."""
+    path = HERE / "shops.json"
+    shops = json.loads(path.read_text()).get("shops", []) if path.exists() else []
+    for s in shops:
+        s.setdefault("slug", slug(s["name"]))
+        s["synced"] = None
+        if s.get("shopify") and not sample:
+            try:
+                live = shopify_products(s["shopify"])
+                if live:
+                    s["products"], s["synced"] = live, datetime.now(timezone.utc)
+            except Exception as exc:
+                note(f"Shop Local: couldn't refresh {s['name']} from Shopify ({exc}); using the saved products")
+        for p in s.get("products", []):
+            p.setdefault("kind", shop_kind(p.get("title", ""), ""))
+    return shops
+
+
+def shop_link(shop, handle=""):
+    """Where a Buy button goes: the shop's Collabs/affiliate link when there is one, otherwise the normal store page."""
+    if handle and (shop.get("collab_links") or {}).get(handle):
+        return shop["collab_links"][handle], True
+    if not handle and shop.get("collab_url"):
+        return shop["collab_url"], True
+    base = shop.get("store_url") or f'https://{shop.get("shopify", "")}'
+    url = base.rstrip("/") + (f"/products/{handle}" if handle else "")
+    params = (shop.get("link_params") or "").lstrip("?&")
+    return (url + ("&" if "?" in url else "?") + params if params else url), bool(params)
+
+
+def shop_img(src, width=600):
+    if "cdn.shopify.com" in src and "width=" not in src:
+        src += ("&" if "?" in src else "?") + f"width={width}"
+    return src
+
+
+def shop_price(p):
+    fmt = lambda v: f"${float(v):,.2f}".replace(".00", "")
+    return fmt(p["price"]) + (f"–{fmt(p['price_max'])}" if p.get("price_max") else "")
+
+
+def shop_product_card(shop, p):
+    url, paid = shop_link(shop, p["handle"])
+    rel = "sponsored noopener" if paid else "noopener"
+    meta = " · ".join(x for x in [dict(SHOP_KINDS).get(p["kind"], "").rstrip("s") if p["kind"] != "other" else "", p.get("size")] if x)
+    img = (f'<img src="{e(shop_img(p["image"]))}" alt="{e(p["title"])}" loading="lazy" referrerpolicy="no-referrer">' if p.get("image")
+           else f'<span class="art"><svg viewBox="0 0 100 100" aria-hidden="true">{ART["biz"]}</svg></span>')
+    tag = '<span class="sl-tag caps">Sold out</span>' if not p.get("available", True) else ""
+    buy = (f'<a class="btn sm solid" href="{e(url)}" target="_blank" rel="{rel}">Buy</a>' if p.get("available", True)
+           else f'<a class="btn sm" href="{e(url)}" target="_blank" rel="{rel}">See it</a>')
+    return (f'<article class="sl-card{" out" if tag else ""}" data-kind="{e(p["kind"])}"><a class="sl-ph" href="{e(url)}" target="_blank" rel="{rel}" tabindex="-1" aria-hidden="true">{img}{tag}</a>'
+            f'<div class="sl-in"><span class="caps sl-shop">{e(shop["name"])}</span><h3 class="hed"><a href="{e(url)}" target="_blank" rel="{rel}">{e(p["title"])}</a></h3>'
+            f'{f"<span class=sl-meta>{e(meta)}</span>" if meta else ""}<div class="sl-row"><span class="sl-price">{e(shop_price(p))}</span>{buy}</div></div></article>')
+
+
+def shop_event(shop, ev):
+    try:
+        day = datetime.strptime(ev["date"], "%Y-%m-%d")
+    except (KeyError, ValueError):
+        return ""
+    if day.date() < datetime.now(timezone.utc).date() - timedelta(days=1):
+        return ""
+    url, paid = shop_link(shop, ev.get("handle", ""))
+    when = f'{day.strftime("%A, %B")} {day.day}'
+    return (f'<div class="sl-event"><div class="sl-date"><span class="caps">{day.strftime("%b")}</span><b>{day.day}</b></div>'
+            f'<div><h3 class="hed">{e(ev["title"])}</h3><p>{e(when)} · {e(ev.get("where") or shop["name"])}. {e(ev.get("about", ""))}</p></div>'
+            f'<a class="btn sm" href="{e(url)}" target="_blank" rel="{"sponsored noopener" if paid else "noopener"}">Save a seat</a></div>')
+
+
+def render_shop(cfg, shops, stories):
+    site = cfg["site_url"].rstrip("/")
+    blocks, any_paid = [], False
+    for shop in sorted(shops, key=lambda s: not s.get("featured")):
+        goods = [p for p in shop.get("products", []) if p["kind"] != "class"]
+        goods.sort(key=lambda p: (not p.get("available", True), ["candle", "melt", "other"].index(p["kind"]) if p["kind"] in ("candle", "melt", "other") else 3))
+        any_paid = any_paid or bool(shop.get("collab_url") or shop.get("collab_links") or shop.get("link_params"))
+        visit, paid = shop_link(shop)
+        kinds = [(k, label, sum(1 for p in goods if p["kind"] == k)) for k, label in SHOP_KINDS if k != "class"]
+        kinds = [x for x in kinds if x[2]]
+        chips = ("" if len(kinds) < 2 else f'<div class="sl-chips caps" role="group" aria-label="Show"><button type="button" class="on" data-kind="">All {len(goods)}</button>'
+                 + "".join(f'<button type="button" data-kind="{k}">{label} {n}</button>' for k, label, n in kinds) + "</div>")
+        synced = (f'Synced from Shopify · {len(goods)} items · updated {shop["synced"].strftime("%B")} {shop["synced"].day}' if shop.get("synced")
+                  else f'From their Shopify store · {len(goods)} items')
+        img = shop.get("image") or next((p["image"] for p in goods if p.get("image")), "")
+        events = "".join(shop_event(shop, ev) for ev in shop.get("events", []))
+        blocks.append(f"""<section class="wrap sl-shopblock" id="{e(shop["slug"])}">
+<h2 class="label">{"Featured shop" if shop.get("featured") else "Local shop"}</h2>
+<article class="sl-feat"><div class="sl-hero"{f' style="background-image:url({e(shop_img(img, 1200))})"' if img else ""}><span class="caps sl-badge">Made in Ohio</span></div>
+<div class="sl-body"><span class="caps kicker">{e(shop.get("category") or "Local shop")} · {e(shop.get("town") or "Ohio")}</span>
+<h2 class="hed">{e(shop["name"])}</h2>{f'<p class="sl-tagline">{e(shop["tagline"])}</p>' if shop.get("tagline") else ""}
+<p class="dek">{e(shop.get("about", ""))}</p>
+<p class="sl-sync"><svg viewBox="0 0 18 20" aria-hidden="true"><path d="M15.4 3.9c0-.1-.1-.2-.2-.2l-1.6-.1-1.2-1.2c-.1-.1-.3-.1-.4 0l-.6.2C11 1.5 10.3.6 9.2.6h-.1C8.8.2 8.4 0 8.1 0 5.5 0 4.3 3.2 3.9 4.9l-1.8.6c-.6.2-.6.2-.6.7L0 17.7l11.3 2.1 6.1-1.3S15.4 4 15.4 3.9z" fill="#5e8e3e"/></svg>{e(synced)}</p>
+<div class="share"><a class="btn solid" href="{e(visit)}" target="_blank" rel="{"sponsored noopener" if paid else "noopener"}">Visit the shop</a>
+<a class="btn fb" href="{e(fb_share(f"{site}/shop.html#{shop['slug']}"))}" target="_blank" rel="noopener">{FB_ICON}Share</a></div></div></article>
+{events}
+<h2 class="label sl-label">From {e(shop["name"])}</h2>{chips}
+<div class="sl-grid">{"".join(shop_product_card(shop, p).replace('<article class="sl-card', '<article hidden class="sl-card more' if i >= SHOP_FIRST else '<article class="sl-card', 1) for i, p in enumerate(goods))}</div>
+{f'<div class="more-row"><button class="btn" type="button" data-sl-all>See all {len(goods)} items</button></div>' if len(goods) > SHOP_FIRST else ""}</section>""")
+    note_text = ("Some Buy links are affiliate links: if you buy, the shop may share a small thank-you with Sunny Mansfield, at no extra cost to you."
+                 if any_paid else "Sunny Mansfield doesn't take a cut. Every Buy button goes straight to the shop's own checkout.")
+    inner = f"""{page_title("Buy from your neighbors!", "Shop local", "Gifts made right here in Ohio, straight from local makers. Tap any item to buy it on the shop's own store, so the money goes to them.")}
+{"".join(blocks)}
+<section class="wrap"><p class="note">{e(note_text)}</p></section>
+<section class="wrap sl-join"><div class="candy"><div class="candy-in sl-join-in">
+<div><span class="script">Hey, local makers!</span><h2 class="retro sm">Sell on Sunny</h2>
+<p>Have a Shopify store? Bring it to Sunny Mansfield readers. It's free to list, and your products stay up to date on their own.</p>
+<a class="btn solid" href="{e(site)}/contact.html">Add your shop</a></div>
+<ol class="sl-steps"><li><b>Send us your store link.</b> That's all we need to start.</li>
+<li><b>Your products show up on their own.</b> New items, prices and sold-out tags update every few minutes.</li>
+<li><b>Neighbors buy from you directly.</b> Checkout happens on your own store, so the money goes straight to you.</li></ol>
+</div></div></section>"""
+    return shell(cfg, f"Shop Local: Gifts from Ohio Makers · {cfg['site_name']}",
+                 "Shop gifts from local Ohio makers on Sunny Mansfield. Every Buy button goes straight to the shop's own store.",
+                 f"{site}/shop.html", inner, stories, extra=SHOP_JS, data=hub_data(cfg, "Shop local", "shop.html"))
+
+
+SHOP_JS = """<script>
+document.querySelectorAll('.sl-shopblock').forEach(function(sec){
+var all=sec.querySelector('[data-sl-all]'),grid=sec.querySelector('.sl-grid');
+function show(k){grid.querySelectorAll('.sl-card').forEach(function(c){c.hidden=k?c.getAttribute('data-kind')!==k:(!!all&&c.classList.contains('more'))})}
+if(all)all.addEventListener('click',function(){all.parentNode.remove();all=null;show('')});
+var g=sec.querySelector('.sl-chips');if(g)g.addEventListener('click',function(ev){var b=ev.target.closest('button');if(!b)return;
+g.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b)});var k=b.getAttribute('data-kind');
+if(k&&all){all.parentNode.remove();all=null}show(k)})});
+</script>"""
+
+
 def parse_bracket(text):
     """Rounds of games from lines like "Semifinals" and "Madison 3 vs Ontario 1"."""
     rounds = []
@@ -6454,7 +6673,7 @@ def merge_community(cfg, stories, community):
     return sorted(stories + community, key=lambda s: s["date"], reverse=True)
 
 
-PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("students.html", "daily", "0.7"), ("write.html", "monthly", "0.5"), ("send-a-story.html", "monthly", "0.4"), ("pets.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"),
+PAGES = [("", "daily", "1.0"), ("events.html", "daily", "0.9"), ("sports.html", "daily", "0.8"), ("students.html", "daily", "0.7"), ("write.html", "monthly", "0.5"), ("send-a-story.html", "monthly", "0.4"), ("pets.html", "daily", "0.8"), ("businesses.html", "weekly", "0.8"), ("shop.html", "daily", "0.8"),
          ("fundraisers.html", "daily", "0.7"), ("free.html", "daily", "0.6"), ("jobs.html", "daily", "0.7"), ("homes.html", "daily", "0.7"), ("watch.html", "daily", "0.7"),
          ("submit.html", "monthly", "0.6"), ("birthdays.html", "daily", "0.6"), ("rules.html", "monthly", "0.4"), ("about.html", "monthly", "0.5"), ("contact.html", "yearly", "0.4"), ("link.html", "monthly", "0.4"), ("start.html", "monthly", "0.6"), ("partners.html", "monthly", "0.5"),
          ("advertise.html", "monthly", "0.4"), ("privacy.html", "yearly", "0.2"), ("terms.html", "yearly", "0.2")]
@@ -6731,6 +6950,7 @@ def main():
     for b in businesses:
         (out / "b" / f"{b['slug']}.html").write_text(rebase(render_business(cfg, b, businesses, stories)))
     (out / "businesses.html").write_text(rebase(render_businesses(cfg, businesses, stories)))
+    (out / "shop.html").write_text(rebase(render_shop(cfg, load_shops(args.sample), stories)))
     (out / "submit.html").write_text(rebase(render_submit(cfg, stories)))
     (out / "birthdays.html").write_text(rebase(render_birthdays(cfg, got["birthdays"], stories)))
     (out / "rules.html").write_text(rebase(render_rules(cfg, stories)))

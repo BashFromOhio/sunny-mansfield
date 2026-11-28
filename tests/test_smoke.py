@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 SITE = Path(os.environ.get("SITE_DIR", Path(__file__).resolve().parent.parent / "site"))
-PAGES = ["index.html", "admin.html", "submit.html", "about.html", "advertise.html", "events.html", "404.html"]
+PAGES = ["index.html", "admin.html", "submit.html", "about.html", "advertise.html", "events.html", "shop.html", "404.html"]
 
 
 def test_site_was_built():
@@ -68,3 +68,23 @@ def test_live_style_rows_build(monkeypatch):
     got = b.load_submissions(cfg, False)
     assert len(got["listings"]) == 2 and got["listings"][-1]["given"]
     assert got["stories"]
+
+
+def test_shop_local_page():
+    """Shop Local lists products, and every Buy button goes to a shop, never back to our own site."""
+    html = (SITE / "shop.html").read_text()
+    assert html.count('class="sl-card') >= 4, "Shop Local shows fewer than 4 products"
+    for url in re.findall(r'<a class="btn sm solid" href="([^"]+)"', html):
+        assert url.startswith("https://") and "sunnymansfield" not in url, url
+
+
+def test_shop_links_prefer_collab_links():
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    import build as b
+    shop = {"store_url": "https://example.com", "collab_url": "https://collabs.example/shop",
+            "collab_links": {"a": "https://collabs.example/a"}, "link_params": "ref=sunny"}
+    assert b.shop_link(shop, "a") == ("https://collabs.example/a", True)
+    assert b.shop_link(shop, "b") == ("https://example.com/products/b?ref=sunny", True)
+    assert b.shop_link(shop) == ("https://collabs.example/shop", True)
+    assert b.shop_link({"store_url": "https://example.com"}, "b") == ("https://example.com/products/b", False)
